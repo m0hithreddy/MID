@@ -35,6 +35,9 @@ void* unit(void* info)
 
 	while(1)
 	{
+
+		// Syncing and retrying mechanisms
+
 		if(unit_info->quit==1 || (unit_info->resume==0 && unit_info->pc_flag==0))
 			return NULL;
 
@@ -72,6 +75,8 @@ void* unit(void* info)
 		unit_info->err_flag=0;
 		unit_info->status_code=0;
 
+		// Creating range request and sending http request
+
 		if(unit_info->pc_flag && unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
 		{
 			char range[HTTP_REQUEST_HEADERS_MAX_LEN];
@@ -79,9 +84,10 @@ void* unit(void* info)
 			unit_info->s_request->range=range;
 		}
 
+		unit_info->s_request->method="GET";
+
 		pthread_mutex_unlock(&unit_info->lock);
 
-		unit_info->s_request->method="GET";
 
 		struct network_data* request=create_http_request(unit_info->s_request);
 
@@ -173,11 +179,12 @@ void* unit(void* info)
 		if(unit_info->quit==1)
 			return NULL;
 
+		// Read the response and eat the response headers
+
 		struct data_bag* eat_bag=create_data_bag();
 		char* eat_buf=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
 		struct network_data* n_eat_buf=(struct network_data*)malloc(sizeof(struct network_data));
 
-		// Eat response headers
 		int status;
 
 		while(1)
@@ -228,7 +235,7 @@ void* unit(void* info)
 			return NULL;
 		}
 
-		//Parse partial response
+		// Parse partial response
 
 		n_eat_buf=flatten_data_bag(eat_bag);
 
@@ -246,7 +253,7 @@ void* unit(void* info)
 			return NULL;
 		}
 
-		// Check for HTTP Response
+		// Check for HTTP response status code
 
 		if(s_response->status_code[0]!='2')
 		{
@@ -276,6 +283,7 @@ void* unit(void* info)
 
 			return NULL;
 		}
+
 
 		pwrite(fileno(fp),s_response->body->data,s_response->body->len,unit_info->range->start);
 
@@ -703,7 +711,7 @@ struct units_progress* actual_progress(struct unit_info** units,long units_len)
 	return u_progress;
 }
 
-void clear_progress(long count)
+void clear_progress_display(long count)
 {
 	for(long i=0;i<count;i++)
 	{
@@ -739,9 +747,9 @@ void* show_progress(void* s_progress_info)
 		if(quit_flag)
 		{
 			if(p_info->detailed_progress)
-				clear_progress(p_info->report_len+9);
+				clear_progress_display(p_info->report_len+9);
 			else
-				clear_progress(5);
+				clear_progress_display(5);
 
 			return NULL;
 		}

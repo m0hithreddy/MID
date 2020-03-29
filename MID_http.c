@@ -572,3 +572,92 @@ char* determine_filename(char* path)
 	return fin_name;
 }
 
+void handle_identity_encoding(struct encoding_info* en_info)
+{
+
+	long copy_size = en_info->out_max < en_info->in_max - en_info->in_len ? en_info->out_max : en_info->in_max - en_info->in_len;
+
+	memcpy(en_info->out,en_info->in+en_info->in_len,copy_size);
+
+	en_info->out_len=copy_size;
+	en_info->in_len=en_info->in_len + copy_size;
+
+}
+
+void handle_chunked_encoding(struct encoding_info* en_info)
+{
+
+}
+
+void handle_encodings(struct encoding_info* en_info)
+{
+	if(en_info->encoding == IDENTITY_ENCODING )
+	{
+		handle_identity_encoding(en_info);
+	}
+	else if(en_info->encoding == CHUNKED_ENCODING )
+	{
+		handle_chunked_encoding(en_info);
+	}
+}
+
+struct encoding_info* determine_transfer_encodings(struct http_response* s_response)
+{
+	if(s_response == NULL)
+	{
+		return NULL;
+	}
+
+	if(s_response->transfer_encoding == NULL || !strcmp(s_response->transfer_encoding,"identity") )
+	{
+		struct encoding_info* en_info=(struct encoding_info*)calloc(1,sizeof(struct encoding_info));
+
+		en_info->encoding=IDENTITY_ENCODING;
+		en_info->in=NULL;
+		en_info->in_len=0;
+		en_info->in_max=0;
+		en_info->out=malloc(IDENTITY_ENCODING_BUFFER_SIZE);
+		en_info->out_len=0;
+		en_info->out_max=IDENTITY_ENCODING_BUFFER_SIZE;
+		en_info->data=NULL;
+
+		return en_info;
+	}
+
+	else if(!strcmp(s_response->transfer_encoding,"chunked"))
+	{
+		struct encoding_info* en_info=(struct encoding_info*)calloc(1,sizeof(struct encoding_info));
+
+		en_info->encoding=CHUNKED_ENCODING;
+		en_info->in=NULL;
+		en_info->in_len=0;
+		en_info->in_max=0;
+		en_info->out=malloc(CHUNKED_ENCODING_BUFFER_SIZE);
+		en_info->out_len=0;
+		en_info->out_max=CHUNKED_ENCODING_BUFFER_SIZE;
+		en_info->data=NULL;
+
+		return en_info;
+	}
+
+	return NULL; // Encoding not known or not handled
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -29,8 +29,10 @@
 #define RETURN_REQUEST 010
 #define RETURN_S_REQUEST 011
 #define RETURN_S_REQUEST_S_RESPONSE 100
-#define TRANSFER_ENCODING_IDENTITY 00
-#define TRANSFER_ENCODING_CHUNKED 01
+#define IDENTITY_ENCODING 0
+#define CHUNKED_ENCODING 1
+#define IDENTITY_ENCODING_BUFFER_SIZE 65536
+#define CHUNKED_ENCODING_BUFFER_SIZE 65536
 
 #define HTTP_REQUEST_HEADERS " User-Agent 6 Accept 7 Accept-Encoding 8 Connection 9 Content-Type 10 Content-Length 11 Accept-Language 12 Referer 13 Upgrade-Insecure-Requests 14 If-Modified-Since 15 If-None-Match 16 Cache-Control 17 Date 18 Pragma 19 Trailer 20 Transfer-Encoding 21 Upgrade 22 Via 23 Warning 24 Accept-Charset 25 Authorization 26 Expect 27 From 28 If-Match 29 If-Match 30 If-Unmodified-Since 31 Max-Forwards 32 Proxy-Authorization 33 Range 34 TE 35 " 
 
@@ -137,6 +139,18 @@ struct http_range
 	long end;
 };
 
+struct encoding_info
+{
+	int encoding; // Encoding used
+	void* in; // In buffer
+	long in_len;
+	long in_max;
+	void* out; // Out buffer
+	long out_len;
+	long out_max;
+	void* data; // Encoding specific data used by function handling the encoding
+};
+
 struct network_data* create_http_request(struct http_request* s_request);
 
 struct http_response* parse_http_response(struct network_data *response);
@@ -148,5 +162,14 @@ void* send_https_request(int sockfd,struct network_data* request,int flag);
 void* follow_redirects(struct http_request* c_s_request,struct network_data* response,long max_redirects,struct socket_info* cli_info,int flag);
 
 char* determine_filename(char* path); // With out the beginning '/'
+
+void handle_identity_encoding(struct encoding_info* en_info);
+
+void handle_chunked_encoding(struct encoding_info* en_info);
+
+void handle_encodings(struct encoding_info* en_info);
+
+struct encoding_info* determine_transfer_encodings(struct http_response* s_response);
+
 #endif /* MID_HTTP_H_ */
 
