@@ -1,0 +1,992 @@
+/*
+ * MID_downloader.c
+ *
+ *  Created on: 14-Mar-2020
+ *      Author: Mohith Reddy
+ */
+
+#include"MID_unit.h"
+#include"MID.h"
+#include"MID_structures.h"
+#include"MID_http.h"
+#include"MID_socket.h"
+#include"MID_functions.h"
+#include"MID_interfaces.h"
+#include"url_parser.h"
+#include<stdio.h>
+#include<stdlib.h>
+#include<openssl/ssl.h>
+#include<openssl/err.h>
+#include<string.h>
+#include<unistd.h>
+#include<time.h>
+#include<pthread.h>
+
+void* unit(void* info)
+{
+
+	struct unit_info* unit_info=(struct unit_info*)info;
+
+	unit_info->total_size=0;
+
+	int sleep_time=MIN_UNIT_SLEEP_TIME;
+
+	long retries_count=0;
+
+	while(1)
+	{
+		if(unit_info->quit==1 || (unit_info->resume==0 && unit_info->pc_flag==0))
+			return NULL;
+
+		if(unit_info->self_repair==1)
+		{
+			sleep(unit_info->healing_time);
+
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->self_repair=0;
+			unit_info->resume=1;
+
+			pthread_mutex_unlock(&unit_info->lock);
+		}
+
+		if(unit_info->resume==0)
+		{
+			retries_count=0;
+
+			sleep(sleep_time);
+
+			sleep_time++;
+			if(sleep_time>MAX_UNIT_SLEEP_TIME)
+				sleep_time=MIN_UNIT_SLEEP_TIME;
+
+			continue;
+		}
+
+		sleep_time=MIN_UNIT_SLEEP_TIME;
+
+		pthread_mutex_lock(&unit_info->lock);
+
+		unit_info->current_size=0;
+		time(&unit_info->start_time);
+		unit_info->err_flag=0;
+		unit_info->status_code=0;
+
+		if(unit_info->pc_flag && unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
+		{
+			char range[HTTP_REQUEST_HEADERS_MAX_LEN];
+			sprintf(range,"bytes=%ld-%ld",unit_info->range->start,unit_info->range->end);
+			unit_info->s_request->range=range;
+		}
+
+		pthread_mutex_unlock(&unit_info->lock);
+
+		unit_info->s_request->method="GET";
+
+		struct network_data* request=create_http_request(unit_info->s_request);
+
+		if(unit_info->quit==1)
+			return NULL;
+
+		int sockfd=open_connection(unit_info->cli_info,unit_info->servaddr);
+
+		if(sockfd<0)
+		{
+
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->resume=0;
+
+			if(retries_count<unit_info->max_unit_retries)
+			{
+				retries_count++;
+				unit_info->self_repair=1;
+				unit_info->healing_time=unit_info->unit_retry_sleep_time;
+
+				pthread_mutex_unlock(&unit_info->lock);
+
+				continue;
+			}
+
+			unit_info->err_flag=1;
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+			return NULL;
+		}
+
+		if(unit_info->quit==1)
+			return NULL;
+
+		struct parsed_url* purl=parse_url(unit_info->s_request->url);
+
+		if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
+		{
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->err_flag=1;
+			unit_info->resume=0;
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+			return NULL;
+		}
+
+		SSL* ssl;
+		int http_flag;
+
+		if(!strcmp(purl->scheme,"http"))
+		{
+			http_flag=1;
+			send_http_request(sockfd,request,JUST_SEND);
+		}
+		else
+		{
+			http_flag=0;
+			ssl=(SSL*)send_https_request(sockfd,request,JUST_SEND);
+
+			if(ssl==NULL)
+			{
+				pthread_mutex_lock(&unit_info->lock);
+
+				unit_info->resume=0;
+
+				if(retries_count<unit_info->max_unit_retries)
+				{
+					retries_count++;
+					unit_info->self_repair=1;
+					unit_info->healing_time=unit_info->unit_retry_sleep_time;
+
+					pthread_mutex_unlock(&unit_info->lock);
+
+					continue;
+				}
+
+				unit_info->err_flag=1;
+
+				pthread_mutex_unlock(&unit_info->lock);
+
+				return NULL;
+			}
+		}
+
+		if(unit_info->quit==1)
+			return NULL;
+
+		struct data_bag* eat_bag=create_data_bag();
+		char* eat_buf=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
+		struct network_data* n_eat_buf=(struct network_data*)malloc(sizeof(struct network_data));
+
+		// Eat response headers
+		int status;
+
+		while(1)
+		{
+			if(unit_info->quit==1)
+				return NULL;
+
+			if(http_flag)
+				status=read(sockfd,eat_buf,MAX_TRANSACTION_SIZE);
+			else
+				status=SSL_read(ssl,eat_buf,MAX_TRANSACTION_SIZE);
+
+			if(status<=0)
+				break;
+
+			n_eat_buf->data=eat_buf;
+			n_eat_buf->len=status;
+
+			place_data(eat_bag,n_eat_buf);
+
+			struct network_data* tmp_n_data=flatten_data_bag(eat_bag);
+
+			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len)!=NULL)
+				break;
+		}
+
+		if(status<0)
+		{
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->resume=0;
+
+			if(retries_count<unit_info->max_unit_retries)
+			{
+				retries_count++;
+				unit_info->self_repair=1;
+				unit_info->healing_time=unit_info->unit_retry_sleep_time;
+
+				pthread_mutex_unlock(&unit_info->lock);
+
+				continue;
+			}
+
+			unit_info->err_flag=1;
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+			return NULL;
+		}
+
+		//Parse partial response
+
+		n_eat_buf=flatten_data_bag(eat_bag);
+
+		struct http_response* s_response=parse_http_response(n_eat_buf);
+
+		if(s_response==NULL)
+		{
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->err_flag=1;
+			unit_info->resume=0;
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+			return NULL;
+		}
+
+		// Check for HTTP Response
+
+		if(s_response->status_code[0]!='2')
+		{
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->status_code=atoi(s_response->status_code);
+			unit_info->err_flag=1;
+			unit_info->resume=0;
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+			continue;
+		}
+
+		// Write the over eaten data to file
+
+		FILE* fp=fopen(unit_info->file,"r+");
+
+		if(fp==NULL)
+		{
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->err_flag=1;
+			unit_info->resume=0;
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+			return NULL;
+		}
+
+		pwrite(fileno(fp),s_response->body->data,s_response->body->len,unit_info->range->start);
+
+		pthread_mutex_lock(&unit_info->lock);
+
+		unit_info->current_size=s_response->body->len;
+		unit_info->total_size=unit_info->total_size+s_response->body->len;
+		unit_info->report_size[unit_info->if_id]=unit_info->report_size[unit_info->if_id]+s_response->body->len;
+
+		append_data_pocket(unit_info->unit_ranges,sizeof(long));
+		unit_info->unit_ranges->end->len=sizeof(long);
+		*(long*)unit_info->unit_ranges->end->data=unit_info->range->start;
+
+
+		append_data_pocket(unit_info->unit_ranges,sizeof(long));
+		unit_info->unit_ranges->end->len=sizeof(long);
+		*(long*)unit_info->unit_ranges->end->data=unit_info->range->start+s_response->body->len-1;
+
+		// If range downloaded
+
+		if(unit_info->pc_flag)
+		{
+
+			if(unit_info->current_size>=unit_info->range->end-unit_info->range->start+1)
+			{
+				shutdown(sockfd,SHUT_RDWR);
+				unit_info->resume=0;
+
+				pthread_mutex_unlock(&unit_info->lock);
+
+				continue;
+			}
+
+		}
+
+		pthread_mutex_unlock(&unit_info->lock);
+
+		free(s_response);
+
+		// Download Data...
+
+		char* data_buf=eat_buf;
+
+		while(1)
+		{
+
+			if(unit_info->quit==1)
+				return NULL;
+
+			if(http_flag)
+				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
+			else
+				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
+
+			if(status<=0)
+				break;
+
+			pwrite(fileno(fp),data_buf,status,unit_info->range->start+unit_info->current_size);
+
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->current_size=unit_info->current_size+status;
+			unit_info->total_size=unit_info->total_size+status;
+			unit_info->report_size[unit_info->if_id]=unit_info->report_size[unit_info->if_id]+status;
+			*(long*)unit_info->unit_ranges->end->data=*(long*)unit_info->unit_ranges->end->data+status;
+
+
+			if(unit_info->pc_flag)
+			{
+
+				if(unit_info->current_size>=unit_info->range->end-unit_info->range->start+1)
+				{
+					pthread_mutex_unlock(&unit_info->lock);
+
+					break;
+				}
+
+			}
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+		}
+
+		shutdown(sockfd,SHUT_RDWR);
+
+		if(status<0 || unit_info->current_size < unit_info->range->end-unit_info->range->start+1)
+		{
+			pthread_mutex_lock(&unit_info->lock);
+
+			unit_info->resume=0;
+			unit_info->current_size=0;
+
+			if(retries_count<unit_info->max_unit_retries)
+			{
+				retries_count++;
+				unit_info->self_repair=1;
+				unit_info->healing_time=unit_info->unit_retry_sleep_time;
+				unit_info->range->start=*(long*)unit_info->unit_ranges->end->data+1;
+
+				pthread_mutex_unlock(&unit_info->lock);
+
+				continue;
+			}
+
+			unit_info->err_flag=1;
+
+			pthread_mutex_unlock(&unit_info->lock);
+
+			return NULL;
+		}
+
+		pthread_mutex_lock(&unit_info->lock);
+
+		unit_info->resume=0;
+
+		pthread_mutex_unlock(&unit_info->lock);
+
+	}
+
+	return NULL;
+}
+
+struct unit_info* handle_unit_errors(struct unit_info* unit)
+{
+	pthread_mutex_lock(&unit->lock);
+
+	if(unit->err_flag==0)
+	{
+		pthread_mutex_unlock(&unit->lock);
+		return NULL;
+	}
+
+	if(unit->status_code==503) // Service Temporarily Unavailable
+	{
+		unit->err_flag=0;
+		unit->self_repair=1;
+
+		pthread_mutex_unlock(&unit->lock);
+
+		return NULL;
+	}
+
+	else
+	{
+		pthread_mutex_unlock(&unit->lock);
+		return unit;
+	}
+
+}
+
+struct interface_report* get_interface_report(struct unit_info** units,long units_len,struct network_interface* net_if,long if_len,struct interface_report* prev)
+{
+	if(net_if==NULL || if_len==0)
+		return NULL;
+
+	struct interface_report* if_report=(struct interface_report*)calloc(if_len,sizeof(struct interface_report));
+
+	for(int i=0;i<if_len;i++)
+	{
+
+		if_report[i].if_name=net_if[i].name;
+		if_report[i].if_id=i;
+		if_report[i].time=time(NULL);
+
+		if(prev!=NULL)
+		{
+			long time_spent=if_report[i].time-prev[i].time;
+
+			if(time_spent>0)
+				if_report[i].speed=-prev[i].downloaded/time_spent;
+		}
+
+	}
+
+	long if_id;
+
+	for(int i=0;i<units_len;i++)
+	{
+
+		pthread_mutex_lock(&units[i]->lock);
+
+		if(units[i]->resume==1)
+			if_report[units[i]->if_id].connections=if_report[units[i]->if_id].connections+1;
+
+		pthread_mutex_unlock(&units[i]->lock);
+
+		for(int j=0;j<if_len;j++)
+		{
+			pthread_mutex_lock(&units[i]->lock);
+
+			if_report[j].downloaded=if_report[j].downloaded+units[i]->report_size[j];
+
+			if(prev!=NULL)
+			{
+				long time_spent=if_report[j].time-prev[j].time;
+
+				if(time_spent>0)
+					if_report[j].speed=if_report[j].speed+(units[i]->report_size[j])/time_spent;
+			}
+			else
+			{
+				long time_spent=if_report[j].time-units[i]->start_time;
+
+				if(time_spent>0)
+					if_report[j].speed=if_report[j].speed+(units[i]->report_size[j])/time_spent;
+			}
+
+			pthread_mutex_unlock(&units[i]->lock);
+		}
+
+	}
+
+	return if_report;
+}
+
+struct unit_info* largest_unit(struct unit_info** units,long units_len)
+{
+	if(units==NULL)
+		return NULL;
+
+	struct unit_info* largest=NULL;
+	long current=0;
+
+	for(int i=0;i<units_len;i++)
+	{
+		pthread_mutex_lock(&units[i]->lock);
+
+		if(units[i]->resume==1 && units[i]->range->end - units[i]->range->start + 1 - units[i]->current_size > current)
+		{
+			current=units[i]->range->end - units[i]->range->start + 1 -units[i]->current_size;
+			largest=units[i];
+		}
+
+		pthread_mutex_unlock(&units[i]->lock);
+	}
+
+	return largest;
+}
+
+struct unit_info* idle_unit(struct unit_info** units,long units_len)
+{
+	if(units==NULL)
+		return NULL;
+
+	struct unit_info* err;
+
+	for(long i=0;i<units_len;i++)
+	{
+
+		pthread_mutex_lock(&units[i]->lock);
+
+		if(units [i]->resume==1 || units[i]->self_repair==1)
+		{
+			pthread_mutex_unlock(&units[i]->lock);
+
+			continue;
+		}
+
+		if(units[i]->err_flag==1)
+		{
+			pthread_mutex_unlock(&units[i]->lock);
+
+			err=handle_unit_errors(units[i]);
+
+			if(err==NULL)
+				continue;
+			else
+				return units[i];
+		}
+
+		if(units[i]->resume==0)
+		{
+			pthread_mutex_unlock(&units[i]->lock);
+
+			return units[i];
+		}
+
+		pthread_mutex_unlock(&units[i]->lock);
+	}
+
+	return NULL;
+
+}
+
+long scheduler(struct interface_report* current,struct interface_report* prev,long report_len,long last)
+{
+	return 0;
+}
+
+long suspend_units(struct unit_info** units,long units_len)
+{
+	if(units==NULL)
+		return 0;
+
+	long counter=0;
+
+	for(long i=0;i<units_len;i++)
+	{
+
+		units[i]->quit=1;
+		counter++;
+	}
+
+	for(long i=0;i<units_len;i++)
+	{
+		pthread_join(units[i]->unit_id,NULL);
+	}
+
+	for(long i=0;i<units_len;i++)
+	{
+		pthread_mutex_destroy(&units[i]->lock);
+	}
+
+	return counter;
+}
+
+void* compare_units_progress(void* unit_a,void* unit_b)
+{
+	int* res=(int*)malloc(sizeof(int));
+
+	if(((struct http_range*)unit_a)->start<((struct http_range*)unit_b)->start)
+	{
+		*res=1;
+		return (void*)res;
+	}
+
+	*res=0;
+	return (void*)res;
+}
+
+struct units_progress* merge_units_progress(struct units_progress* progress)
+{
+
+	if(progress==NULL || progress->n_ranges==0 || progress->ranges==NULL)
+		return NULL;
+
+	sort((void*)progress->ranges,sizeof(struct http_range),0,progress->n_ranges-1,compare_units_progress);
+
+	struct data_bag* u_bag=create_data_bag();
+
+	append_data_pocket(u_bag,sizeof(long));
+	u_bag->end->len=sizeof(long);
+	*(long*)u_bag->end->data=progress->ranges[0].start;
+
+	append_data_pocket(u_bag,sizeof(long));
+	u_bag->end->len=sizeof(long);
+	*(long*)u_bag->end->data=progress->ranges[0].end;
+
+	for (long i = 1 ; i < progress->n_ranges; i++)
+	{
+		if (*(long*)u_bag->end->data < progress->ranges[i].start)
+		{
+			append_data_pocket(u_bag,sizeof(long));
+			u_bag->end->len=sizeof(long);
+			*(long*)u_bag->end->data=progress->ranges[i].start;
+
+			append_data_pocket(u_bag,sizeof(long));
+			u_bag->end->len=sizeof(long);
+			*(long*)u_bag->end->data=progress->ranges[i].end;
+
+		}
+
+		else if (*(long*)u_bag->end->data < progress->ranges[i].end)
+		{
+			*(long*)u_bag->end->data = progress->ranges[i].end;
+		}
+	}
+
+	struct units_progress* u_progress=(struct units_progress*)malloc(sizeof(struct units_progress));
+
+	u_progress->ranges=(struct http_range*)flatten_data_bag(u_bag)->data;
+	u_progress->n_ranges=u_bag->n_pockets/2;
+
+	u_progress->content_length=LONG_MIN;
+
+	return u_progress;
+
+}
+
+struct units_progress* actual_progress(struct unit_info** units,long units_len)
+{
+	if(units==NULL || units_len==0 )
+		return NULL;
+
+	struct data_bag* ranges_bag=create_data_bag();
+
+	long ranges_counter=0;
+
+	for(long i=0;i<units_len;i++)
+	{
+		pthread_mutex_lock(&units[i]->lock);
+
+		place_data(ranges_bag,flatten_data_bag(units[i]->unit_ranges));
+		ranges_counter=ranges_counter+units[i]->unit_ranges->n_pockets/2;
+
+		pthread_mutex_unlock(&units[i]->lock);
+
+	}
+
+	struct network_data* n_ranges=flatten_data_bag(ranges_bag);
+
+	if(n_ranges==NULL)
+		return NULL;
+
+	struct units_progress* progress=(struct units_progress*)malloc(sizeof(struct units_progress));
+
+	progress->ranges=(struct http_range*)n_ranges->data;
+	progress->n_ranges=ranges_counter;
+	progress->content_length=LONG_MIN;
+
+	struct units_progress* u_progress=merge_units_progress(progress);
+
+	if(u_progress==NULL || u_progress->ranges==NULL)
+		return NULL;
+
+	long content_length=0;
+
+	for(long i=0;i<u_progress->n_ranges;i++)
+	{
+		content_length=content_length+u_progress->ranges[i].end-u_progress->ranges[i].start+1;
+	}
+
+	u_progress->content_length=content_length;
+
+	return u_progress;
+}
+
+void clear_progress(long count)
+{
+	for(long i=0;i<count;i++)
+	{
+		printf("\n");
+	}
+
+}
+
+void* show_progress(void* s_progress_info)
+{
+
+	struct show_progress_info* p_info=(struct show_progress_info*)s_progress_info;
+
+	long sleep_time;
+	long quit_flag=0;
+
+	char* bar1=(char*)malloc(sizeof(char)*153);
+	memset(bar1,' ',153);
+	bar1[0]='|';
+	bar1[151]='|';
+	bar1[152]='\0';
+
+	char* bar2=(char*)malloc(sizeof(char)*153);
+
+	long bar_status=1;
+	int bar_flag=1;
+	long marker_start;
+	long marker_end;
+
+	while(1)
+	{
+
+		if(quit_flag)
+		{
+			if(p_info->detailed_progress)
+				clear_progress(p_info->report_len+9);
+			else
+				clear_progress(5);
+
+			return NULL;
+		}
+
+		pthread_mutex_lock(&p_info->lock);
+
+		if(p_info->quit==1)
+			quit_flag=1;
+
+		sleep_time=p_info->sleep_time;
+
+		pthread_mutex_unlock(&p_info->lock);
+
+		sleep(sleep_time);
+
+		pthread_mutex_lock(&p_info->lock);
+
+		if(p_info->report==NULL || p_info->progress==NULL)
+		{
+			pthread_mutex_unlock(&p_info->lock);
+
+			continue;
+		}
+
+		long t_conc=0;
+		long t_speed=0;
+		long t_cont=0;
+
+		for(long i=0;i<p_info->report_len;i++)
+		{
+			t_conc=t_conc+p_info->report[i].connections;
+			t_speed=t_speed+p_info->report[i].speed;
+			t_cont=t_cont+p_info->report[i].downloaded;
+		}
+
+		// Progress Status Bar
+
+		if(p_info->content_length==0)
+		{
+
+			memcpy(bar2,bar1,153);
+
+			bar2[bar_status]='+';
+
+			printf("\n");
+			printf("%s",bar2);
+			printf("\n");
+
+			if(bar_flag)
+				bar_status++;
+			else
+				bar_status--;
+
+			if(bar_status==150)
+				bar_flag=0;
+
+			if(bar_status==1)
+				bar_flag=1;
+		}
+		else
+		{
+			memcpy(bar2,bar1,153);
+
+			long marker_eq=p_info->content_length/150;
+
+			for(long i=0;i<p_info->progress->n_ranges;i++)
+			{
+				marker_start=1+p_info->progress->ranges[i].start/marker_eq + (p_info->progress->ranges[i].start%marker_eq == 0 ? 0 : 1 );
+				marker_end=1+p_info->progress->ranges[i].end/marker_eq;
+
+				if(marker_end>150)
+					marker_end=150;
+
+				for(long j=marker_start;j<=marker_end;j++)
+				{
+					bar2[j]='+';
+				}
+			}
+
+			printf("\n");
+			printf("%s",bar2);
+			printf("\n");
+		}
+
+		if(p_info->detailed_progress)
+		{
+			printf("\n");
+
+			for(int i=0;i<152;i++)
+				printf("-");
+
+			printf("\n");
+
+			printf("| %-23s | %-20s | %-26s | %-29s | %-38s |","Network Interface","Interface ID","Number of Connections","Download Speed","Data Fetched");
+			printf("\n");
+
+			for(long i=0;i<p_info->report_len;i++)
+			{
+				printf("| %-23s | %-20ld | %-26ld | %-29s | %-38s |",p_info->report[i].if_name,p_info->report[i].if_id,p_info->report[i].connections,convert_speed(p_info->report[i].speed),convert_data(p_info->report[i].downloaded,0));
+				printf("\n");
+			}
+
+
+			for(int i=0;i<152;i++)
+				printf("-");
+
+			printf("\n");
+		}
+
+		printf("\n\n");
+
+		printf("Total Connections = %-4ld Total Speed = %-13s Total Downloaded = %-34s %40s left",t_conc,convert_speed(t_speed),convert_data(p_info->progress->content_length,p_info->content_length),p_info->content_length==0 ? "unknown" : t_speed==0 ? "inf":convert_time((p_info->content_length-p_info->progress->content_length)/t_speed));
+
+		printf("\n");
+
+		fflush(stdout);
+
+		printf("\r");
+
+		if(p_info->detailed_progress)
+		{
+
+			for(long i=0;i<p_info->report_len;i++)
+			{
+				printf("\e[A");
+			}
+			printf("\e[A\e[A\e[A\e[A");
+		}
+
+		printf("\e[A\e[A\e[A\e[A\e[A");
+
+		pthread_mutex_unlock(&p_info->lock);
+	}
+
+
+}
+
+
+char* convert_speed(long speed)
+{
+	char* speed_str=(char*)malloc(sizeof(char)*30);
+
+	if(speed<1024)
+	{
+		sprintf(speed_str,"%ld B/s",speed);
+	}
+	else if(speed<1024*1024)
+	{
+		sprintf(speed_str,"%.2lf KiB/s",((double)speed)/1024);
+	}
+	else if(speed<1024*1024*1024)
+	{
+		sprintf(speed_str,"%.2lf MiB/s",((double)speed)/(1024*1024));
+	}
+	else
+	{
+		sprintf(speed_str,"%.2lf GiB/s",((double)speed)/(1024*1024*1024));
+	}
+
+	return speed_str;
+}
+
+char* convert_data(long data,long total_data)
+{
+	char* data_str=(char*)malloc(sizeof(char)*66);
+
+	if(data<1024)
+	{
+		if(total_data!=0)
+			sprintf(data_str,"%ld B/%s (%.2lf \%)",data,convert_data(total_data,0),(((double)data)/total_data)*100);
+		else
+			sprintf(data_str,"%ld B",data);
+	}
+	else if(data<1024*1024)
+	{
+		if(total_data!=0)
+			sprintf(data_str,"%.2lf KiB/%s (%.2lf \%)",((double)data)/1024,convert_data(total_data,0),(((double)data)/total_data)*100);
+		else
+			sprintf(data_str,"%.2lf KiB",((double)data)/1024);
+	}
+	else if(data<1024*1024*1024)
+	{
+		if(total_data!=0)
+			sprintf(data_str,"%.2lf MiB/%s (%.2lf \%)",((double)data)/(1024*1024),convert_data(total_data,0),(((double)data)/total_data)*100);
+		else
+			sprintf(data_str,"%.2lf MiB",((double)data)/(1024*1024));
+	}
+	else
+	{
+		if(total_data!=0)
+			sprintf(data_str,"%.2lf GiB/%s (%.2lf \%)",((double)data)/(1024*1024*1024),convert_data(total_data,0),(((double)data)/total_data)*100);
+		else
+			sprintf(data_str,"%.2lf GiB",((double)data)/(1024*1024*1024));
+	}
+
+	return data_str;
+}
+
+char* convert_time(long sec)
+{
+	long min=sec/60;
+	long r_sec=sec%60;
+	long hr=min/60;
+	long r_min=min%60;
+	long day=hr/24;
+	long r_hr=hr%24;
+	long mon=day/30;
+	long r_day=day%30;
+	long yr=mon/30;
+	long r_mon=mon%30;
+
+	char* time_str=(char*)malloc(sizeof(char)*41);
+
+	if(min==0)
+	{
+		sprintf(time_str,"%ld sec",r_sec);
+	}
+	else if(hr==0)
+	{
+		sprintf(time_str,"%ld min:%ld sec",r_min,r_sec);
+	}
+	else if(day==0)
+	{
+		sprintf(time_str,"%ld hr:%ld min:%ld sec",r_hr,r_min,r_sec);
+	}
+	else if(mon==0)
+	{
+		sprintf(time_str,"%ld day:%ld hr:%ld min:%ld sec",r_day,r_hr,r_min,r_sec);
+	}
+	else if(yr==0)
+	{
+		sprintf(time_str,"%ld mon:%ld day:%ld hr:%ld min:%ld sec",r_mon,r_day,r_hr,r_min,r_sec);
+	}
+	else
+	{
+		sprintf(time_str,"%ld yr:%ld mon:%ld day:%ld hr:%ld min:%ld sec",yr,r_mon,r_day,r_hr,r_min,r_sec);
+	}
+
+	return time_str;
+}
+
+
+
+
+
+
+
+
