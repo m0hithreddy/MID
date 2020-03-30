@@ -85,7 +85,7 @@ void* unit(void* info)
 		}
 
 		unit_info->s_request->method="GET";
-
+		unit_info->s_request->te="chunked";
 		pthread_mutex_unlock(&unit_info->lock);
 
 
@@ -268,7 +268,7 @@ void* unit(void* info)
 			continue;
 		}
 
-		// Write the over eaten data to file
+		// Open the file and write the over eaten data and remaining download data to the file
 
 		FILE* fp=fopen(unit_info->file,"r+");
 
@@ -284,72 +284,68 @@ void* unit(void* info)
 			return NULL;
 		}
 
+		char* data_buf=eat_buf;
+		status=s_response->body->len;
 
-		pwrite(fileno(fp),s_response->body->data,s_response->body->len,unit_info->range->start);
-
-		pthread_mutex_lock(&unit_info->lock);
-
-		unit_info->current_size=s_response->body->len;
-		unit_info->total_size=unit_info->total_size+s_response->body->len;
-		unit_info->report_size[unit_info->if_id]=unit_info->report_size[unit_info->if_id]+s_response->body->len;
-
-		append_data_pocket(unit_info->unit_ranges,sizeof(long));
-		unit_info->unit_ranges->end->len=sizeof(long);
-		*(long*)unit_info->unit_ranges->end->data=unit_info->range->start;
-
-
-		append_data_pocket(unit_info->unit_ranges,sizeof(long));
-		unit_info->unit_ranges->end->len=sizeof(long);
-		*(long*)unit_info->unit_ranges->end->data=unit_info->range->start+s_response->body->len-1;
-
-		// If range downloaded
-
-		if(unit_info->pc_flag)
-		{
-
-			if(unit_info->current_size>=unit_info->range->end-unit_info->range->start+1)
-			{
-				shutdown(sockfd,SHUT_RDWR);
-				unit_info->resume=0;
-
-				pthread_mutex_unlock(&unit_info->lock);
-
-				continue;
-			}
-
-		}
-
-		pthread_mutex_unlock(&unit_info->lock);
+		memcpy(data_buf,s_response->body->data,s_response->body->len);
 
 		free(s_response);
 
-		// Download Data...
+		pthread_mutex_lock(&unit_info->lock);
 
-		char* data_buf=eat_buf;
+		append_data_pocket(unit_info->unit_ranges,sizeof(long)); // Creating unit range entry
+		unit_info->unit_ranges->end->len=sizeof(long);
+		*(long*)unit_info->unit_ranges->end->data=unit_info->range->start;
+
+		append_data_pocket(unit_info->unit_ranges,sizeof(long));
+		unit_info->unit_ranges->end->len=sizeof(long);
+		*(long*)unit_info->unit_ranges->end->data=unit_info->range->start-1;
+
+		pthread_mutex_unlock(&unit_info->lock);
+
+		struct encoding_info* en_info=determine_encodings(s_response->transfer_encoding);
+		int en_status;
 
 		while(1)
 		{
 
-			if(unit_info->quit==1)
-				return NULL;
-
-			if(http_flag)
-				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
-			else
-				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
-
-			if(status<=0)
-				break;
-
-			pwrite(fileno(fp),data_buf,status,unit_info->range->start+unit_info->current_size);
-
 			pthread_mutex_lock(&unit_info->lock);
 
-			unit_info->current_size=unit_info->current_size+status;
+			if(unit_info->quit==1)
+			{
+				pthread_mutex_unlock(&unit_info->lock);
+
+				return NULL;
+			}
+
+			en_info->in=data_buf;
+			en_info->in_len=0;
+			en_info->in_max=status;
+
+			while(en_info->in_len!=en_info->in_max)
+			{
+
+				en_status=handle_encodings(en_info);
+
+				if(en_status!=EN_OK && en_status!=EN_END)
+				{
+					unit_info->resume=0;
+					unit_info->current_size=0;
+					unit_info->err_flag=1;
+
+					pthread_mutex_unlock(&unit_info->lock);
+
+					return NULL;
+				}
+
+				pwrite(fileno(fp),en_info->out,en_info->out_len,unit_info->range->start+unit_info->current_size);
+
+				unit_info->current_size=unit_info->current_size+en_info->out_len;
+				*(long*)unit_info->unit_ranges->end->data=*(long*)unit_info->unit_ranges->end->data+en_info->out_len;
+			}
+
 			unit_info->total_size=unit_info->total_size+status;
 			unit_info->report_size[unit_info->if_id]=unit_info->report_size[unit_info->if_id]+status;
-			*(long*)unit_info->unit_ranges->end->data=*(long*)unit_info->unit_ranges->end->data+status;
-
 
 			if(unit_info->pc_flag)
 			{
@@ -364,6 +360,14 @@ void* unit(void* info)
 			}
 
 			pthread_mutex_unlock(&unit_info->lock);
+
+			if(http_flag)
+				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
+			else
+				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
+
+			if(status<=0)
+				break;
 
 		}
 

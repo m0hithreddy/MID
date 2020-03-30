@@ -572,7 +572,7 @@ char* determine_filename(char* path)
 	return fin_name;
 }
 
-void handle_identity_encoding(struct encoding_info* en_info)
+int handle_identity_encoding(struct encoding_info* en_info)
 {
 
 	long copy_size = en_info->out_max < en_info->in_max - en_info->in_len ? en_info->out_max : en_info->in_max - en_info->in_len;
@@ -582,33 +582,159 @@ void handle_identity_encoding(struct encoding_info* en_info)
 	en_info->out_len=copy_size;
 	en_info->in_len=en_info->in_len + copy_size;
 
+	return EN_OK;
+
 }
 
-void handle_chunked_encoding(struct encoding_info* en_info)
+int handle_chunked_encoding(struct encoding_info* en_info)
 {
+	if(en_info->data==NULL) // Encoding state information initialization
+	{
+		en_info->data=calloc(1,sizeof(long)+23*sizeof(char)+sizeof(long)+5*sizeof(int)); // rem_chunk_len + chunk_len_str + str_counter + chunk_len + r1_flag + n1_flag + r2_flag + n2_flag
+
+		((char*)(en_info->data+sizeof(long)))[0]='0';
+		((char*)(en_info->data+sizeof(long)))[1]='X';
+		*((int*)(en_info->data+sizeof(long)+23*sizeof(char)))=2;
+
+	}
+
+	long* rem_chunk_len=(long*)en_info->data;
+	char* chunk_len_str=(char*)(en_info->data+sizeof(long));
+	int* str_counter=(int*)(en_info->data+sizeof(long)+23*sizeof(char));
+	long* chunk_len=(long*)(en_info->data+sizeof(long)+23*sizeof(char)+sizeof(int));
+	int* r1_flag=(int*)(en_info->data+sizeof(long)+23*sizeof(char)+sizeof(int)+sizeof(long));
+	int* n1_flag=(int*)(en_info->data+sizeof(long)+23*sizeof(char)+sizeof(int)+sizeof(long)+sizeof(int));
+	int* r2_flag=(int*)(en_info->data+sizeof(long)+23*sizeof(char)+sizeof(int)+sizeof(long)+2*sizeof(int));
+	int* n2_flag=(int*)(en_info->data+sizeof(long)+23*sizeof(char)+sizeof(int)+sizeof(long)+3*sizeof(int));
+
+	long in_counter=en_info->in_len;
+	en_info->out_len=0;
+
+	if(*r1_flag!=1)
+	{
+		while(en_info->in_len!=en_info->in_max)
+		{
+			if( !( ((char*)en_info->in)[in_counter]=='\r' || ( ((char*)en_info->in)[in_counter] >= '0' && ((char*)en_info->in)[in_counter] <= '9' ) || ( ((char*)en_info->in)[in_counter] >= 'a' && ((char*)en_info->in)[in_counter] <= 'f' ) || ( ((char*)en_info->in)[in_counter] >= 'A' && ((char*)en_info->in)[in_counter] <= 'F' ) ) )
+			{
+				return EN_ERROR;
+			}
+
+			if(((char*)en_info->in)[in_counter]=='\r')
+			{
+				*r1_flag=1;
+				in_counter++;
+				en_info->in_len=en_info->in_len+1;
+
+				break;
+			}
+
+			((char*)chunk_len_str)[*str_counter]=((char*)en_info->in)[in_counter];
+			*str_counter=*str_counter+1;
+			in_counter++;
+			en_info->in_len=en_info->in_len+1;
+		}
+	}
+
+	if(en_info->in_len==en_info->in_max)
+		return EN_OK;
+
+	if(*n1_flag!=1)
+	{
+		if(((char*)en_info->in)[in_counter]!='\n')
+			return EN_ERROR;
+
+		*chunk_len=strtol(chunk_len_str,NULL,16);
+		*rem_chunk_len=*chunk_len;
+
+		*n1_flag=1;
+		in_counter++;
+		en_info->in_len=en_info->in_len+1;
+
+	}
+
+	if(en_info->in_len==en_info->in_max)
+		return EN_OK;
+
+	if(*rem_chunk_len!=0)
+	{
+		long copy_size;
+
+		if(*rem_chunk_len < en_info->in_max-en_info->in_len)
+			copy_size=*rem_chunk_len;
+		else
+			copy_size=en_info->in_max-en_info->in_len;
+
+		if(en_info->out_max < copy_size)
+			copy_size=en_info->out_max;
+
+		memcpy(en_info->out,en_info->in+en_info->in_len,copy_size);
+
+		en_info->out_len=copy_size;
+		en_info->in_len=en_info->in_len+copy_size;
+		*rem_chunk_len=*rem_chunk_len-copy_size;
+		in_counter=in_counter+copy_size;
+	}
+
+	if(en_info->in_len==en_info->in_max)
+		return EN_OK;
+
+	if(*r2_flag!=1)
+	{
+		if(((char*)en_info->in)[in_counter]!='\r')
+			return EN_ERROR;
+
+		*r2_flag=1;
+		in_counter++;
+		en_info->in_len=en_info->in_len+1;
+	}
+
+	if(en_info->in_len==en_info->in_max)
+		return EN_OK;
+
+	if(*n2_flag!=1)
+	{
+		if(((char*)en_info->in)[in_counter]!='\n')
+			return EN_ERROR;
+
+		*n2_flag=1;
+		in_counter++;
+		en_info->in_len=en_info->in_len+1;
+	}
+
+	if(*chunk_len==0)
+		return EN_END;
+	else
+	{
+		*r1_flag=0;
+		*n1_flag=0;
+		*r2_flag=0;
+		*n2_flag=0;
+		*str_counter=2;
+		memset(chunk_len_str+*str_counter,0,21);
+	}
+
+	return EN_OK;
 
 }
 
-void handle_encodings(struct encoding_info* en_info)
+int handle_encodings(struct encoding_info* en_info)
 {
 	if(en_info->encoding == IDENTITY_ENCODING )
 	{
-		handle_identity_encoding(en_info);
+		return handle_identity_encoding(en_info);
 	}
 	else if(en_info->encoding == CHUNKED_ENCODING )
 	{
-		handle_chunked_encoding(en_info);
+		return handle_chunked_encoding(en_info);
 	}
+
+	return EN_UNKNOWN;
 }
 
-struct encoding_info* determine_transfer_encodings(struct http_response* s_response)
+struct encoding_info* determine_encodings(char* encoding_str)
 {
-	if(s_response == NULL)
-	{
-		return NULL;
-	}
 
-	if(s_response->transfer_encoding == NULL || !strcmp(s_response->transfer_encoding,"identity") )
+	if(encoding_str == NULL || !strcmp(encoding_str,"identity") )
 	{
 		struct encoding_info* en_info=(struct encoding_info*)calloc(1,sizeof(struct encoding_info));
 
@@ -624,7 +750,7 @@ struct encoding_info* determine_transfer_encodings(struct http_response* s_respo
 		return en_info;
 	}
 
-	else if(!strcmp(s_response->transfer_encoding,"chunked"))
+	else if(!strcmp(encoding_str,"chunked"))
 	{
 		struct encoding_info* en_info=(struct encoding_info*)calloc(1,sizeof(struct encoding_info));
 
