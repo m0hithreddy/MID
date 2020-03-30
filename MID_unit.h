@@ -18,6 +18,7 @@
 #define MAX_UNIT_RETRIES 3
 #define UNIT_RETRY_SLEEP_TIME 5
 #define PROGRESS_UPDATE_TIME 1
+#define SCHEDULER_DEFAULT_SLEEP_TIME 2
 
 #include"MID_http.h"
 #include"MID_socket.h"
@@ -85,6 +86,17 @@ struct show_progress_info
 	int detailed_progress;
 };
 
+struct scheduler_info
+{
+	struct interface_report* prev;
+	struct interface_report* current;
+	char* ifs;
+	long ifs_len;
+	long sleep_time;
+	long prev_sch_id;
+	long max_parallel_downloads;
+};
+
 void* unit(void* info);
 
 struct unit_info* handle_unit_errors(struct unit_info* unit);
@@ -95,7 +107,7 @@ struct unit_info* largest_unit(struct unit_info** units,long units_len);
 
 struct unit_info* idle_unit(struct unit_info** units,long units_len);
 
-long scheduler(struct interface_report* current,struct interface_report* prev,long report_len,long last);
+long scheduler(struct scheduler_info* sch_info,long if_id);
 
 long suspend_units(struct unit_info** units,long units_len);
 

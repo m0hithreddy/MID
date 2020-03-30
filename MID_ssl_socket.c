@@ -11,13 +11,13 @@
 #include<openssl/ssl.h>
 #include<openssl/err.h>
 
-SSL* ssl_open_connection(int sockfd)
+SSL* ssl_open_connection(int sockfd,char* hostname)
 {
 	SSL_library_init();
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
 
-	SSL_METHOD* method=TLS_client_method();
+	const SSL_METHOD* method=TLS_method();
 
 	SSL_CTX* ctx=SSL_CTX_new(method);
 
@@ -28,8 +28,13 @@ SSL* ssl_open_connection(int sockfd)
 
 	SSL_set_fd(ssl,sockfd);
 
+	if(hostname!=NULL)
+		SSL_set_tlsext_host_name(ssl, hostname);
+
 	if(SSL_connect(ssl)<0)
+	{
 		return NULL;
+	}
 
 	return ssl;
 }

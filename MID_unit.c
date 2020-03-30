@@ -85,7 +85,7 @@ void* unit(void* info)
 		}
 
 		unit_info->s_request->method="GET";
-		unit_info->s_request->te="chunked";
+
 		pthread_mutex_unlock(&unit_info->lock);
 
 
@@ -144,12 +144,12 @@ void* unit(void* info)
 		if(!strcmp(purl->scheme,"http"))
 		{
 			http_flag=1;
-			send_http_request(sockfd,request,JUST_SEND);
+			send_http_request(sockfd,request,NULL,JUST_SEND);
 		}
 		else
 		{
 			http_flag=0;
-			ssl=(SSL*)send_https_request(sockfd,request,JUST_SEND);
+			ssl=(SSL*)send_https_request(sockfd,request,purl->host,JUST_SEND);
 
 			if(ssl==NULL)
 			{
@@ -572,8 +572,34 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 
 }
 
-long scheduler(struct interface_report* current,struct interface_report* prev,long report_len,long last)
+long scheduler(struct scheduler_info* sch_info,long if_id)
 {
+	return 0;
+
+	sch_info->prev_sch_id=-1;
+	sch_info->sleep_time=SCHEDULER_DEFAULT_SLEEP_TIME;
+
+	if(sch_info->current==NULL || sch_info->ifs_len<=0 || sch_info->ifs==NULL )
+		return -1;
+
+	long t_conn=0;
+	long p_t_conn=0;
+
+	for(long i=0;i<sch_info->ifs_len;i++)
+	{
+		t_conn=t_conn+sch_info->current[i].connections;
+		p_t_conn=p_t_conn+sch_info->prev[i].connections;
+	}
+
+	if(t_conn >= sch_info->max_parallel_downloads)
+		return -1;
+
+	if(sch_info->prev==NULL) // First scheduling decision
+	{
+		sch_info->prev_sch_id=0;
+		return 0;
+	}
+
 	return 0;
 }
 

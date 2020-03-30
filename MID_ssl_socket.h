@@ -12,7 +12,7 @@
 #include<openssl/ssl.h>
 #include<openssl/err.h>
 
-SSL* ssl_open_connection(int sockfd);
+SSL* ssl_open_connection(int sockfd,char* hostname);
 
 int ssl_sock_write(SSL* ssl,struct network_data* n_data);
 

@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 
 	if( !args->surpass_root_check && getuid()!=0 && geteuid()!=0)
 	{
-		mid_help("MID: SO_BINDTODEVICE socket-option is used to bind to an interface, which requires root permissions and CAP_NET_RAW capability. If you believe the current UID is having the sufficient permissions then try using --surpass-root-check flag");
+		mid_help("\nMID: SO_BINDTODEVICE socket-option is used to bind to an interface, which requires root permissions and CAP_NET_RAW capability. If you believe the current UID is having the sufficient permissions then try using --surpass-root-check flag");
 	}
 
 	//Parse the URL
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 	if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"MID: Not a HTTP or HTTPS URL\nExiting...\n\n");
+			fprintf(stderr,"\nMID: Not a HTTP or HTTPS URL\nExiting...\n\n");
 
 		exit(1);
 	}
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 	if(hostip==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"MID: Unable to find the IPV4 address of %s\nExiting...\n\n",purl->host);
+			fprintf(stderr,"\nMID: Unable to find the IPV4 address of %s\nExiting...\n\n",purl->host);
 
 		exit(1);
 	}
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 	if(net_if[0]==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"MID: No network-interface found for downloading\nExiting...\n\n");
+			fprintf(stderr,"\nMID: No network-interface found for downloading\nExiting...\n\n");
 
 		exit(1);
 	}
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
 	if(servaddr==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"MID: Error Checking partial content support\nExiting...\n\n");
+			fprintf(stderr,"\nMID: Error Checking partial content support\nExiting...\n\n");
 
 		exit(1);
 	}
@@ -190,9 +190,9 @@ int main(int argc, char **argv) {
 		struct network_data *response;
 
 		if(!strcmp(purl->scheme,"http"))
-			response=send_http_request(sockfd,request,0);
+			response=send_http_request(sockfd,request,NULL,0);
 		else
-			response=send_https_request(sockfd,request,0);
+			response=send_https_request(sockfd,request,purl->host,0);
 
 		close(sockfd);
 
@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
 	if(gl_s_response==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"MID: Error reading server response\nExiting...\n\n");
+			fprintf(stderr,"\nMID: Error reading server response\nExiting...\n\n");
 
 		exit(1);
 	}
@@ -251,21 +251,21 @@ int main(int argc, char **argv) {
 		if(gl_s_response->status_code[0]=='4')
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"MID: Client Side Error, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+				fprintf(stderr,"\nMID: Client Side Error, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 
 			exit(1);
 		}
 		else if(gl_s_response->status_code[0]=='5')
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"MID: Server Side Error, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+				fprintf(stderr,"\nMID: Server Side Error, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 
 			exit(1);
 		}
 		else if(gl_s_response->status_code[0]!='2')
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"MID: Unknown error reported by server, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+				fprintf(stderr,"\nMID: Unknown error reported by server, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 
 			exit(1);
 		}
@@ -289,7 +289,7 @@ int main(int argc, char **argv) {
 	if(net_if_data==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"MID: No suitable network-interface found for downloading\nExiting...\n\n");
+			fprintf(stderr,"\nMID: No suitable network-interface found for downloading\nExiting...\n\n");
 
 		exit(1);
 	}
@@ -312,7 +312,7 @@ int main(int argc, char **argv) {
 	if(ok_net_if_len==0)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"MID: No suitable network-interface found for downloading\nExiting...\n\n");
+			fprintf(stderr,"\nMID: No suitable network-interface found for downloading\nExiting...\n\n");
 
 		exit(1);
 	}
@@ -548,18 +548,7 @@ int main(int argc, char **argv) {
 			if(downloaded_length==content_length) // Download complete
 				break;
 
-			if(!args->quiet_flag)
-			{
-				pthread_mutex_lock(&s_progress_info->lock);
-
-				s_progress_info->report=current;
-				s_progress_info->progress=progress;
-
-				pthread_mutex_unlock(&s_progress_info->lock);
-
-			}
-
-			if_id=scheduler(current,prev,ok_net_if_len,if_id);
+			if_id=scheduler(NULL,if_id);
 			prev=current;
 
 			if(if_id<0)
@@ -683,7 +672,7 @@ int main(int argc, char **argv) {
 
 	if(err!=NULL)
 	{
-		fprintf(stderr,"MID: Error downloading chunk\nExiting...\n\n");
+		fprintf(stderr,"\nMID: Error downloading chunk\nExiting...\n\n");
 	}
 
 

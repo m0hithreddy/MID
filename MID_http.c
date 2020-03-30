@@ -318,7 +318,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 }
 
-void* send_http_request(int sockfd,struct network_data* request,int flag)
+void* send_http_request(int sockfd,struct network_data* request,char* hostname,int flag)
 {
 	if(request==NULL)
 		return NULL;
@@ -351,16 +351,16 @@ void* send_http_request(int sockfd,struct network_data* request,int flag)
 	return NULL;
 }
 
-void* send_https_request(int sockfd,struct network_data* request,int flag)
+void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag)
 {
 
 	if(sockfd<0)
 		return NULL;
 
-	SSL* ssl=ssl_open_connection(sockfd);
+	SSL* ssl=ssl_open_connection(sockfd,hostname);
 
 	if(ssl==NULL)
-		return 0;
+		return NULL;
 
 	if(ssl_sock_write(ssl,request)!=request->len)
 	{
@@ -484,12 +484,15 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 
 		if(!strcmp(purl->scheme,"http"))
 		{
-			response=(struct network_data*)send_http_request(sockfd,request,0);
+			response=(struct network_data*)send_http_request(sockfd,request,NULL,0);
 		}
 		else
 		{
-			response=(struct network_data*)send_https_request(sockfd,request,0);
+			response=(struct network_data*)send_https_request(sockfd,request,purl->host,0);
 		}
+
+		if(response==NULL)
+			return NULL;
 
 		if(args->vverbose_flag && !args->quiet_flag)
 		{

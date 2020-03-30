@@ -159,9 +159,9 @@ struct network_data* create_http_request(struct http_request* s_request);
 
 struct http_response* parse_http_response(struct network_data *response);
 
-void* send_http_request(int sockfd,struct network_data* request,int flag);
+void* send_http_request(int sockfd,struct network_data* request,char* hostname,int flag);
 
-void* send_https_request(int sockfd,struct network_data* request,int flag);
+void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag);
 
 void* follow_redirects(struct http_request* c_s_request,struct network_data* response,long max_redirects,struct socket_info* cli_info,int flag);
 
