@@ -77,9 +77,9 @@ struct show_progress_info
 {
 	pthread_t tid;
 	pthread_mutex_t lock;
-	struct interface_report* report;
-	long report_len;
-	struct units_progress* progress;
+	struct data_bag* units_bag;
+	struct network_interface* ifs;
+	long ifs_len;
 	long content_length;
 	long sleep_time;
 	int quit;
@@ -90,10 +90,10 @@ struct scheduler_info
 {
 	struct interface_report* prev;
 	struct interface_report* current;
-	char* ifs;
+	struct network_interface* ifs;
 	long ifs_len;
 	long sleep_time;
-	long prev_sch_id;
+	long sch_id;
 	long max_parallel_downloads;
 };
 
@@ -107,7 +107,7 @@ struct unit_info* largest_unit(struct unit_info** units,long units_len);
 
 struct unit_info* idle_unit(struct unit_info** units,long units_len);
 
-long scheduler(struct scheduler_info* sch_info,long if_id);
+void scheduler(struct scheduler_info* sch_info);
 
 long suspend_units(struct unit_info** units,long units_len);
 

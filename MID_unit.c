@@ -572,15 +572,16 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 
 }
 
-long scheduler(struct scheduler_info* sch_info,long if_id)
+void scheduler(struct scheduler_info* sch_info)
 {
-	return 0;
 
-	sch_info->prev_sch_id=-1;
 	sch_info->sleep_time=SCHEDULER_DEFAULT_SLEEP_TIME;
 
-	if(sch_info->current==NULL || sch_info->ifs_len<=0 || sch_info->ifs==NULL )
-		return -1;
+	if( sch_info->current==NULL || sch_info->ifs==NULL || sch_info->ifs_len<=0 )
+	{
+		sch_info->sch_id=-1;
+		return;
+	}
 
 	long t_conn=0;
 	long p_t_conn=0;
@@ -592,15 +593,20 @@ long scheduler(struct scheduler_info* sch_info,long if_id)
 	}
 
 	if(t_conn >= sch_info->max_parallel_downloads)
-		return -1;
-
-	if(sch_info->prev==NULL) // First scheduling decision
 	{
-		sch_info->prev_sch_id=0;
-		return 0;
+		sch_info->sch_id=-1;
+		return;
 	}
 
-	return 0;
+	if(sch_info->prev==NULL || sch_info->sch_id==-1) // First scheduling decision ||  recovering from errors
+	{
+		sch_info->sch_id=0;
+		return;
+	}
+
+	sch_info->sch_id=0;
+
+
 }
 
 long suspend_units(struct unit_info** units,long units_len)
@@ -755,6 +761,13 @@ void* show_progress(void* s_progress_info)
 
 	struct show_progress_info* p_info=(struct show_progress_info*)s_progress_info;
 
+	struct interface_report* current=NULL;
+	struct interface_report* prev=NULL;
+	struct units_progress* progress=NULL;
+	struct unit_info** units=NULL;
+	long units_len=0;
+	long ifs_len=0;
+
 	long sleep_time;
 	long quit_flag=0;
 
@@ -777,7 +790,7 @@ void* show_progress(void* s_progress_info)
 		if(quit_flag)
 		{
 			if(p_info->detailed_progress)
-				clear_progress_display(p_info->report_len+9);
+				clear_progress_display(ifs_len+9);
 			else
 				clear_progress_display(5);
 
@@ -797,10 +810,18 @@ void* show_progress(void* s_progress_info)
 
 		pthread_mutex_lock(&p_info->lock);
 
-		if(p_info->report==NULL || p_info->progress==NULL)
-		{
-			pthread_mutex_unlock(&p_info->lock);
+		units=(struct unit_info**)flatten_data_bag(p_info->units_bag)->data;
+		units_len=p_info->units_bag->n_pockets;
 
+		current=get_interface_report(units, units_len, p_info->ifs, p_info->ifs_len, prev);
+		progress=actual_progress(units, units_len);
+		ifs_len=p_info->ifs_len;
+		prev=current;
+
+		pthread_mutex_unlock(&p_info->lock);
+
+		if(current==NULL || progress==NULL)
+		{
 			continue;
 		}
 
@@ -808,11 +829,11 @@ void* show_progress(void* s_progress_info)
 		long t_speed=0;
 		long t_cont=0;
 
-		for(long i=0;i<p_info->report_len;i++)
+		for(long i=0;i<ifs_len;i++)
 		{
-			t_conc=t_conc+p_info->report[i].connections;
-			t_speed=t_speed+p_info->report[i].speed;
-			t_cont=t_cont+p_info->report[i].downloaded;
+			t_conc=t_conc+current[i].connections;
+			t_speed=t_speed+current[i].speed;
+			t_cont=t_cont+current[i].downloaded;
 		}
 
 		// Progress Status Bar
@@ -845,10 +866,10 @@ void* show_progress(void* s_progress_info)
 
 			long marker_eq=p_info->content_length/150;
 
-			for(long i=0;i<p_info->progress->n_ranges;i++)
+			for(long i=0;i<progress->n_ranges;i++)
 			{
-				marker_start=1+p_info->progress->ranges[i].start/marker_eq + (p_info->progress->ranges[i].start%marker_eq == 0 ? 0 : 1 );
-				marker_end=1+p_info->progress->ranges[i].end/marker_eq;
+				marker_start=1+progress->ranges[i].start/marker_eq + (progress->ranges[i].start%marker_eq == 0 ? 0 : 1 );
+				marker_end=1+progress->ranges[i].end/marker_eq;
 
 				if(marker_end>150)
 					marker_end=150;
@@ -876,9 +897,9 @@ void* show_progress(void* s_progress_info)
 			printf("| %-23s | %-20s | %-26s | %-29s | %-38s |","Network Interface","Interface ID","Number of Connections","Download Speed","Data Fetched");
 			printf("\n");
 
-			for(long i=0;i<p_info->report_len;i++)
+			for(long i=0;i<ifs_len;i++)
 			{
-				printf("| %-23s | %-20ld | %-26ld | %-29s | %-38s |",p_info->report[i].if_name,p_info->report[i].if_id,p_info->report[i].connections,convert_speed(p_info->report[i].speed),convert_data(p_info->report[i].downloaded,0));
+				printf("| %-23s | %-20ld | %-26ld | %-29s | %-38s |",current[i].if_name,current[i].if_id,current[i].connections,convert_speed(current[i].speed),convert_data(current[i].downloaded,0));
 				printf("\n");
 			}
 
@@ -891,7 +912,7 @@ void* show_progress(void* s_progress_info)
 
 		printf("\n\n");
 
-		printf("Total Connections = %-4ld Total Speed = %-13s Total Downloaded = %-34s %40s left",t_conc,convert_speed(t_speed),convert_data(p_info->progress->content_length,p_info->content_length),p_info->content_length==0 ? "unknown" : t_speed==0 ? "inf":convert_time((p_info->content_length-p_info->progress->content_length)/t_speed));
+		printf("Total Connections = %-4ld Total Speed = %-13s Total Downloaded = %-34s %40s left",t_conc,convert_speed(t_speed),convert_data(progress->content_length,p_info->content_length),p_info->content_length==0 ? "unknown" : t_speed==0 ? "inf":convert_time((p_info->content_length-progress->content_length)/t_speed));
 
 		printf("\n");
 
@@ -902,7 +923,7 @@ void* show_progress(void* s_progress_info)
 		if(p_info->detailed_progress)
 		{
 
-			for(long i=0;i<p_info->report_len;i++)
+			for(long i=0;i<ifs_len;i++)
 			{
 				printf("\e[A");
 			}

@@ -390,23 +390,7 @@ int main(int argc, char **argv) {
 
 	fclose(fopen(base_unit_info->file,"w"));
 
-	// Creating thread for Progress Display;
 
-	struct show_progress_info* s_progress_info=(struct show_progress_info*)malloc(sizeof(struct show_progress_info));
-
-	if(!args->quiet_flag)
-	{
-		s_progress_info->report=NULL;
-		s_progress_info->report_len=ok_net_if_len;
-		s_progress_info->progress=NULL;
-		s_progress_info->content_length=0;
-		s_progress_info->sleep_time=args->progress_update_time;
-		s_progress_info->quit=0;
-		s_progress_info->detailed_progress=args->detailed_progress;
-
-		pthread_mutex_init(&s_progress_info->lock, NULL);
-		pthread_create(&s_progress_info->tid,NULL,show_progress,(void*)s_progress_info);
-	}
 
 	// Initiating download
 
@@ -422,6 +406,24 @@ int main(int argc, char **argv) {
 	time_t start_time=time(NULL);
 	long downloaded_length=0;
 	long content_length=0;
+
+	// Creating thread for Progress Display;
+
+	struct show_progress_info* s_progress_info=(struct show_progress_info*)malloc(sizeof(struct show_progress_info));
+
+	if(!args->quiet_flag)
+	{
+		s_progress_info->units_bag=units_bag;
+		s_progress_info->ifs=ok_net_if;
+		s_progress_info->ifs_len=ok_net_if_len;
+		s_progress_info->content_length=content_length;
+		s_progress_info->sleep_time=args->progress_update_time;
+		s_progress_info->quit=0;
+		s_progress_info->detailed_progress=args->detailed_progress;
+
+		pthread_mutex_init(&s_progress_info->lock, NULL);
+		pthread_create(&s_progress_info->tid,NULL,show_progress,(void*)s_progress_info);
+	}
 
 	if(pc_flag==0) // If range requests are not supported
 	{
@@ -444,16 +446,6 @@ int main(int argc, char **argv) {
 			prev=current;
 
 			progress=actual_progress(units, units_len);
-
-			if(!args->quiet_flag)
-			{
-				pthread_mutex_lock(&s_progress_info->lock);
-
-				s_progress_info->report=current;
-				s_progress_info->progress=progress;
-
-				pthread_mutex_unlock(&s_progress_info->lock);
-			}
 
 			idle=idle_unit(units,units_len);
 
@@ -518,6 +510,15 @@ int main(int argc, char **argv) {
 		long sleep_time=MIN_SCHED_SLEEP_TIME;
 		long max_parallel_downloads=args->max_parallel_downloads;
 
+		struct scheduler_info* sch_info=(struct scheduler_info*)calloc(1,sizeof(struct scheduler_info));
+
+		sch_info->prev=NULL;
+		sch_info->current=NULL;
+		sch_info->ifs=ok_net_if;
+		sch_info->ifs_len=ok_net_if_len;
+		sch_info->max_parallel_downloads=max_parallel_downloads;
+		sch_info->sch_id=0;
+		sch_info->sleep_time=0;
 
 		while(1)
 		{
@@ -529,17 +530,6 @@ int main(int argc, char **argv) {
 
 			progress=actual_progress(units, units_len);
 
-			if(!args->quiet_flag)
-			{
-				pthread_mutex_lock(&s_progress_info->lock);
-
-				s_progress_info->report=current;
-				s_progress_info->progress=progress;
-
-				pthread_mutex_unlock(&s_progress_info->lock);
-
-			}
-
 			if(progress!=NULL)
 			{
 				downloaded_length=progress->content_length;
@@ -548,7 +538,12 @@ int main(int argc, char **argv) {
 			if(downloaded_length==content_length) // Download complete
 				break;
 
-			if_id=scheduler(NULL,if_id);
+			sch_info->prev=prev;
+			sch_info->current=current;
+
+			scheduler(sch_info);
+			if_id=sch_info->sch_id;
+
 			prev=current;
 
 			if(if_id<0)
@@ -636,7 +631,13 @@ int main(int argc, char **argv) {
 				n_unit->data=(void*)&update;
 				n_unit->len=sizeof(struct unit_info*);
 
+				if(!args->quiet_flag)
+					pthread_mutex_lock(&s_progress_info->lock);
+
 				place_data(units_bag,n_unit);
+
+				if(!args->quiet_flag)
+					pthread_mutex_unlock(&s_progress_info->lock);
 
 				update=NULL;
 			}
