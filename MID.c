@@ -469,7 +469,7 @@ int main(int argc, char **argv) {
 		content_length=atol(gl_s_response->content_length);
 		s_progress_info->content_length=content_length;
 
-		//Initiating the first partial request
+		//Initiating the first range request
 
 		struct unit_info* unit_info=(struct unit_info*)malloc(sizeof(struct unit_info));
 		memcpy(unit_info,base_unit_info,sizeof(struct unit_info));
@@ -506,25 +506,30 @@ int main(int argc, char **argv) {
 		long if_id=0;
 		struct unit_info* largest=NULL;
 		struct unit_info* update=NULL;
+		struct unit_info* new=NULL;
 
 		long sleep_time=MIN_SCHED_SLEEP_TIME;
 		long max_parallel_downloads=args->max_parallel_downloads;
 
 		struct scheduler_info* sch_info=(struct scheduler_info*)calloc(1,sizeof(struct scheduler_info));
 
-		sch_info->prev=NULL;
 		sch_info->current=NULL;
 		sch_info->ifs=ok_net_if;
 		sch_info->ifs_len=ok_net_if_len;
+		sch_info->max_speed=(long*)calloc(ok_net_if_len,sizeof(long));
+		sch_info->max_connections=(long*)calloc(ok_net_if_len,sizeof(long));
 		sch_info->max_parallel_downloads=max_parallel_downloads;
 		sch_info->sch_id=0;
-		sch_info->sleep_time=0;
+		sch_info->sleep_time=SCHEDULER_DEFAULT_SLEEP_TIME;
+		sch_info->probing_done=0;
 
 		while(1)
 		{
 
 			units=(struct unit_info**)flatten_data_bag(units_bag)->data;
 			units_len=units_bag->n_pockets;
+
+			sleep(sch_info->sleep_time);
 
 			current=get_interface_report(units,units_len,ok_net_if,ok_net_if_len,prev);
 
@@ -538,56 +543,51 @@ int main(int argc, char **argv) {
 			if(downloaded_length==content_length) // Download complete
 				break;
 
-			sch_info->prev=prev;
 			sch_info->current=current;
 
 			scheduler(sch_info);
+
 			if_id=sch_info->sch_id;
 
 			prev=current;
 
 			if(if_id<0)
 			{
-				sleep(sleep_time);
-
-				sleep_time++;
-				if(sleep_time>MAX_SCHED_SLEEP_TIME)
-					sleep_time=MIN_SCHED_SLEEP_TIME;
-
 				continue;
-			}
-			else
-			{
-				sleep(1);
-				sleep_time=MIN_SCHED_SLEEP_TIME;
 			}
 
 			idle=idle_unit(units,units_len);
 
-			if(idle==NULL && update==NULL)
+			if(idle==NULL && new==NULL)
 			{
 				if(units_bag->n_pockets>=max_parallel_downloads)
 					continue;
 
-				update=(struct unit_info*)malloc(sizeof(struct unit_info));
-				memcpy(update,base_unit_info,sizeof(struct unit_info));
+				new=(struct unit_info*)malloc(sizeof(struct unit_info));
+				memcpy(new,base_unit_info,sizeof(struct unit_info));
 
-				update->pc_flag=1;
-				update->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
+				new->pc_flag=1;
+				new->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
 
-				update->cli_info=(struct socket_info*)malloc(sizeof(struct socket_info));
-				memcpy(update->cli_info,base_socket_info,sizeof(struct socket_info));
+				new->cli_info=(struct socket_info*)malloc(sizeof(struct socket_info));
+				memcpy(new->cli_info,base_socket_info,sizeof(struct socket_info));
 
-				update->cli_info->sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*2);
-				memcpy(update->cli_info->sock_opts,base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
+				new->cli_info->sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*2);
+				memcpy(new->cli_info->sock_opts,base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
 
-				update->s_request=(struct http_request*)malloc(sizeof(struct http_request));
-				memcpy(update->s_request,gl_s_request,sizeof(struct http_request));
+				new->s_request=(struct http_request*)malloc(sizeof(struct http_request));
+				memcpy(new->s_request,gl_s_request,sizeof(struct http_request));
 
-				update->range=(struct http_range*)malloc(sizeof(struct http_range));
+				new->range=(struct http_range*)malloc(sizeof(struct http_range));
 
-				update->unit_ranges=create_data_bag();
+				new->unit_ranges=create_data_bag();
 
+				update=new;
+
+			}
+			else if(idle==NULL && new!=NULL)
+			{
+				update=new;
 			}
 			else
 			{
@@ -639,12 +639,11 @@ int main(int argc, char **argv) {
 				if(!args->quiet_flag)
 					pthread_mutex_unlock(&s_progress_info->lock);
 
-				update=NULL;
+				new=NULL;
 			}
 			else
 			{
 				update->resume=1;
-				update=NULL;
 			}
 		}
 	}

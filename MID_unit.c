@@ -584,29 +584,79 @@ void scheduler(struct scheduler_info* sch_info)
 	}
 
 	long t_conn=0;
-	long p_t_conn=0;
 
 	for(long i=0;i<sch_info->ifs_len;i++)
 	{
 		t_conn=t_conn+sch_info->current[i].connections;
-		p_t_conn=p_t_conn+sch_info->prev[i].connections;
 	}
 
 	if(t_conn >= sch_info->max_parallel_downloads)
 	{
 		sch_info->sch_id=-1;
-		return;
+		goto maxs_update;
 	}
 
-	if(sch_info->prev==NULL || sch_info->sch_id==-1) // First scheduling decision ||  recovering from errors
+	if(!sch_info->probing_done && sch_info->sch_id==-1) // First scheduling decision
 	{
 		sch_info->sch_id=0;
-		return;
+		goto maxs_update;
 	}
 
-	sch_info->sch_id=0;
+	if(!sch_info->probing_done)
+	{
+		long sch_id=sch_info->sch_id;
 
+		if( 2*sch_info->max_speed[sch_id] <= sch_info->current[sch_id].speed || sch_info->max_speed[sch_id] + SCHEDULER_THRESHOLD_SPEED <= sch_info->current[sch_id].speed )
+		{
+			goto maxs_update;
+		}
+		else
+		{
+			sch_id++;
 
+			if(sch_id<sch_info->ifs_len)
+				sch_info->sch_id=sch_id;
+			else
+			{
+				sch_info->sch_id=-1;
+				sch_info->probing_done=1;
+			}
+
+			goto maxs_update;
+		}
+	}
+	else
+	{
+
+		for(long i=0;i<sch_info->ifs_len;i++)
+		{
+			if( sch_info->current[i].speed +SCHEDULER_THRESHOLD_SPEED < sch_info->max_speed[i] && sch_info->current[i].connections <= sch_info->max_connections[i])
+			{
+				sch_info->sch_id=i;
+
+				goto maxs_update;
+			}
+		}
+
+		sch_info->sch_id=-1;
+
+		goto maxs_update;
+	}
+
+	maxs_update:
+
+	for(long i=0;i<sch_info->ifs_len;i++)
+	{
+		if(sch_info->max_speed[i] < sch_info->current[i].speed)
+		{
+			sch_info->max_speed[i]=sch_info->current[i].speed;
+
+			if(sch_info->max_connections[i] < sch_info->current[i].connections)
+				sch_info->max_connections[i]=sch_info->current[i].connections;
+		}
+	}
+
+	return;
 }
 
 long suspend_units(struct unit_info** units,long units_len)
@@ -747,7 +797,7 @@ struct units_progress* actual_progress(struct unit_info** units,long units_len)
 	return u_progress;
 }
 
-void clear_progress_display(long count)
+void skip_progress_display(long count)
 {
 	for(long i=0;i<count;i++)
 	{
@@ -790,9 +840,9 @@ void* show_progress(void* s_progress_info)
 		if(quit_flag)
 		{
 			if(p_info->detailed_progress)
-				clear_progress_display(ifs_len+9);
+				skip_progress_display(ifs_len+9);
 			else
-				clear_progress_display(5);
+				skip_progress_display(5);
 
 			return NULL;
 		}
