@@ -8,8 +8,9 @@ config.log
 config.h.in
 configure
 .settings
-Makefile.in
+*Makefile.in
 config.status
 config.h.in~
 stamp*
 config.h
+*Makefile
