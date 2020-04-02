@@ -10,6 +10,7 @@
 #include"MID_structures.h"
 #include<openssl/ssl.h>
 #include<openssl/err.h>
+#include<openssl/evp.h>
 
 SSL* ssl_open_connection(int sockfd,char* hostname)
 {

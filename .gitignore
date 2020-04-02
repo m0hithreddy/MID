@@ -1,4 +1,15 @@
-TODO
 .cproject
 .project
-build/
+.autotools
+aclocal.m4
+autom4te.cache
+build-aux
+config.log
+config.h.in
+configure
+.settings
+Makefile.in
+config.status
+config.h.in~
+stamp*
+config.h

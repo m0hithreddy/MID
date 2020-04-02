@@ -508,7 +508,7 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 	}
 
 
-	// Do as caller requested
+	// Return values as caller requested
 
 	if(flag==RETURN_RESPONSE)
 		return (void*)response;
