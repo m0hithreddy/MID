@@ -14,3 +14,7 @@ config.h.in~
 stamp*
 config.h
 *Makefile
+*.o
+*.deps
+*.dirstamp
+*MID
