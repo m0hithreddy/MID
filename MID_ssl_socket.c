@@ -29,7 +29,7 @@ SSL* ssl_open_connection(int sockfd,char* hostname)
 	SSL_set_fd(ssl,sockfd);
 
 	if(hostname!=NULL)
-		SSL_set_tlsext_host_name(ssl, hostname);
+		SSL_set_tlsext_host_name(ssl, hostname); // Host used during certificate verification
 
 	if(SSL_connect(ssl)<0)
 	{
@@ -74,4 +74,3 @@ struct network_data* ssl_sock_read(SSL* ssl)
 
 	return n_data;
 }
-

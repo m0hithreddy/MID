@@ -205,4 +205,3 @@ struct network_interface** get_net_if_info(char** include_ifs,long include_ifs_c
 	return net_if;
 
 }
-

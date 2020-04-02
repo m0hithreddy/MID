@@ -16,6 +16,8 @@
 void sort(void* arr,long ele_size,long start,long end,two_to_one_func compare)
 {
 
+	// Generic Recursive Quick Sort Algorithm
+
 	if (start < end)
 	{
 
@@ -30,6 +32,9 @@ void sort(void* arr,long ele_size,long start,long end,two_to_one_func compare)
 			if (*(int*)compare(arr+j*ele_size,x))
 			{
 				i++;
+
+				// Swap is done by copying memory areas
+
 				memcpy(tmp,arr+i*ele_size,ele_size);
 				memcpy(arr+i*ele_size,arr+j*ele_size,ele_size);
 				memcpy(arr+j*ele_size,tmp,ele_size);
@@ -75,6 +80,8 @@ char* strcaselocate(char* haystack,char* needle,long start,long end)
 
 struct network_data* sseek(struct network_data* n_data,char* delimiter)
 {
+	// seek through the string unless the delimiter string character is not hit
+
 	if(n_data==NULL || n_data->data==NULL)
 		return NULL;
 
@@ -97,6 +104,8 @@ struct network_data* sseek(struct network_data* n_data,char* delimiter)
 
 struct network_data* scopy(struct network_data* n_data,char* delimiter,char** dest,long len)
 {
+	// Copy and seek though the string till the delimiter string character
+
 	if(n_data==NULL || n_data->data==NULL)
 		return NULL;
 

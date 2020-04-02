@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 
 	struct network_data* net_if_data=(struct network_data*)malloc(sizeof(struct network_data));
 
-	for (int i = 0; net_if[i]!=NULL ; i++)
+	for (int i = 0; net_if[i]!=NULL ; i++) // for each network interface check whether server is accessible
 	{
 
 		if(net_if[i]->family!=AF_INET)
@@ -560,6 +560,8 @@ int main(int argc, char **argv) {
 
 			if(idle==NULL && new==NULL)
 			{
+				// Create a new unit
+
 				if(units_bag->n_pockets>=max_parallel_downloads)
 					continue;
 
@@ -587,11 +589,13 @@ int main(int argc, char **argv) {
 			}
 			else if(idle==NULL && new!=NULL)
 			{
+				// Use already created but not used unit
+
 				update=new;
 			}
 			else
 			{
-				if(idle->err_flag==1)
+				if(idle->err_flag==1) // Check for errors, if found terminate download
 				{
 					err=idle;
 					break;
@@ -608,7 +612,7 @@ int main(int argc, char **argv) {
 
 			largest=largest_unit(units,units_len);
 
-			if(largest==NULL)
+			if(largest==NULL) // If all busy in error recovery
 			{
 				continue;
 			}
@@ -622,6 +626,8 @@ int main(int argc, char **argv) {
 			update->range->start=largest->range->end+1;
 
 			pthread_mutex_unlock(&largest->lock);
+
+			// Assign task to the unit
 
 			if(idle==NULL)
 			{
@@ -647,6 +653,8 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
+
+	// End of the download
 
 	time_t end_time=time(NULL);
 

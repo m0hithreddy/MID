@@ -165,10 +165,3 @@ char* resolve_dns(char* hostname)
 	return hostip;
 
 }
-
-
-
-
-
-
-

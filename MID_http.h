@@ -21,7 +21,7 @@
 #define DEFAULT_MAX_HTTP_REDIRECTS 20
 #define MID_HTTP_TOKEN_DELIMITERS "\r\n: "
 #define MID_HTTP_VALUE_DELIMITERS "\r\n"
-#define SEND_RECEIVE 00
+#define SEND_RECEIVE 11
 #define JUST_SEND 10
 #define JUST_RECEIVE 01
 #define RETURN_RESPONSE 000
@@ -176,4 +176,3 @@ int handle_encodings(struct encoding_info* en_info);
 struct encoding_info* determine_encodings(char* encoding_str);
 
 #endif /* MID_HTTP_H_ */
-

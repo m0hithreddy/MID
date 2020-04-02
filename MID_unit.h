@@ -120,7 +120,7 @@ struct units_progress* merge_units_progress(struct units_progress* progress);
 
 struct units_progress* actual_progress(struct unit_info** units,long units_len);
 
-void skip_progress_display(long count);
+void skip_progress_text(long count);
 
 void* show_progress(void* s_progress_info);
 

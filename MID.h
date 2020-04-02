@@ -17,4 +17,3 @@
 extern struct mid_args* args;
 
 #endif /* MID_H_ */
-

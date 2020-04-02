@@ -48,4 +48,3 @@ char* resolve_dns(char* hostname);
 
 
 #endif /* MID_SOCKET_H_ */
-

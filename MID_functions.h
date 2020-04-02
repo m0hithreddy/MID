@@ -44,5 +44,3 @@ struct hash_token** get_values(hashmap* map);
 int delete_pair(hashmap* map,struct hash_token* key);
 
 #endif /* MID_FUNCTIONS_H_ */
-
-

@@ -54,4 +54,3 @@ struct network_data* flatten_data_bag(struct data_bag *bag);
 
 
 #endif /* MID_STRUCTURES_H_ */
-

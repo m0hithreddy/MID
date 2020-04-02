@@ -250,7 +250,7 @@ struct http_response* parse_http_response(struct network_data *response)
 		comp_buffer[strlen(token_buffer)+1]=' ';
 		comp_buffer[strlen(token_buffer)+2]='\0';
 
-		if((current=strcaselocate(HTTP_RESPONSE_HEADERS,comp_buffer,0,strlen(HTTP_RESPONSE_HEADERS)))!=NULL)
+		if((current=strcaselocate(HTTP_RESPONSE_HEADERS,comp_buffer,0,strlen(HTTP_RESPONSE_HEADERS)))!=NULL) // If found in the default headers string
 		{
 			n_buf->data=current+strlen(token_buffer)+2;
 			n_buf->len=strlen(current);
@@ -271,6 +271,8 @@ struct http_response* parse_http_response(struct network_data *response)
 			continue;
 		}
 
+		// Else should be placed in the custom headers matrix
+
 		n_buf->data=token_buffer;
 		n_buf->len=strlen(token_buffer)+1;
 
@@ -281,6 +283,8 @@ struct http_response* parse_http_response(struct network_data *response)
 
 		place_data(bag,n_buf);
 	}
+
+	// Fill the custom headers matrix
 
 	int cus_size=(bag->n_pockets/2)+(bag->n_pockets%2)+1;
 
@@ -326,9 +330,12 @@ void* send_http_request(int sockfd,struct network_data* request,char* hostname,i
 	if(sockfd<0)
 		return NULL;
 
+	if(flag==0)
+		flag=SEND_RECEIVE;
+
 	long* status=(long*)malloc(sizeof(long));
 
-	if(flag==0 || flag==JUST_SEND || flag==SEND_RECEIVE)
+	if(flag==JUST_SEND || flag==SEND_RECEIVE)
 	{
 		if(request->len!=(*status=sock_write(sockfd,request)))
 		{
@@ -341,7 +348,7 @@ void* send_http_request(int sockfd,struct network_data* request,char* hostname,i
 		return (void*)status;
 	}
 
-	if(flag==0 || flag==JUST_RECEIVE || flag==SEND_RECEIVE)
+	if(flag==JUST_RECEIVE || flag==SEND_RECEIVE)
 	{
 		struct network_data* response=sock_read(sockfd,LONG_MAX);
 
@@ -406,9 +413,7 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 			fprintf(stderr,"\nHTTP Redirection Number %ld:\n\n",redirect_count+1);
 		}
 
-		//Parse the URL
-
-		purl=parse_url(s_response->location);
+		purl=parse_url(s_response->location); // Parse the URL
 
 		if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
 		{
@@ -426,9 +431,7 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 			fprintf(stderr,"-->Query: %s\n",purl->query);
 		}
 
-		// DNS Query
-
-		char* hostip=resolve_dns(purl->host);
+		char* hostip=resolve_dns(purl->host); // Resolve DNS
 
 		if(hostip==NULL)
 			return NULL;
@@ -458,7 +461,7 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 		s_request->url=s_response->location;
 		s_request->hostip=hostip;
 
-		request=create_http_request(s_request);
+		request=create_http_request(s_request); // Create HTTP Request
 
 		if(args->vverbose_flag && !args->quiet_flag)
 		{
@@ -505,6 +508,8 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 	}
 
 
+	// Do as caller requested
+
 	if(flag==RETURN_RESPONSE)
 		return (void*)response;
 
@@ -533,9 +538,9 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 	return NULL;
 }
 
-char* determine_filename(char* path)
+char* determine_filename(char* path) // With out the beginning '/'
 {
-	if(path==NULL)
+	if(path==NULL) //Default file
 		return determine_filename("index.html");
 
 	char* current=path;
@@ -558,6 +563,8 @@ char* determine_filename(char* path)
 	FILE* fp;
 	char* fin_name=(char*)malloc(sizeof(char)*(sizeof(pre_name)+64+2));
 	strcpy(fin_name,pre_name);
+
+	// Check whether file is already there or not
 
 	while(1)
 	{
@@ -613,7 +620,7 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 	long in_counter=en_info->in_len;
 	en_info->out_len=0;
 
-	if(*r1_flag!=1)
+	if(*r1_flag!=1) // Chunk size in hexadecimal till the first \r is encountered
 	{
 		while(en_info->in_len!=en_info->in_max)
 		{
@@ -622,7 +629,7 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 				return EN_ERROR;
 			}
 
-			if(((char*)en_info->in)[in_counter]=='\r')
+			if(((char*)en_info->in)[in_counter]=='\r') // \r found break
 			{
 				*r1_flag=1;
 				in_counter++;
@@ -641,7 +648,7 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 	if(en_info->in_len==en_info->in_max)
 		return EN_OK;
 
-	if(*n1_flag!=1)
+	if(*n1_flag!=1) // \n follows after \r
 	{
 		if(((char*)en_info->in)[in_counter]!='\n')
 			return EN_ERROR;
@@ -658,7 +665,7 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 	if(en_info->in_len==en_info->in_max)
 		return EN_OK;
 
-	if(*rem_chunk_len!=0)
+	if(*rem_chunk_len!=0) // Chunk data
 	{
 		long copy_size;
 
@@ -681,7 +688,7 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 	if(en_info->in_len==en_info->in_max)
 		return EN_OK;
 
-	if(*r2_flag!=1)
+	if(*r2_flag!=1) // \r follows after chunk data
 	{
 		if(((char*)en_info->in)[in_counter]!='\r')
 			return EN_ERROR;
@@ -694,7 +701,7 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 	if(en_info->in_len==en_info->in_max)
 		return EN_OK;
 
-	if(*n2_flag!=1)
+	if(*n2_flag!=1) // \n follows after \r
 	{
 		if(((char*)en_info->in)[in_counter]!='\n')
 			return EN_ERROR;
@@ -704,9 +711,9 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 		en_info->in_len=en_info->in_len+1;
 	}
 
-	if(*chunk_len==0)
+	if(*chunk_len==0) // If chunk_len is zero then last chunk, decoding done.
 		return EN_END;
-	else
+	else // Make preparations to handle upcoming chunk
 	{
 		*r1_flag=0;
 		*n1_flag=0;
@@ -720,7 +727,7 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 
 }
 
-int handle_encodings(struct encoding_info* en_info)
+int handle_encodings(struct encoding_info* en_info) // Interface connecting actual decoding functions and callers
 {
 	if(en_info->encoding == IDENTITY_ENCODING )
 	{
@@ -771,22 +778,3 @@ struct encoding_info* determine_encodings(char* encoding_str)
 
 	return NULL; // Encoding not known or not handled
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -75,7 +75,7 @@ void* unit(void* info)
 		unit_info->err_flag=0;
 		unit_info->status_code=0;
 
-		// Creating range request and sending http request
+		// Creating http/http-range request and sending request
 
 		if(unit_info->pc_flag && unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
 		{
@@ -306,6 +306,8 @@ void* unit(void* info)
 		struct encoding_info* en_info=determine_encodings(s_response->transfer_encoding);
 		int en_status;
 
+		// Download data...
+
 		while(1)
 		{
 
@@ -322,7 +324,7 @@ void* unit(void* info)
 			en_info->in_len=0;
 			en_info->in_max=status;
 
-			while(en_info->in_len!=en_info->in_max)
+			while(en_info->in_len!=en_info->in_max) //handle encodings
 			{
 
 				en_status=handle_encodings(en_info);
@@ -360,6 +362,8 @@ void* unit(void* info)
 			}
 
 			pthread_mutex_unlock(&unit_info->lock);
+
+			// Read Socket data
 
 			if(http_flag)
 				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
@@ -797,7 +801,7 @@ struct units_progress* actual_progress(struct unit_info** units,long units_len)
 	return u_progress;
 }
 
-void skip_progress_display(long count)
+void skip_progress_text(long count)
 {
 	for(long i=0;i<count;i++)
 	{
@@ -840,9 +844,9 @@ void* show_progress(void* s_progress_info)
 		if(quit_flag)
 		{
 			if(p_info->detailed_progress)
-				skip_progress_display(ifs_len+9);
+				skip_progress_text(ifs_len+9);
 			else
-				skip_progress_display(5);
+				skip_progress_text(5);
 
 			return NULL;
 		}
@@ -1091,11 +1095,3 @@ char* convert_time(long sec)
 
 	return time_str;
 }
-
-
-
-
-
-
-
-

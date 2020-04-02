@@ -266,7 +266,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		}
 	}
 
-	else
+	else // If option not valid
 	{
 		struct network_data* op_data=(struct network_data*)malloc(sizeof(struct network_data));
 		struct data_bag* op_bag=create_data_bag();
@@ -362,7 +362,7 @@ void read_conf(char* conf,struct mid_args* args)
 				fill_mid_args(key_buffer,NULL,args,1);
 		}
 
-		if(((char*)conf_data->data)[0]=='#')
+		if(((char*)conf_data->data)[0]=='#') // Skip the comments
 		{
 			conf_data=scopy(conf_data,"\n",NULL,-1);
 		}
@@ -370,7 +370,41 @@ void read_conf(char* conf,struct mid_args* args)
 		{
 			if(key_flag==0)
 			{
-				conf_data=scopy(conf_data," \n#",&key_buffer,-1);
+				if(((char*)conf_data->data)[0]=='\'')
+				{
+					conf_data->data=conf_data->data+1;
+					conf_data->len=conf_data->len-1;
+
+					conf_data=scopy(conf_data,"\'",&key_buffer,-1);
+
+					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
+					{
+						mid_help("MID: Configuration file not understood, missing \" ' \"");
+					}
+
+					conf_data->data=conf_data->data+1;
+					conf_data->len=conf_data->len-1;
+				}
+				else if(((char*)conf_data->data)[0]=='\"')
+				{
+					conf_data->data=conf_data->data+1;
+					conf_data->len=conf_data->len-1;
+
+					conf_data=scopy(conf_data,"\"",&key_buffer,-1);
+
+					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
+					{
+						mid_help("MID: Configuration file not understood, missing \" \" \"");
+					}
+
+					conf_data->data=conf_data->data+1;
+					conf_data->len=conf_data->len-1;
+				}
+				else
+				{
+					conf_data=scopy(conf_data," \n#",&key_buffer,-1);
+				}
+
 				key_flag=1;
 			}
 			else
@@ -468,6 +502,8 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 	args->arg_count=argc;
 
 	counter++;
+
+	// Parse the command line arguments
 
 	while(counter<argc)
 	{
@@ -704,12 +740,12 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 	}
 
-	if(args->url==NULL)
+	if(args->url==NULL) // mandatory argument --url
 	{
 		mid_help("MID: URL must be specified using --url option");
 	}
 
-	if(hdr_bag->n_pockets!=0)
+	if(hdr_bag->n_pockets!=0) // collect the custom http headers across the configuration file and command line arguments
 	{
 		if(hdr_bag->n_pockets%2!=0)
 		{

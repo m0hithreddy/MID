@@ -304,4 +304,3 @@ struct network_data* flatten_data_bag(struct data_bag *bag)
 
 	return n_data;
 }
-
