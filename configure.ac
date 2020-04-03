@@ -121,7 +121,7 @@ AC_CHECK_DECLS( [ \
 				  																																		 #include <openssl/tls1.h> \  
 				  																																		 ]] )
 				   
-AM_INIT_AUTOMAKE([-Wall -Werror])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_CONFIG_FILES([ Makefile \
 		  src/Makefile \
