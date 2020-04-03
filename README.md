@@ -23,6 +23,7 @@ The list of dependencies required for the compiling, running and building from t
 * [```autoconf```](https://github.com/autotools-mirror/autoconf) [```$ apt install autoconf```]
 * [```automake```](https://github.com/autotools-mirror/automake) [```$ apt install automake```]
 * [```libtool```](https://github.com/autotools-mirror/libtool) [```$ apt install libtool```]
+* [```txt2man```](https://github.com/mvertes/txt2man) [```$ apt install txt2man```]
 
 ## Downloading
 
@@ -65,7 +66,7 @@ After installing dependencies, obtaining MID sources and changing to the source 
 
 Verify the installation with ```$ MID -v```. Now you can download the file from URL as follows
 			
-	$ MID --url URL [ --detailed-progress | -Pd ]
+	$ sudo MID --url URL [ --detailed-progress | -Pd ]
 
 Check ```$ MID --help``` for more options and ```/etc/MID/MID.conf``` can be used to make the settings persistent
 

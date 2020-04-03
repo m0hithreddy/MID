@@ -1,0 +1,99 @@
+NAME
+ MID - Multiple Interface Downloader
+
+SYNOPSIS
+ MID --url URL [OPTIONS]
+
+DESCRIPTION
+ MID is a HTTP[S] download accelarator. MID tries to send HTTP range requests through multiple network-interfaces to boost the download speed.
+ MID unit (downloading unit) requests a specific part of the file and replicate it locally on the disk. MID units work in parallel to complete the download
+
+ MID supports HTTP and HTTPS protocols.
+
+OPTIONS
+ --url argument is mandatory. URL should be a valid HTTP[S] url
+ 
+ Other options:
+
+   --output-file file                   -o file             Specify the output file, if not specified MID will automatically detect from the URL.
+
+   --interfaces nic1,nic2...            -i nic1,nic2...     Network-interfaces which are used in the file download.
+
+   --exclude-interfaces nic1,nic2...    -ni nic1,nic2...    Network-interfaces which are excluded from the file download.
+
+   --help                               -h                  Print the help message and exit.
+
+   --url URL                            nil                 URL to be downloaded.
+
+   --max-parallel-downloads x           -n x                Maximum x number of parallel connections are allowed.
+
+   --max-unit-retries x                 -Ur x               Maximum x number of retries are made by a unit to download a chunk. If failed, the download is terminated.
+
+   --max-redirects x                    -R x                Maximum x number of HTTP redirects are followed.
+
+   --max-tcp-syn-retransmits x          -Sr x               At max x TCP SYN are retransmitted when initiating a TCP connection.
+
+   --unit-sleep-time x                  -Us x               Download unit sleeps for x seconds before retrying.
+
+   --progress-update-time x             -Pu x               Information related to download progress updates after every x seconds.
+
+   --detailed-progress                  -Pd                 Show detailed download progress.
+
+   --version                            -v                  Print the version and exit.
+
+   --header h=v                         -H h=v              Add custom headers to HTTP request message (option can be used multiple times to add multiple headers).
+
+   --quiet                              -q                  Silent mode, don't output anything.
+
+   --verbose                            -V                  Print the verbose information.
+
+   --vverbose                           -VV                 Print the very verbose information.
+
+   --surpass-root-check                 -s                  If had the sufficient permissions, use -s to surpass the root-check.
+
+   --conf file                          -c file             Specify the configuration file path. Preference order: cmd_line > conf_file > default_values
+   
+   * marked arguments are mandatory
+    
+NOTE
+ For binding to a network-interface, MID uses SO_BINDTODEVICE socket-option. This generally requires elevated (super user) permissions and CAP_NET_RAW capability.
+ So super user check is performed when application is invoked. If the program is not invoked as super user, it terminates printing the mentioned note. 
+ If you beleive you have sufficient permissions, then pass [--surpass-root-check | -s] argument to surpass the super user check.
+ But note that the program wont complain, it just hangs at that point and terminates after sometime (after --max-tcp-syn-retransmits). 
+
+RETURN VALUE
+ The program returns 0 when the download was successful, 1 if error occured before the download was started and 2 if the download started and was interuptted. 
+
+EXAMPLES
+ The trivial file download is performed as follows:
+ 	
+ 	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso
+
+ The [--detailed-progress | -Pd] argment can be used to make MID display the detailed stats
+ 	
+ 	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -Pd
+
+ The [--include-interfaces | -i] and [--exclude-interfaces | -ni] can be configured to limit MID to use particular network-interfaces in the file download.
+ Both options can be configured together and MID performs include-interfaces - exclude-interfaces to determine the interfaces which are used in the download
+ 	
+ 	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni lo
+ 	
+	(Loopback interface is excluded and all other interfaces are used in the download)
+	
+	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -i eth0,wlan0
+	
+	(Only eth0,wlan0 are used in the file download)
+	
+	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni eth1 -i eth0,eth1
+	
+	(Only eth0 is used in the file download)
+	
+FILES
+ /etc/MID/MID.conf - System-wide configuration file.
+ 
+ Use MID.conf file to make the settings persistent. The oder of preferefernce is command_line > conf_file > default_values
+
+COPYRIGHT
+ MID was originally written by Mohith Reddy. Please, see the AUTHORS and ChangeLog files.
+
+ The project homepage is <https://github.com/MohithReddy2439/MID>

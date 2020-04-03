@@ -1,15 +1,29 @@
 
-AC_INIT(MID,[1.0])
+AC_INIT(MID,[1.0.0])
 
 #safety check in case user overwritten --srcdir
 AC_CONFIG_SRCDIR([src/MID.c])
 
 AC_CONFIG_AUX_DIR([build-aux])
 
-#Check for C compiler
+#Check for necessary programs
 AC_PROG_CC
 
-#Check for HEADERS
+AC_PROG_SED
+
+AC_PROG_INSTALL
+
+AC_PROG_AWK
+
+AC_CHECK_PROG([TXT2MAN],[txt2man],[yes])
+
+if test "x${TXT2MAN}" != "xyes" ; then
+    AC_MSG_NOTICE([txt2man not found, no support for building man pages])
+fi
+
+AM_CONDITIONAL([TXT2MAN], [test "x${TXT2MAN}" = "xyes"])
+
+#Check for System HEADERS
 
 AC_CHECK_HEADERS( [ \
 					stdio.h \
@@ -121,11 +135,9 @@ AC_CHECK_DECLS( [ \
 				  																																		 #include <openssl/tls1.h> \  
 				  																																		 ]] )
 				   
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([subdir-objects])
 
-AC_CONFIG_FILES([ Makefile \
-		  src/Makefile \
-		  ])
+AC_CONFIG_FILES([Makefile])
 
 AC_CONFIG_HEADERS([config.h])
 

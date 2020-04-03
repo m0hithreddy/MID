@@ -681,10 +681,10 @@ int main(int argc, char **argv) {
 	if(err!=NULL)
 	{
 		fprintf(stderr,"\nMID: Error downloading chunk\nExiting...\n\n");
+		exit(2);
 	}
 
 
-	return 0;
-
+	exit(0);
 
 }
