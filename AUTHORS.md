@@ -2,4 +2,4 @@
 
 ## Individuals
 
-* Mohith Reddy
+* Mohith Reddy < m.mohithreddy99@gmail.com >
