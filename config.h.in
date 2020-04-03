@@ -1,0 +1,286 @@
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define to 1 if you have the <arpa/inet.h> header file. */
+#undef HAVE_ARPA_INET_H
+
+/* Define to 1 if you have the `atoi' function. */
+#undef HAVE_ATOI
+
+/* Define to 1 if you have the `atol' function. */
+#undef HAVE_ATOL
+
+/* Define to 1 if you have the `bind' function. */
+#undef HAVE_BIND
+
+/* Define to 1 if you have the <bits/sockaddr.h> header file. */
+#undef HAVE_BITS_SOCKADDR_H
+
+/* Define to 1 if you have the `bzero' function. */
+#undef HAVE_BZERO
+
+/* Define to 1 if you have the `calloc' function. */
+#undef HAVE_CALLOC
+
+/* Define to 1 if you have the `connect' function. */
+#undef HAVE_CONNECT
+
+/* Define to 1 if you have the <ctype.h> header file. */
+#undef HAVE_CTYPE_H
+
+/* Define to 1 if you have the <errno.h> header file. */
+#undef HAVE_ERRNO_H
+
+/* Define to 1 if you have the `exit' function. */
+#undef HAVE_EXIT
+
+/* Define to 1 if you have the `fclose' function. */
+#undef HAVE_FCLOSE
+
+/* Define to 1 if you have the `fileno' function. */
+#undef HAVE_FILENO
+
+/* Define to 1 if you have the `fopen' function. */
+#undef HAVE_FOPEN
+
+/* Define to 1 if you have the `fprintf' function. */
+#undef HAVE_FPRINTF
+
+/* Define to 1 if you have the `free' function. */
+#undef HAVE_FREE
+
+/* Define to 1 if you have the `geteuid' function. */
+#undef HAVE_GETEUID
+
+/* Define to 1 if you have the `gethostbyname' function. */
+#undef HAVE_GETHOSTBYNAME
+
+/* Define to 1 if you have the `getifaddrs' function. */
+#undef HAVE_GETIFADDRS
+
+/* Define to 1 if you have the `getnameinfo' function. */
+#undef HAVE_GETNAMEINFO
+
+/* Define to 1 if you have the `getuid' function. */
+#undef HAVE_GETUID
+
+/* Define to 1 if you have the `htons' function. */
+#undef HAVE_HTONS
+
+/* Define to 1 if you have the <ifaddrs.h> header file. */
+#undef HAVE_IFADDRS_H
+
+/* Define to 1 if you have the `inet_ntop' function. */
+#undef HAVE_INET_NTOP
+
+/* Define to 1 if you have the `inet_pton' function. */
+#undef HAVE_INET_PTON
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `isalpha' function. */
+#undef HAVE_ISALPHA
+
+/* Define to 1 if you have the `crypto' library (-lcrypto). */
+#undef HAVE_LIBCRYPTO
+
+/* Define to 1 if you have the `pthread' library (-lpthread). */
+#undef HAVE_LIBPTHREAD
+
+/* Define to 1 if you have the `ssl' library (-lssl). */
+#undef HAVE_LIBSSL
+
+/* Define to 1 if you have the <limits.h> header file. */
+#undef HAVE_LIMITS_H
+
+/* Define to 1 if you have the <linux/if_link.h> header file. */
+#undef HAVE_LINUX_IF_LINK_H
+
+/* Define to 1 if you have the `malloc' function. */
+#undef HAVE_MALLOC
+
+/* Define to 1 if you have the `memcmp' function. */
+#undef HAVE_MEMCMP
+
+/* Define to 1 if you have the `memcpy' function. */
+#undef HAVE_MEMCPY
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the `memset' function. */
+#undef HAVE_MEMSET
+
+/* Define to 1 if you have the <netdb.h> header file. */
+#undef HAVE_NETDB_H
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <openssl/err.h> header file. */
+#undef HAVE_OPENSSL_ERR_H
+
+/* Define to 1 if you have the <openssl/evp.h> header file. */
+#undef HAVE_OPENSSL_EVP_H
+
+/* Define to 1 if you have the <openssl/ssl.h> header file. */
+#undef HAVE_OPENSSL_SSL_H
+
+/* Define to 1 if you have the <openssl/tls1.h> header file. */
+#undef HAVE_OPENSSL_TLS1_H
+
+/* Define to 1 if you have the `printf' function. */
+#undef HAVE_PRINTF
+
+/* Define to 1 if you have the `pthread_create' function. */
+#undef HAVE_PTHREAD_CREATE
+
+/* Define to 1 if you have the <pthread.h> header file. */
+#undef HAVE_PTHREAD_H
+
+/* Define to 1 if you have the `pthread_join' function. */
+#undef HAVE_PTHREAD_JOIN
+
+/* Define to 1 if you have the `pthread_mutex_destroy' function. */
+#undef HAVE_PTHREAD_MUTEX_DESTROY
+
+/* Define to 1 if you have the `pthread_mutex_init' function. */
+#undef HAVE_PTHREAD_MUTEX_INIT
+
+/* Define to 1 if you have the `pthread_mutex_lock' function. */
+#undef HAVE_PTHREAD_MUTEX_LOCK
+
+/* Define to 1 if you have the `pthread_mutex_unlock' function. */
+#undef HAVE_PTHREAD_MUTEX_UNLOCK
+
+/* Define to 1 if you have the `pwrite' function. */
+#undef HAVE_PWRITE
+
+/* Define to 1 if you have the `read' function. */
+#undef HAVE_READ
+
+/* Define to 1 if you have the `setsockopt' function. */
+#undef HAVE_SETSOCKOPT
+
+/* Define to 1 if you have the `sleep' function. */
+#undef HAVE_SLEEP
+
+/* Define to 1 if you have the `snprintf' function. */
+#undef HAVE_SNPRINTF
+
+/* Define to 1 if you have the `socket' function. */
+#undef HAVE_SOCKET
+
+/* Define to 1 if you have the `sprintf' function. */
+#undef HAVE_SPRINTF
+
+/* Define to 1 if you have the `SSL_connect' function. */
+#undef HAVE_SSL_CONNECT
+
+/* Define to 1 if you have the `SSL_CTX_new' function. */
+#undef HAVE_SSL_CTX_NEW
+
+/* Define to 1 if you have the `SSL_new' function. */
+#undef HAVE_SSL_NEW
+
+/* Define to 1 if you have the `SSL_read' function. */
+#undef HAVE_SSL_READ
+
+/* Define to 1 if you have the `SSL_set_fd' function. */
+#undef HAVE_SSL_SET_FD
+
+/* Define to 1 if you have the `SSL_write' function. */
+#undef HAVE_SSL_WRITE
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdio.h> header file. */
+#undef HAVE_STDIO_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the `strcasestr' function. */
+#undef HAVE_STRCASESTR
+
+/* Define to 1 if you have the `strcat' function. */
+#undef HAVE_STRCAT
+
+/* Define to 1 if you have the `strcmp' function. */
+#undef HAVE_STRCMP
+
+/* Define to 1 if you have the `strcpy' function. */
+#undef HAVE_STRCPY
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the `strlen' function. */
+#undef HAVE_STRLEN
+
+/* Define to 1 if you have the `strncpy' function. */
+#undef HAVE_STRNCPY
+
+/* Define to 1 if you have the `strstr' function. */
+#undef HAVE_STRSTR
+
+/* Define to 1 if you have the `strtol' function. */
+#undef HAVE_STRTOL
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#undef HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the `time' function. */
+#undef HAVE_TIME
+
+/* Define to 1 if you have the <time.h> header file. */
+#undef HAVE_TIME_H
+
+/* Define to 1 if you have the `TLS_method' function. */
+#undef HAVE_TLS_METHOD
+
+/* Define to 1 if you have the `tolower' function. */
+#undef HAVE_TOLOWER
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `write' function. */
+#undef HAVE_WRITE
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* Version number of package */
+#undef VERSION

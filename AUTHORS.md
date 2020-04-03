@@ -1,0 +1,5 @@
+# AUTHORS
+
+## Individuals
+
+* Mohith Reddy

@@ -8,30 +8,69 @@
  
 * Traditional HTTP download accelerators use HTTP range requests to achieve this. 
 
-* MID also uses HTTP range requests to achieve download acceleration but it takes it to the next level by involving multiple interfaces in the download (hence bandwidth boost)
+* MID also uses HTTP range requests to achieve download acceleration but it takes it to the next level by involving multiple network-interfaces in the download (hence bandwidth boost)
  
-## Installation
+## Dependencies
 
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
+The list of dependencies required for the compiling, running and building from the sources of MID are given along with the possible installation steps (OS dependent)
 
-```bash
-pip install foobar
-```
+##### MID dependencies
+
+* [```libssl-dev```](https://github.com/openssl/openssl) [```$ apt install libssl-dev```]
+
+##### Build and Install dependencies
+
+* [```autoconf```](https://github.com/autotools-mirror/autoconf) [```$ apt install autoconf```]
+* [```automake```](https://github.com/autotools-mirror/automake) [```$ apt install automake```]
+* [```libtool```](https://github.com/autotools-mirror/libtool) [```$ apt install libtool```]
+
+## Downloading
+
+Obtain the latest stable MID sources by cloning from GitHub mirror
+
+	$ git clone https://github.com/MohithReddy2439/MID.git
+
+Also you can fetch the archive of master branch or particular relase as follows
+
+* Master Branch
+
+		$ wget https://github.com/MohithReddy2439/MID/archive/master.zip && unzip MID-master.zip && cd MID-master
+	
+* Zip archive of particular release
+		
+		$ wget https://github.com/MohithReddy2439/MID/archive/vx.y.z.zip && unzip MID-x.y.z.zip && cd MID-x.y.z
+
+* Gzipped Tar archive of particular release
+		
+		$ wget https://github.com/MohithReddy2439/MID/archive/vx.y.z.tar.gz && tar -xvf MID-x.y.z.tar.gz && cd MID-x.y.z
+
+## Build and Install
+
+After installing dependencies, obtaining MID sources and changing to the source directory...
+
+* Quick and Dirty Installation
+
+		$ ./configure
+		$ make
+		$ sudo make install
+
+* Clean Installation
+
+		$ autoreconf -vfi
+		$ ./configure
+		$ make
+		$ sudo make install
 
 ## Usage
 
-```python
-import foobar
+Verify the installation with ```$ MID -v```. Now you can download the file from URL as follows
+			
+	$ MID --url URL [ --detailed-progress | -Pd ]
 
-foobar.pluralize('word') # returns 'words'
-foobar.pluralize('goose') # returns 'geese'
-foobar.singularize('phenomena') # returns 'phenomenon'
-```
+Check ```$ MID --help``` for more options and ```/etc/MID/MID.conf``` can be used to make the settings persistent
 
 ## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
+Under Development
 
 ## License
-[MIT](https://choosealicense.com/licenses/mit/)
+[GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
