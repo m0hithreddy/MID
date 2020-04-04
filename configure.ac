@@ -23,6 +23,10 @@ fi
 
 AM_CONDITIONAL([TXT2MAN], [test "x${TXT2MAN}" = "xyes"])
 
+# Some predefined headers
+
+AC_FUNC_MALLOC
+
 #Check for System HEADERS
 
 AC_CHECK_HEADERS( [ \

@@ -8,7 +8,7 @@
 #ifndef MID_ARGUMENTS_H_
 #define MID_ARGUMENTS_H_
 
-#define DEFAULT_CONFIG_FILE "/etc/MID/MID.conf"
+#define DEFAULT_CONFIG_FILE "/usr/local/etc/MID.conf"
 
 struct mid_args
 {
