@@ -669,7 +669,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 		else if(!strcmp(argv[counter],"--version") || !strcmp(argv[counter],"-v"))
 		{
-			fprintf(stderr,"MID version 1.0 (linux-gnu)\n\n");
+			fprintf(stderr,"MID version 1.0.0 (linux-gnu)\n\n");
 			exit(1);
 		}
 
