@@ -96,4 +96,4 @@ FILES
 COPYRIGHT
  MID was originally written by Mohith Reddy. Please, see the AUTHORS and ChangeLog files.
 
- The project homepage is <https://github.com/MohithReddy2439/MID>
+ The project homepage is <https://github.com/m0hithreddy/MID>

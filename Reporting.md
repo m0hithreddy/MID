@@ -2,7 +2,7 @@
 
 Your bug-report is greatly appreciated! Follow the following steps while reporting any undefined, undesired and unexpected behavaior. Alternatively you can request a feature, which after a thought will be added to the TODO list
 
-* [MID](https://github.com/MohithReddy2439/MID/) is expected to be an active project. So before reporting, fetch the latest sources from the master branch and see if the error still persists. 
+* [MID](https://github.com/m0hithreddy/MID/) is expected to be an active project. So before reporting, fetch the latest sources from the master branch and see if the error still persists. 
 
 * You can raise an issue in the github. When reporting upload the command-line arguments and configuration-file. If possible pass ```-VV``` flag and upload the program output (make sure you wont upload any sensitive informations like usernames and passwords). 
 

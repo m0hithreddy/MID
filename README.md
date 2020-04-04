@@ -29,21 +29,21 @@ The list of dependencies required for the compiling, running and building from t
 
 Obtain the latest stable MID sources by cloning from GitHub mirror
 
-	$ git clone https://github.com/MohithReddy2439/MID.git
+	$ git clone https://github.com/m0hithreddy/MID.git
 
 Also you can fetch the archive of master branch or particular relase as follows
 
 * Master Branch
 
-		$ wget https://github.com/MohithReddy2439/MID/archive/master.zip && unzip MID-master.zip && cd MID-master
+		$ wget https://github.com/m0hithreddy/MID/archive/master.zip && unzip MID-master.zip && cd MID-master
 	
 * Zip archive of particular release
 		
-		$ wget https://github.com/MohithReddy2439/MID/archive/vx.y.z.zip && unzip MID-x.y.z.zip && cd MID-x.y.z
+		$ wget https://github.com/m0hithreddy/MID/archive/vx.y.z.zip && unzip MID-x.y.z.zip && cd MID-x.y.z
 
 * Gzipped Tar archive of particular release
 		
-		$ wget https://github.com/MohithReddy2439/MID/archive/vx.y.z.tar.gz && tar -xvf MID-x.y.z.tar.gz && cd MID-x.y.z
+		$ wget https://github.com/m0hithreddy/MID/archive/vx.y.z.tar.gz && tar -xvf MID-x.y.z.tar.gz && cd MID-x.y.z
 
 ## Build and Install
 
@@ -72,12 +72,12 @@ Check ```$ MID --help``` for more options and ```/etc/MID/MID.conf``` can be use
 
 ## Reporting
 
-As a user you can be helpful to the project by reporting any undefined, undesired and unexpected behavior. Please, see [Reporting.md](https://github.com/MohithReddy2439/MID/blob/master/Reporting.md)
+As a user you can be helpful to the project by reporting any undefined, undesired and unexpected behavior. Please, see [Reporting.md](https://github.com/m0hithreddy/MID/blob/master/Reporting.md)
 
 ## Contributing
 
-[MID](https://github.com/MohithReddy2439/MID) works! But MID requires many feature additions, improvements and survilance. If you are a budding developer like me, it is a high time
-you can get into some serious development by contributing to MID. Please, see [Contributing.md](https://github.com/MohithReddy2439/MID/blob/master/Contributing.md)
+[MID](https://github.com/m0hithreddy/MID) works! But MID requires many feature additions, improvements and survilance. If you are a budding developer like me, it is a high time
+you can get into some serious development by contributing to MID. Please, see [Contributing.md](https://github.com/m0hithreddy/MID/blob/master/Contributing.md)
 
 ## License
 [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
