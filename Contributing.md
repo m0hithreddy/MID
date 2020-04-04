@@ -1,0 +1,3 @@
+# Contributing
+
+As a budding developer, it makes me enthusiastic to collaborate with the other developers around; exploring their coding style, getting some knowledge, and improving my proficiency. If you are intrested in contributing to MID, you can send patches which addresses the issues that are raised by the users or which implements any new feature that are mentioned in the TODO list or which brings the repository to a better shape by making it allign with the general developing standards. Mail at < m.mohithreddy99@gmail.com > !

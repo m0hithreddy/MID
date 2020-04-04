@@ -72,11 +72,12 @@ Check ```$ MID --help``` for more options and ```/etc/MID/MID.conf``` can be use
 
 ## Reporting
 
-As a user you can be helpful to the project by reporting any undefined, undesired and unexpected behavior. See [Reporting.md](https://github.com/MohithReddy2439/MID/blob/master/Reporting.md)
+As a user you can be helpful to the project by reporting any undefined, undesired and unexpected behavior. Please, see [Reporting.md](https://github.com/MohithReddy2439/MID/blob/master/Reporting.md)
 
 ## Contributing
 
-Under Development
+[MID](https://github.com/MohithReddy2439/MID) works! But MID requires many feature additions, improvements and survilance. If you are a budding developer like me, it is a high time
+you can get into some serious development by contributing to MID. Please, see [Contributing.md](https://github.com/MohithReddy2439/MID/blob/master/Contributing.md)
 
 ## License
 [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
