@@ -52,15 +52,16 @@ After installing dependencies, obtaining MID sources and changing to the source 
 * Quick and Dirty Installation
 
 		$ ./configure
-		$ make
-		$ sudo make install
+		$ make all
+		$ make install
 
 * Clean Installation
 
 		$ autoreconf -vfi
 		$ ./configure
-		$ make
-		$ sudo make install
+		$ make all
+		$ make uninstall
+		$ make install
 
 ## Usage
 
