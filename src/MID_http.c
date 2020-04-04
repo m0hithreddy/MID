@@ -546,13 +546,16 @@ char* determine_filename(char* path) // With out the beginning '/'
 	char* current=path;
 	char* prev=current;
 
-	while(1)
+	while(args->output_file==NULL)
 	{
-		current=strlocate(current,"/",0,strlen(current));
-		if(current==NULL)
-			break;
-		current=current+1;
-		prev=current;
+		while(1)
+		{
+			current=strlocate(current,"/",0,strlen(current));
+			if(current==NULL)
+				break;
+			current=current+1;
+			prev=current;
+		}
 	}
 
 	char pre_name[strlen(prev)+1];
