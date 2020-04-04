@@ -428,6 +428,7 @@ struct unit_info* handle_unit_errors(struct unit_info* unit)
 	{
 		unit->err_flag=0;
 		unit->self_repair=1;
+		unit->healing_time=ERR_CODE_503_HEALING_TIME;
 
 		pthread_mutex_unlock(&unit->lock);
 
