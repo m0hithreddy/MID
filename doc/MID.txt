@@ -2,7 +2,7 @@ NAME
  MID - Multiple Interface Downloader
 
 SYNOPSIS
- MID --url URL [OPTIONS]
+ [MID | mid] --url URL [OPTIONS]
 
 DESCRIPTION
  MID is a HTTP[S] download accelarator. MID tries to send HTTP range requests through multiple network-interfaces to boost the download speed.
@@ -67,24 +67,24 @@ RETURN VALUE
 EXAMPLES
  The trivial file download is performed as follows:
  	
- 	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso
+ 	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso
 
  The [--detailed-progress | -Pd] argment can be used to make MID display the detailed stats
  	
- 	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -Pd
+ 	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -Pd
 
  The [--include-interfaces | -i] and [--exclude-interfaces | -ni] can be configured to limit MID to use particular network-interfaces in the file download.
  Both options can be configured together and MID performs include-interfaces - exclude-interfaces to determine the interfaces which are used in the download
  	
- 	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni lo
+ 	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni lo
  	
 	(Loopback interface is excluded and all other interfaces are used in the download)
 	
-	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -i eth0,wlan0
+	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -i eth0,wlan0
 	
 	(Only eth0,wlan0 are used in the file download)
 	
-	# MID --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni eth1 -i eth0,eth1
+	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni eth1 -i eth0,eth1
 	
 	(Only eth0 is used in the file download)
 	

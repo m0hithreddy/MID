@@ -7,7 +7,15 @@ EXTRA_DIST= \
 			MID.conf \
 			README.md \
 			Reporting.md
-			
+
+install-exec-local:
+	ln -s -i $(bindir)/MID $(bindir)/mid
+	ln -s -i $(man1dir)/MID.1 $(man1dir)/mid.1
+
+uninstall-local: 
+	rm -rf $(bindir)/mid
+	rm -rf $(man1dir)/mid.1
+	 
 clean-local:
 	rm -rf doc/*.1
 

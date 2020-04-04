@@ -64,11 +64,11 @@ After installing dependencies, obtaining MID sources and changing to the source 
 
 ## Usage
 
-Verify the installation with ```$ MID -v```. Now you can download the file from URL as follows
+Verify the installation with ```$ [MID | mid] -v```. Now you can download the file from URL as follows
 			
-	$ sudo MID --url URL [ --detailed-progress | -Pd ]
+	$ sudo [MID | mid] --url URL [ --detailed-progress | -Pd ]
 
-Check ```$ MID --help``` for more options and ```/etc/MID/MID.conf``` can be used to make the settings persistent
+Check ```$ [MID | mid] --help``` for more options and ```/etc/MID/MID.conf``` can be used to make the settings persistent
 
 ## Reporting
 
