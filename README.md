@@ -68,7 +68,7 @@ Verify the installation with ```$ [MID | mid] -v```. Now you can download the fi
 			
 	$ sudo [MID | mid] --url URL [--detailed-progress | -Pd] [--exclude-interfaces lo | -ni lo]
 
-Check ```$ [MID | mid] --help``` for more options and ```/etc/MID/MID.conf``` can be used to make the settings persistent
+Check ```$ [MID | mid] --help``` for more options and ```/usr/local/etc/MID.conf``` can be used to make the settings persistent
 
 ## Reporting
 
