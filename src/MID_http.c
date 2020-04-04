@@ -546,7 +546,7 @@ char* determine_filename(char* path) // With out the beginning '/'
 	char* current=path;
 	char* prev=current;
 
-	while(args->output_file==NULL)
+	if(args->output_file==NULL)
 	{
 		while(1)
 		{
