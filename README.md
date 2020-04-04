@@ -72,7 +72,7 @@ Check ```$ MID --help``` for more options and ```/etc/MID/MID.conf``` can be use
 
 ## Reporting
 
-As a user you can be helpful to the project by reporting any undefined, undesired and unexpected behavior. See [Reporting.md](https://github.com/MohithReddy2439/MID/Reporting.md)
+As a user you can be helpful to the project by reporting any undefined, undesired and unexpected behavior. See [Reporting.md](https://github.com/MohithReddy2439/MID/blob/master/Reporting.md)
 
 ## Contributing
 
