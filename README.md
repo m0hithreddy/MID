@@ -70,7 +70,12 @@ Verify the installation with ```$ MID -v```. Now you can download the file from 
 
 Check ```$ MID --help``` for more options and ```/etc/MID/MID.conf``` can be used to make the settings persistent
 
+## Reporting
+
+As a user you can be helpful to the project by reporting any undefined, undesired and unexpected behavior. See [Reporting.md](https://github.com/MohithReddy2439/MID/Reporting.md)
+
 ## Contributing
+
 Under Development
 
 ## License

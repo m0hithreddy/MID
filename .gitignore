@@ -14,3 +14,5 @@ config.h
 *.deps
 *.dirstamp
 *MID
+*.1
+scripts

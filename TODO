@@ -1,5 +1,11 @@
+-> Logging mechanism
+
+-> Handling Content-Encoding 
+
+-> Resume download 
+
 -> Requesting and accepting gzipped responses (later)
 
 -> Continue Download if some interfaces fail (later)
 
--> creating GUI
+-> Creating GUI (later)
