@@ -673,10 +673,13 @@ int main(int argc, char **argv) {
 
 	}
 
-	printf("\n---------\n");
-	printf("|SUMMARY|\n");
-	printf("---------\n\n");
-	printf("Time Spent = %s     Total Downloaded = %s     Average Speed = %s\n\n",convert_time(end_time-start_time),convert_data(downloaded_length,0), end_time-start_time !=0 ? convert_speed(downloaded_length/(end_time-start_time)) : "undef");
+	if(!args->quiet_flag)
+	{
+		printf("\n---------\n");
+		printf("|SUMMARY|\n");
+		printf("---------\n\n");
+		printf("Time Spent = %s     Total Downloaded = %s     Average Speed = %s\n\n",convert_time(end_time-start_time),convert_data(downloaded_length,0), end_time-start_time !=0 ? convert_speed(downloaded_length/(end_time-start_time)) : "undef");
+	}
 
 	if(err!=NULL)
 	{
