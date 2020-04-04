@@ -15,6 +15,10 @@ AC_PROG_INSTALL
 
 AC_PROG_AWK
 
+AC_PROG_LN_S
+
+AC_PROG_MKDIR_P
+
 AC_CHECK_PROG([TXT2MAN],[txt2man],[yes])
 
 if test "x${TXT2MAN}" != "xyes" ; then

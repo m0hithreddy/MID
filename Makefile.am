@@ -8,13 +8,16 @@ EXTRA_DIST= \
 			README.md \
 			Reporting.md
 
+
 install-exec-local:
-	ln -s -i $(bindir)/MID $(bindir)/mid
-	ln -s -i $(man1dir)/MID.1 $(man1dir)/mid.1
+	$(MKDIR_P) "$(DESTDIR)$(bindir)"
+	$(LN_S) $(DESTDIR)$(bindir)/MID $(DESTDIR)$(bindir)/mid
+	$(MKDIR_P) "$(DESTDIR)$(man1dir)"
+	$(LN_S) $(DESTDIR)$(man1dir)/MID.1 $(DESTDIR)$(man1dir)/mid.1
 
 uninstall-local: 
-	rm -rf $(bindir)/mid
-	rm -rf $(man1dir)/mid.1
+	rm -rf $(DESTDIR)$(bindir)/mid
+	rm -rf $(DESTDIR)$(man1dir)/mid.1
 	 
 clean-local:
 	rm -rf doc/*.1
