@@ -77,7 +77,7 @@ As a user you can be helpful to the project by reporting any undefined, undesire
 
 ## Contributing
 
-[MID](https://github.com/m0hithreddy/MID) works! But MID requires many feature additions, improvements and survilance. If you are a budding developer like me, it is a high time
+[MID](https://github.com/m0hithreddy/MID) works! But MID requires many feature additions, improvements and surveillance. If you are a budding developer like me, it is a high time
 you can get into some serious development by contributing to MID. Please, see [Contributing.md](https://github.com/m0hithreddy/MID/blob/master/Contributing.md)
 
 ## License
