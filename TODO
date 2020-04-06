@@ -4,6 +4,10 @@
 
 -> Resume download 
 
+-> Implementing own URL parser
+
+-> Making SSL support optional
+
 -> Requesting and accepting gzipped responses (later)
 
 -> Continue Download if some interfaces fail (later)
