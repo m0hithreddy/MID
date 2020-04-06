@@ -8,10 +8,15 @@
 #include"MID_socket.h"
 #include"MID_ssl_socket.h"
 #include"MID_structures.h"
-#include<openssl/ssl.h>
-#include<openssl/err.h>
-#include<openssl/evp.h>
+#include"MID_http.h"
+#include<stdlib.h>
 
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
+#ifdef LIBSSL_SANE
 SSL* ssl_open_connection(int sockfd,char* hostname)
 {
 	SSL_library_init();
@@ -75,3 +80,29 @@ struct network_data* ssl_sock_read(SSL* ssl)
 
 	return n_data;
 }
+#else
+SSL* ssl_open_connection(int sockfd,char* hostname)
+{
+	https_quit();
+	return NULL;
+}
+
+int ssl_sock_write(SSL* ssl,struct network_data* n_data)
+{
+	https_quit();
+	return NULL;
+}
+
+struct network_data* ssl_sock_read(SSL* ssl)
+{
+	https_quit();
+	return NULL;
+}
+
+int SSL_read(void* ran1,void* ran2,long ran3)
+{
+	https_quit();
+	return -1;
+}
+
+#endif

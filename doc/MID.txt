@@ -62,7 +62,8 @@ NOTE
  But note that the program wont complain, it just hangs at that point and terminates after sometime (after --max-tcp-syn-retransmits). 
 
 RETURN VALUE
- The program returns 0 when the download was successful, 1 if error occured before the download was started and 2 if the download started and was interuptted. 
+ The program returns 0 when the download was successful, 1 if error occured before the download was started, 2 if the download started and was interuptted and
+ 3 if there was a fatal error because of the lack of library support. 
 
 EXAMPLES
  The trivial file download is performed as follows:

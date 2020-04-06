@@ -20,6 +20,7 @@ MID_SOURCES = \
 			  src/MID_socket.h \
 			  src/MID_ssl_socket.h \
 			  src/MID_unit.h \
-			  src/url_parser.h
+			  src/url_parser.h \
+			  config.h
 
-AM_CFLAGS=-I$(abs_srcdir)/src
+AM_CFLAGS=-I$(abs_srcdir)/src -I$(abs_srcdir)

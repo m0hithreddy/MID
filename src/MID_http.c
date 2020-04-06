@@ -15,13 +15,16 @@
 #include<stdlib.h>
 #include<string.h>
 #include<stdio.h>
-#include<openssl/ssl.h>
-#include<openssl/err.h>
 #include<netdb.h>
 #include<netinet/in.h>
 #include<sys/socket.h>
 #include<arpa/inet.h>
 #include<limits.h>
+
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
 
 struct network_data* create_http_request(struct http_request* s_request)
 {
@@ -358,6 +361,7 @@ void* send_http_request(int sockfd,struct network_data* request,char* hostname,i
 	return NULL;
 }
 
+#ifdef LIBSSL_SANE
 void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag)
 {
 
@@ -383,6 +387,12 @@ void* send_https_request(int sockfd,struct network_data* request,char* hostname,
 
 	return (void*)response;
 }
+#else
+void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag)
+{
+	https_quit();
+}
+#endif
 
 void* follow_redirects(struct http_request* c_s_request,struct network_data* response,long max_redirects,struct socket_info* cli_info,int flag)
 {
@@ -730,6 +740,13 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 
 }
 
+#ifdef LIBZ_SANE
+int handle_gzipped_encoding(struct encoding_info* en_info)
+{
+	return 0;
+}
+#endif
+
 int handle_encodings(struct encoding_info* en_info) // Interface connecting actual decoding functions and callers
 {
 	if(en_info->encoding == IDENTITY_ENCODING )
@@ -740,6 +757,12 @@ int handle_encodings(struct encoding_info* en_info) // Interface connecting actu
 	{
 		return handle_chunked_encoding(en_info);
 	}
+#ifdef LIBZ_SANE
+	else if(en_info->encoding == GZIPPED_ENCODING)
+	{
+		return handle_gzipped_encoding(en_info);
+	}
+#endif
 
 	return EN_UNKNOWN;
 }
@@ -779,5 +802,30 @@ struct encoding_info* determine_encodings(char* encoding_str)
 		return en_info;
 	}
 
+#ifdef LIBZ_SANE
+	else if(strcmp(encoding_str,"gzip"))
+	{
+		struct encoding_info* en_info=(struct encoding_info*)calloc(1,sizeof(struct encoding_info));
+
+		en_info->encoding=GZIPPED_ENCODING;
+		en_info->in=NULL;
+		en_info->in_len=0;
+		en_info->in_max=0;
+		en_info->out=malloc(GZIPPED_ENCODING_BUFFER_SIZE);
+		en_info->out_len=0;
+		en_info->out_max=GZIPPED_ENCODING_BUFFER_SIZE;
+		en_info->data=NULL;
+	}
+#endif
+
 	return NULL; // Encoding not known or not handled
 }
+
+#ifndef LIBSSL_SANE
+void https_quit()
+{
+	fprintf(stderr,"\nMID: HTTPS URL encountered! MID is not built with the SSL support. Please recompile MID with the SSL support\nExiting...\n\n");
+	exit(3);
+}
+#endif
+

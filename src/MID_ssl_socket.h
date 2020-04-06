@@ -9,8 +9,20 @@
 #define MID_SSL_SOCKET_H_
 
 #include"MID_socket.h"
+
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
+#ifdef LIBSSL_SANE
 #include<openssl/ssl.h>
 #include<openssl/err.h>
+#include<openssl/evp.h>
+#else
+typedef void* SSL;
+int SSL_read(void* ran1,void* ran2,long ran3);
+#endif
 
 SSL* ssl_open_connection(int sockfd,char* hostname);
 

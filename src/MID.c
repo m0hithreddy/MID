@@ -19,8 +19,6 @@
 #include<netinet/in.h>
 #include<arpa/inet.h>
 #include<sys/socket.h>
-#include<openssl/ssl.h>
-#include<openssl/err.h>
 #include<unistd.h>
 #include<netinet/tcp.h>
 #include<pthread.h>

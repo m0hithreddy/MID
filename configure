@@ -2197,7 +2197,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-#safety check in case user overwritten --srcdir
+# Safety check in case user overwritten --srcdir
+
 
 
 ac_aux_dir=
@@ -2230,7 +2231,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
-#Checks for source files and other important files
+# Checks for source files and other important files
 
 as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID.c" | $as_tr_sh`
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID.c" >&5
@@ -2855,7 +2856,8 @@ else
 fi
 
 
-#Check for necessary programs
+# Checks for necessary programs
+
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -4022,7 +4024,7 @@ else
 fi
 
 
-#Some predefined headers
+# Some predefined headers
 
 
 ac_ext=c
@@ -4490,10 +4492,11 @@ fi
 
 
 
-#Check for System HEADERS
+# Checks for system headers
 
 for ac_header in stdio.h \
 stdlib.h \
+stddef.h \
 string.h \
 unistd.h \
 netdb.h \
@@ -4524,6 +4527,8 @@ fi
 
 done
 
+
+# Checks for system functions
 
 for ac_func in printf \
 strcmp \
@@ -4583,6 +4588,8 @@ else
 fi
 done
 
+
+# Pthread library checks
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
 $as_echo_n "checking for pthread_create in -lpthread... " >&6; }
@@ -4653,6 +4660,8 @@ fi
 done
 
 
+#SSL library checks
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BIO_new in -lcrypto" >&5
 $as_echo_n "checking for BIO_new in -lcrypto... " >&6; }
 if ${ac_cv_lib_crypto_BIO_new+:} false; then :
@@ -4696,8 +4705,6 @@ _ACEOF
 
   LIBS="-lcrypto $LIBS"
 
-else
-  as_fn_error $? "-lcrypto is required but not found. Try installing libssl-dev or similar packages." "$LINENO" 5
 fi
 
 
@@ -4744,10 +4751,10 @@ _ACEOF
 
   LIBS="-lssl $LIBS"
 
-else
-  as_fn_error $? "-lssl is required but not found. Try installing libssl-dev or similar packages." "$LINENO" 5
 fi
 
+
+if test "x${ac_cv_lib_crypto_BIO_new}" == "xyes" && test "x${ac_cv_lib_ssl_SSL_new}" == "xyes" ; then
 
 for ac_header in openssl/ssl.h \
 openssl/err.h \
@@ -4762,7 +4769,7 @@ if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
 _ACEOF
 
 else
-  as_fn_error $? "$ac_header is required but not found. Header provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+  ssl_header_not_found="yes"
 
 fi
 
@@ -4785,7 +4792,7 @@ if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
 _ACEOF
 
 else
-  as_fn_error $? "$ac_func required but not found. Function provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+  ssl_func_not_found="yes"
 
 fi
 done
@@ -4808,7 +4815,7 @@ _ACEOF
 if test $ac_have_decl = 1; then :
 
 else
-  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+  ssl_symbol_not_found="yes"
 fi
 ac_fn_c_check_decl "$LINENO" "OpenSSL_add_all_algorithms" "ac_cv_have_decl_OpenSSL_add_all_algorithms" "#include <openssl/ssl.h>
 #include <openssl/evp.h>
@@ -4827,7 +4834,7 @@ _ACEOF
 if test $ac_have_decl = 1; then :
 
 else
-  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+  ssl_symbol_not_found="yes"
 fi
 ac_fn_c_check_decl "$LINENO" "SSL_load_error_strings" "ac_cv_have_decl_SSL_load_error_strings" "#include <openssl/ssl.h>
 #include <openssl/evp.h>
@@ -4846,7 +4853,7 @@ _ACEOF
 if test $ac_have_decl = 1; then :
 
 else
-  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+  ssl_symbol_not_found="yes"
 fi
 ac_fn_c_check_decl "$LINENO" "SSL_set_tlsext_host_name" "ac_cv_have_decl_SSL_set_tlsext_host_name" "#include <openssl/ssl.h>
 #include <openssl/evp.h>
@@ -4865,9 +4872,118 @@ _ACEOF
 if test $ac_have_decl = 1; then :
 
 else
-  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+  ssl_symbol_not_found="yes"
 fi
 
+
+if test "x${ssl_header_not_found}" != "xyes" && test "x${ssl_func_not_found}" != "xyes" && test "x${ssl_symbol_not_found}" != "xyes" ; then
+
+$as_echo "#define LIBSSL_SANE 1" >>confdefs.h
+
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: libssl and libcrypto are installed, but required headers or functions or symbols not found. Disabling the SSL support!" >&5
+$as_echo "$as_me: libssl and libcrypto are installed, but required headers or functions or symbols not found. Disabling the SSL support!" >&6;}
+fi
+
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: libssl or libcrypto not found! Support for SSL is disabled, try installing libssl-dev or similar packages and recompile the source for enabling the SSL support" >&5
+$as_echo "$as_me: libssl or libcrypto not found! Support for SSL is disabled, try installing libssl-dev or similar packages and recompile the source for enabling the SSL support" >&6;}
+fi
+
+# Zlib checks
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for inflate in -lz" >&5
+$as_echo_n "checking for inflate in -lz... " >&6; }
+if ${ac_cv_lib_z_inflate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lz  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char inflate ();
+int
+main ()
+{
+return inflate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_z_inflate=yes
+else
+  ac_cv_lib_z_inflate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_inflate" >&5
+$as_echo "$ac_cv_lib_z_inflate" >&6; }
+if test "x$ac_cv_lib_z_inflate" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBZ 1
+_ACEOF
+
+  LIBS="-lz $LIBS"
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: libz not found! Support for gzipped encodings is disabled, try installing zlib1g-dev or similar packages and recompile the source for enabling the GZIP support" >&5
+$as_echo "$as_me: libz not found! Support for gzipped encodings is disabled, try installing zlib1g-dev or similar packages and recompile the source for enabling the GZIP support" >&6;}
+fi
+
+
+if test "x${ac_cv_lib_z_inflate}" == "xyes" ; then
+
+for ac_header in zlib.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "zlib.h" "ac_cv_header_zlib_h" "$ac_includes_default"
+if test "x$ac_cv_header_zlib_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_ZLIB_H 1
+_ACEOF
+
+else
+  zlib_header_not_found=yes
+fi
+
+done
+
+
+for ac_func in inflate
+do :
+  ac_fn_c_check_func "$LINENO" "inflate" "ac_cv_func_inflate"
+if test "x$ac_cv_func_inflate" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_INFLATE 1
+_ACEOF
+
+else
+  zlib_func_not_found=yes
+fi
+done
+
+
+if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" ; then
+
+$as_echo "#define LIBZ_SANE 1" >>confdefs.h
+
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: libz installed, but required headers or functions not found. Disabling the GZIP support!" >&5
+$as_echo "$as_me: libz installed, but required headers or functions not found. Disabling the GZIP support!" >&6;}
+fi
+
+fi
+
+# Conclude configure.ac
 
 am__api_version='1.16'
 

@@ -10,15 +10,15 @@
 #include"MID_structures.h"
 #include"MID_http.h"
 #include"MID_socket.h"
+#include"MID_ssl_socket.h"
 #include"MID_functions.h"
 #include"MID_interfaces.h"
 #include"url_parser.h"
 #include<stdio.h>
 #include<stdlib.h>
-#include<openssl/ssl.h>
-#include<openssl/err.h>
 #include<string.h>
 #include<unistd.h>
+#include<limits.h>
 #include<time.h>
 #include<pthread.h>
 

@@ -351,9 +351,10 @@ MID_SOURCES = \
 			  src/MID_socket.h \
 			  src/MID_ssl_socket.h \
 			  src/MID_unit.h \
-			  src/url_parser.h
+			  src/url_parser.h \
+			  config.h
 
-AM_CFLAGS = -I$(abs_srcdir)/src
+AM_CFLAGS = -I$(abs_srcdir)/src -I$(abs_srcdir)
 @TXT2MAN_TRUE@dist_man_MANS = doc/MID.1
 @TXT2MAN_TRUE@PACKAGE_DESC = Multiple-Interface-Downloader
 sysconf_DATA = MID.conf

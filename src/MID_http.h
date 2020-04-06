@@ -29,10 +29,12 @@
 #define RETURN_REQUEST 010
 #define RETURN_S_REQUEST 011
 #define RETURN_S_REQUEST_S_RESPONSE 100
-#define IDENTITY_ENCODING 0
-#define CHUNKED_ENCODING 1
+#define IDENTITY_ENCODING 00
+#define CHUNKED_ENCODING 01
+#define GZIPPED_ENCODING 10
 #define IDENTITY_ENCODING_BUFFER_SIZE 65536
 #define CHUNKED_ENCODING_BUFFER_SIZE 65536
+#define GZIPPED_ENCODING_BUFFER_SIZE 65536*4
 #define EN_OK 0
 #define EN_ERROR -1
 #define EN_UNKNOWN -2
@@ -49,6 +51,11 @@
 #include"MID_structures.h"
 #include"MID_socket.h"
 #include"url_parser.h"
+
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
 
 struct http_request
 {
@@ -171,8 +178,16 @@ int handle_identity_encoding(struct encoding_info* en_info);
 
 int handle_chunked_encoding(struct encoding_info* en_info);
 
+#ifdef LIBZ_SANE
+int handle_gzipped_encoding(struct encoding_info* en_info);
+#endif
+
 int handle_encodings(struct encoding_info* en_info);
 
 struct encoding_info* determine_encodings(char* encoding_str);
+
+#ifndef LIBSSL_SANE
+void https_quit();
+#endif
 
 #endif /* MID_HTTP_H_ */

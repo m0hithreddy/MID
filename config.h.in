@@ -91,6 +91,9 @@
 /* Define to 1 if you have the `inet_pton' function. */
 #undef HAVE_INET_PTON
 
+/* Define to 1 if you have the `inflate' function. */
+#undef HAVE_INFLATE
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -105,6 +108,9 @@
 
 /* Define to 1 if you have the `ssl' library (-lssl). */
 #undef HAVE_LIBSSL
+
+/* Define to 1 if you have the `z' library (-lz). */
+#undef HAVE_LIBZ
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
@@ -208,6 +214,9 @@
 /* Define to 1 if you have the `SSL_write' function. */
 #undef HAVE_SSL_WRITE
 
+/* Define to 1 if you have the <stddef.h> header file. */
+#undef HAVE_STDDEF_H
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -273,6 +282,16 @@
 
 /* Define to 1 if you have the `write' function. */
 #undef HAVE_WRITE
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#undef HAVE_ZLIB_H
+
+/* "libssl installed and found all required headers and functions and symbols"
+   */
+#undef LIBSSL_SANE
+
+/* "libz installed and found all required headers and functions" */
+#undef LIBZ_SANE
 
 /* Name of package */
 #undef PACKAGE

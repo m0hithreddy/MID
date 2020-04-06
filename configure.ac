@@ -1,12 +1,15 @@
 
+# Initate configure.ac 
+
 AC_INIT(MID,[1.0])
 
-#safety check in case user overwritten --srcdir
+# Safety check in case user overwritten --srcdir
+
 AC_CONFIG_SRCDIR([src/MID.c])
 
 AC_CONFIG_AUX_DIR([build-aux])
 
-#Checks for source files and other important files
+# Checks for source files and other important files
 
 AC_CHECK_FILES(
 [${srcdir}/src/MID.c
@@ -36,7 +39,8 @@ ${srcdir}/MID.conf],
 [AC_MSG_ERROR([Repository corrupted, redownload the source.])]
 )
 
-#Check for necessary programs
+# Checks for necessary programs
+
 AC_PROG_CC
 
 AC_PROG_SED
@@ -57,15 +61,16 @@ fi
 
 AM_CONDITIONAL([TXT2MAN], [test "x${TXT2MAN}" = "xyes"])
 
-#Some predefined headers
+# Some predefined headers
 
 AC_FUNC_MALLOC
 
-#Check for System HEADERS
+# Checks for system headers
 
 AC_CHECK_HEADERS(
 [stdio.h \
 stdlib.h \
+stddef.h \
 string.h \
 unistd.h \
 netdb.h \
@@ -84,6 +89,8 @@ ctype.h],
 [],
 [AC_MSG_ERROR([$ac_header is required but not found. Headers provided by libc, installed by default in all distributions.])]
 )
+
+# Checks for system functions
 
 AC_CHECK_FUNCS(
 [printf \
@@ -134,6 +141,8 @@ tolower],
 [AC_MSG_ERROR([$ac_func is required but not found. Should be included in libc, check the libc variant installed in your system.])]
 )
 
+# Pthread library checks
+
 AC_CHECK_LIB(pthread,pthread_create, [], [AC_MSG_ERROR([-lpthread is required but not found. Installed by default in all distributions])])
 
 AC_CHECK_FUNCS(
@@ -147,9 +156,13 @@ pthread_mutex_destroy],
 [AC_MSG_ERROR([$ac_func required but not found. Function provided by libpthread, installed by default in all distributions])]
 )
 
-AC_CHECK_LIB(crypto,BIO_new, [], [AC_MSG_ERROR([-lcrypto is required but not found. Try installing libssl-dev or similar packages.])] )
+#SSL library checks
 
-AC_CHECK_LIB(ssl,SSL_new, [], [AC_MSG_ERROR([-lssl is required but not found. Try installing libssl-dev or similar packages.])], [-lcrypto] ) 
+AC_CHECK_LIB(crypto,BIO_new,, [])
+
+AC_CHECK_LIB(ssl,SSL_new,, [], [-lcrypto] ) 
+
+if test "x${ac_cv_lib_crypto_BIO_new}" == "xyes" && test "x${ac_cv_lib_ssl_SSL_new}" == "xyes" ; then
 
 AC_CHECK_HEADERS(
 [openssl/ssl.h \
@@ -157,7 +170,7 @@ openssl/err.h \
 openssl/evp.h \
 openssl/tls1.h],
 [],
-[AC_MSG_ERROR([$ac_header is required but not found. Header provided by libssl, try installing libssl-dev or similar packages.])]
+[ssl_header_not_found="yes"]
 )
 
 AC_CHECK_FUNCS(
@@ -169,7 +182,7 @@ SSL_connect \
 SSL_write \
 SSL_read],
 [],
-[AC_MSG_ERROR([$ac_func required but not found. Function provided by libssl, try installing libssl-dev or similar packages.])]
+[ssl_func_not_found="yes"]
 )
 
 AC_CHECK_DECLS(
@@ -178,11 +191,47 @@ OpenSSL_add_all_algorithms,
 SSL_load_error_strings,
 SSL_set_tlsext_host_name],
 [],
-[AC_MSG_ERROR([Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages.])],
+[ssl_symbol_not_found="yes"],
 [[#include <openssl/ssl.h>
 #include <openssl/evp.h>
 #include <openssl/tls1.h>]]
 )
+
+if test "x${ssl_header_not_found}" != "xyes" && test "x${ssl_func_not_found}" != "xyes" && test "x${ssl_symbol_not_found}" != "xyes" ; then
+AC_DEFINE([LIBSSL_SANE],[1],["libssl installed and found all required headers and functions and symbols"])
+else
+AC_MSG_NOTICE([libssl and libcrypto are installed, but required headers or functions or symbols not found. Disabling the SSL support!])
+fi
+
+else
+AC_MSG_NOTICE([libssl or libcrypto not found! Support for SSL is disabled, try installing libssl-dev or similar packages and recompile the source for enabling the SSL support])
+fi
+
+# Zlib checks
+
+AC_CHECK_LIB(z,inflate,[],[AC_MSG_NOTICE([libz not found! Support for gzipped encodings is disabled, try installing zlib1g-dev or similar packages and recompile the source for enabling the GZIP support])]) 
+
+if test "x${ac_cv_lib_z_inflate}" == "xyes" ; then
+
+AC_CHECK_HEADERS(
+[zlib.h],
+[],
+[zlib_header_not_found=yes])
+
+AC_CHECK_FUNCS(
+[inflate],
+[],
+[zlib_func_not_found=yes])
+
+if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" ; then
+AC_DEFINE([LIBZ_SANE],[1],["libz installed and found all required headers and functions"])
+else
+AC_MSG_NOTICE([libz installed, but required headers or functions not found. Disabling the GZIP support!])
+fi 
+
+fi
+
+# Conclude configure.ac 
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
