@@ -10,6 +10,6 @@
   
   * Support for Chunked Transfer Encoding.
 
-  * Provided support for configuration file (/etc/MID/MID.conf).
+  * Provided support for configuration file (/usr/local/etc/MID.conf).
   
   * Autoconf build system.
