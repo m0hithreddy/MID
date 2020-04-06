@@ -27,6 +27,22 @@
 /* Define to 1 if you have the <ctype.h> header file. */
 #undef HAVE_CTYPE_H
 
+/* Define to 1 if you have the declaration of `OpenSSL_add_all_algorithms',
+   and to 0 if you don't. */
+#undef HAVE_DECL_OPENSSL_ADD_ALL_ALGORITHMS
+
+/* Define to 1 if you have the declaration of `SSL_library_init', and to 0 if
+   you don't. */
+#undef HAVE_DECL_SSL_LIBRARY_INIT
+
+/* Define to 1 if you have the declaration of `SSL_load_error_strings', and to
+   0 if you don't. */
+#undef HAVE_DECL_SSL_LOAD_ERROR_STRINGS
+
+/* Define to 1 if you have the declaration of `SSL_set_tlsext_host_name', and
+   to 0 if you don't. */
+#undef HAVE_DECL_SSL_SET_TLSEXT_HOST_NAME
+
 /* Define to 1 if you have the <errno.h> header file. */
 #undef HAVE_ERRNO_H
 

@@ -2230,6 +2230,631 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
+#Checks for source files and other important files
+
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_http.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_http.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_http.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_http.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_http.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_http.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_http.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_http.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_http.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_http.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_arguments.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_arguments.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_arguments.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_arguments.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_arguments.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_arguments.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_arguments.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_arguments.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_arguments.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_arguments.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_interfaces.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_interfaces.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_interfaces.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_interfaces.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_interfaces.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_interfaces.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_interfaces.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_interfaces.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_interfaces.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_interfaces.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_socket.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_socket.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_socket.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_socket.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_socket.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_socket.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_socket.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_socket.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_socket.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_socket.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_ssl_socket.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_ssl_socket.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_ssl_socket.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_ssl_socket.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_ssl_socket.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_ssl_socket.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_ssl_socket.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_ssl_socket.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_ssl_socket.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_ssl_socket.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_structures.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_structures.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_structures.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_structures.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_structures.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_structures.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_structures.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_structures.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_structures.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_structures.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_unit.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_unit.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_unit.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_unit.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_unit.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_unit.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_unit.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_unit.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_unit.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_unit.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_functions.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_functions.c" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_functions.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_functions.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_functions.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/MID_functions.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/MID_functions.h" >&5
+$as_echo_n "checking for ${srcdir}/src/MID_functions.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/MID_functions.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/MID_functions.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/url_parser.c" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/url_parser.c" >&5
+$as_echo_n "checking for ${srcdir}/src/url_parser.c... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/url_parser.c"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/url_parser.c" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/url_parser.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/url_parser.h" >&5
+$as_echo_n "checking for ${srcdir}/src/url_parser.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/url_parser.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/url_parser.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/src/Makefile.am" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/src/Makefile.am" >&5
+$as_echo_n "checking for ${srcdir}/src/Makefile.am... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/src/Makefile.am"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/src/Makefile.am" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/Makefile.am" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/Makefile.am" >&5
+$as_echo_n "checking for ${srcdir}/Makefile.am... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/Makefile.am"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/Makefile.am" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+as_ac_File=`$as_echo "ac_cv_file_${srcdir}/MID.conf" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${srcdir}/MID.conf" >&5
+$as_echo_n "checking for ${srcdir}/MID.conf... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${srcdir}/MID.conf"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_${srcdir}/MID.conf" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Repository corrupted, redownload the source." "$LINENO" 5
+
+fi
+
+
 #Check for necessary programs
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -3384,7 +4009,7 @@ fi
 
 
 if test "x${TXT2MAN}" != "xyes" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: txt2man not found, no support for building man pages" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: txt2man not found, no support for building man pages" >&5
 $as_echo "$as_me: txt2man not found, no support for building man pages" >&6;}
 fi
 
@@ -3397,7 +4022,7 @@ else
 fi
 
 
-# Some predefined headers
+#Some predefined headers
 
 
 ac_ext=c
@@ -3867,25 +4492,23 @@ fi
 
 #Check for System HEADERS
 
-for ac_header in  \
-					stdio.h \
-					stdlib.h \
-					string.h \
-					unistd.h \
-					netdb.h \
-					netinet/in.h \
-					sys/socket.h \
-					arpa/inet.h \
-					limits.h \
-					bits/sockaddr.h \
-					arpa/inet.h \
-					ifaddrs.h \
-					linux/if_link.h \
-					errno.h \
-					time.h \
-					pthread.h \
-					ctype.h \
-
+for ac_header in stdio.h \
+stdlib.h \
+string.h \
+unistd.h \
+netdb.h \
+netinet/in.h \
+sys/socket.h \
+arpa/inet.h \
+limits.h \
+bits/sockaddr.h \
+arpa/inet.h \
+ifaddrs.h \
+linux/if_link.h \
+errno.h \
+time.h \
+pthread.h \
+ctype.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -3896,57 +4519,56 @@ _ACEOF
 
 else
   as_fn_error $? "$ac_header is required but not found. Headers provided by libc, installed by default in all distributions." "$LINENO" 5
+
 fi
 
 done
 
 
-for ac_func in  \
-				 printf \
-				 strcmp \
-				 getuid \
-				 geteuid \
-				 fprintf \
-				 snprintf \
-				 sprintf \
-				 pwrite \
-				 exit \
-				 atoi \
-				 atol \
-				 strtol \
-				 malloc \
-				 calloc \
-				 free \
-				 strcpy \
-				 strncpy \
-				 strcat \
-				 strlen \
-				 strstr \
-				 strcasestr \
-				 bzero \
-				 fileno \
-				 fopen \
-				 fclose \
-				 time \
-				 memcpy \
-				 memset \
-				 memcmp \
-				 sleep \
-				 read \
-				 write \
-				 getifaddrs \
-				 getnameinfo \
-				 htons \
-				 inet_pton \
-				 socket \
-				 setsockopt \
-				 bind \
-				 connect \
-				 gethostbyname \
-				 inet_ntop \
-				 isalpha \
-				 tolower \
-
+for ac_func in printf \
+strcmp \
+getuid \
+geteuid \
+fprintf \
+snprintf \
+sprintf \
+pwrite \
+exit \
+atoi \
+atol \
+strtol \
+malloc \
+calloc \
+free \
+strcpy \
+strncpy \
+strcat \
+strlen \
+strstr \
+strcasestr \
+bzero \
+fileno \
+fopen \
+fclose \
+time \
+memcpy \
+memset \
+memcmp \
+sleep \
+read \
+write \
+getifaddrs \
+getnameinfo \
+htons \
+inet_pton \
+socket \
+setsockopt \
+bind \
+connect \
+gethostbyname \
+inet_ntop \
+isalpha \
+tolower
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -3957,6 +4579,7 @@ _ACEOF
 
 else
   as_fn_error $? "$ac_func is required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+
 fi
 done
 
@@ -4009,14 +4632,12 @@ else
 fi
 
 
-for ac_func in  \
-				   pthread_create \
-				   pthread_join \
-				   pthread_mutex_init \
-				   pthread_mutex_lock \
-				   pthread_mutex_unlock \
-				   pthread_mutex_destroy \
-
+for ac_func in pthread_create \
+pthread_join \
+pthread_mutex_init \
+pthread_mutex_lock \
+pthread_mutex_unlock \
+pthread_mutex_destroy
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -4027,6 +4648,7 @@ _ACEOF
 
 else
   as_fn_error $? "$ac_func required but not found. Function provided by libpthread, installed by default in all distributions" "$LINENO" 5
+
 fi
 done
 
@@ -4127,12 +4749,10 @@ else
 fi
 
 
-for ac_header in  \
-				   openssl/ssl.h \
-				   openssl/err.h \
-				   openssl/evp.h \
-				   openssl/tls1.h\
-
+for ac_header in openssl/ssl.h \
+openssl/err.h \
+openssl/evp.h \
+openssl/tls1.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -4143,20 +4763,19 @@ _ACEOF
 
 else
   as_fn_error $? "$ac_header is required but not found. Header provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+
 fi
 
 done
 
 
-for ac_func in  \
-				   TLS_method \
-				   SSL_CTX_new \
-				   SSL_new \
-				   SSL_set_fd \
-				   SSL_connect \
-				   SSL_write \
-				   SSL_read \
-
+for ac_func in TLS_method \
+SSL_CTX_new \
+SSL_new \
+SSL_set_fd \
+SSL_connect \
+SSL_write \
+SSL_read
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -4167,45 +4786,86 @@ _ACEOF
 
 else
   as_fn_error $? "$ac_func required but not found. Function provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+
 fi
 done
 
 
-as_ac_Symbol=`$as_echo "ac_cv_have_decl_\\
-				  SSL_library_init \\
-				  OpenSSL_add_all_algorithms \\
-				  SSL_load_error_strings \\
-				  SSL_set_tlsext_host_name \\
-				  " | $as_tr_sh`
-ac_fn_c_check_decl "$LINENO" "\
-				  SSL_library_init \
-				  OpenSSL_add_all_algorithms \
-				  SSL_load_error_strings \
-				  SSL_set_tlsext_host_name \
-				  " "$as_ac_Symbol" " \
-				  																																		 #include <openssl/ssl.h> \
-				  																																		 #include <openssl/evp.h> \
-				  																																		 #include <openssl/tls1.h> \
+ac_fn_c_check_decl "$LINENO" "SSL_library_init" "ac_cv_have_decl_SSL_library_init" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
 
 "
-if eval test \"x\$"$as_ac_Symbol"\" = x"yes"; then :
+if test "x$ac_cv_have_decl_SSL_library_init" = xyes; then :
   ac_have_decl=1
 else
   ac_have_decl=0
 fi
 
 cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_DECL_\\
-				  SSL_library_init \\
-				  OpenSSL_add_all_algorithms \\
-				  SSL_load_error_strings \\
-				  SSL_set_tlsext_host_name \\
-				  " | $as_tr_cpp` $ac_have_decl
+#define HAVE_DECL_SSL_LIBRARY_INIT $ac_have_decl
 _ACEOF
 if test $ac_have_decl = 1; then :
 
 else
-  as_fn_error $? "$ac_have required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "OpenSSL_add_all_algorithms" "ac_cv_have_decl_OpenSSL_add_all_algorithms" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+
+"
+if test "x$ac_cv_have_decl_OpenSSL_add_all_algorithms" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_OPENSSL_ADD_ALL_ALGORITHMS $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "SSL_load_error_strings" "ac_cv_have_decl_SSL_load_error_strings" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+
+"
+if test "x$ac_cv_have_decl_SSL_load_error_strings" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SSL_LOAD_ERROR_STRINGS $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "SSL_set_tlsext_host_name" "ac_cv_have_decl_SSL_set_tlsext_host_name" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+
+"
+if test "x$ac_cv_have_decl_SSL_set_tlsext_host_name" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SSL_SET_TLSEXT_HOST_NAME $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Symbol provided by libssl, try installing libssl-dev or similar packages." "$LINENO" 5
 fi
 
 
