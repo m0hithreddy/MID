@@ -36,6 +36,7 @@ void* unit(void* info)
 	while(1)
 	{
 
+		init:
 		// Syncing and retrying mechanisms
 
 		if(unit_info->quit==1 || (unit_info->resume==0 && unit_info->pc_flag==0))
@@ -99,26 +100,7 @@ void* unit(void* info)
 		if(sockfd<0)
 		{
 
-			pthread_mutex_lock(&unit_info->lock);
-
-			unit_info->resume=0;
-
-			if(retries_count<unit_info->max_unit_retries)
-			{
-				retries_count++;
-				unit_info->self_repair=1;
-				unit_info->healing_time=unit_info->unit_retry_sleep_time;
-
-				pthread_mutex_unlock(&unit_info->lock);
-
-				continue;
-			}
-
-			unit_info->err_flag=1;
-
-			pthread_mutex_unlock(&unit_info->lock);
-
-			return NULL;
+			goto self_repair;
 		}
 
 		if(unit_info->quit==1)
@@ -128,14 +110,7 @@ void* unit(void* info)
 
 		if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
 		{
-			pthread_mutex_lock(&unit_info->lock);
-
-			unit_info->err_flag=1;
-			unit_info->resume=0;
-
-			pthread_mutex_unlock(&unit_info->lock);
-
-			return NULL;
+			goto fatal_error;
 		}
 
 		SSL* ssl;
@@ -153,26 +128,7 @@ void* unit(void* info)
 
 			if(ssl==NULL)
 			{
-				pthread_mutex_lock(&unit_info->lock);
-
-				unit_info->resume=0;
-
-				if(retries_count<unit_info->max_unit_retries)
-				{
-					retries_count++;
-					unit_info->self_repair=1;
-					unit_info->healing_time=unit_info->unit_retry_sleep_time;
-
-					pthread_mutex_unlock(&unit_info->lock);
-
-					continue;
-				}
-
-				unit_info->err_flag=1;
-
-				pthread_mutex_unlock(&unit_info->lock);
-
-				return NULL;
+				goto self_repair;
 			}
 		}
 
@@ -213,26 +169,7 @@ void* unit(void* info)
 
 		if(status<0)
 		{
-			pthread_mutex_lock(&unit_info->lock);
-
-			unit_info->resume=0;
-
-			if(retries_count<unit_info->max_unit_retries)
-			{
-				retries_count++;
-				unit_info->self_repair=1;
-				unit_info->healing_time=unit_info->unit_retry_sleep_time;
-
-				pthread_mutex_unlock(&unit_info->lock);
-
-				continue;
-			}
-
-			unit_info->err_flag=1;
-
-			pthread_mutex_unlock(&unit_info->lock);
-
-			return NULL;
+			goto self_repair;
 		}
 
 		// Parse partial response
@@ -243,14 +180,7 @@ void* unit(void* info)
 
 		if(s_response==NULL)
 		{
-			pthread_mutex_lock(&unit_info->lock);
-
-			unit_info->err_flag=1;
-			unit_info->resume=0;
-
-			pthread_mutex_unlock(&unit_info->lock);
-
-			return NULL;
+			goto fatal_error;
 		}
 
 		// Check for HTTP response status code
@@ -274,22 +204,13 @@ void* unit(void* info)
 
 		if(fp==NULL)
 		{
-			pthread_mutex_lock(&unit_info->lock);
-
-			unit_info->err_flag=1;
-			unit_info->resume=0;
-
-			pthread_mutex_unlock(&unit_info->lock);
-
-			return NULL;
+			goto fatal_error;
 		}
 
 		char* data_buf=eat_buf;
 		status=s_response->body->len;
 
 		memcpy(data_buf,s_response->body->data,s_response->body->len);
-
-		free(s_response);
 
 		pthread_mutex_lock(&unit_info->lock);
 
@@ -303,8 +224,14 @@ void* unit(void* info)
 
 		pthread_mutex_unlock(&unit_info->lock);
 
-		struct encoding_info* en_info=determine_encodings(s_response->transfer_encoding);
-		int en_status;
+		struct encoding_info* en_info=determine_encodings(s_response->content_encoding);
+
+		if(en_info==NULL)
+		{
+			goto fatal_error;
+		}
+
+		int en_status=EN_OK;
 
 		// Download data...
 
@@ -327,17 +254,18 @@ void* unit(void* info)
 			while(en_info->in_len!=en_info->in_max) //handle encodings
 			{
 
+				if(en_status==EN_END)
+				{
+					pthread_mutex_unlock(&unit_info->lock);
+					goto fatal_error;
+				}
+
 				en_status=handle_encodings(en_info);
 
 				if(en_status!=EN_OK && en_status!=EN_END)
 				{
-					unit_info->resume=0;
-					unit_info->current_size=0;
-					unit_info->err_flag=1;
-
 					pthread_mutex_unlock(&unit_info->lock);
-
-					return NULL;
+					goto fatal_error;
 				}
 
 				pwrite(fileno(fp),en_info->out,en_info->out_len,unit_info->range->start+unit_info->current_size);
@@ -381,26 +309,11 @@ void* unit(void* info)
 		{
 			pthread_mutex_lock(&unit_info->lock);
 
-			unit_info->resume=0;
-			unit_info->current_size=0;
-
-			if(retries_count<unit_info->max_unit_retries)
-			{
-				retries_count++;
-				unit_info->self_repair=1;
-				unit_info->healing_time=unit_info->unit_retry_sleep_time;
-				unit_info->range->start=*(long*)unit_info->unit_ranges->end->data+1;
-
-				pthread_mutex_unlock(&unit_info->lock);
-
-				continue;
-			}
-
-			unit_info->err_flag=1;
+			unit_info->range->start=*(long*)unit_info->unit_ranges->end->data+1;
 
 			pthread_mutex_unlock(&unit_info->lock);
 
-			return NULL;
+			goto self_repair;
 		}
 
 		pthread_mutex_lock(&unit_info->lock);
@@ -410,6 +323,39 @@ void* unit(void* info)
 		pthread_mutex_unlock(&unit_info->lock);
 
 	}
+
+	self_repair:
+
+	pthread_mutex_lock(&unit_info->lock);
+
+	unit_info->resume=0;
+	unit_info->current_size=0;
+
+	if(retries_count<unit_info->max_unit_retries)
+	{
+		retries_count++;
+		unit_info->self_repair=1;
+		unit_info->healing_time=unit_info->unit_retry_sleep_time;
+
+		pthread_mutex_unlock(&unit_info->lock);
+
+		goto init;
+	}
+
+	unit_info->err_flag=1;
+
+	pthread_mutex_unlock(&unit_info->lock);
+
+	return NULL;
+
+	fatal_error:
+
+	pthread_mutex_lock(&unit_info->lock);
+
+	unit_info->err_flag=1;
+	unit_info->resume=0;
+
+	pthread_mutex_unlock(&unit_info->lock);
 
 	return NULL;
 }
