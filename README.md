@@ -16,14 +16,15 @@ The list of dependencies required for the compiling, running and building from t
 
 ##### MID dependencies
 
-* [```libssl-dev```](https://github.com/openssl/openssl) [```$ apt install libssl-dev```]
+* [```libssl-dev```](https://github.com/openssl/openssl) [```$ sudo apt install libssl-dev```]
+* [```zlib1g-dev```](https://github.com/madler/zlib) [```$ sudo apt install zlib1g-dev```]
 
 ##### Build and Install dependencies
 
-* [```autoconf```](https://github.com/autotools-mirror/autoconf) [```$ apt install autoconf```]
-* [```automake```](https://github.com/autotools-mirror/automake) [```$ apt install automake```]
-* [```libtool```](https://github.com/autotools-mirror/libtool) [```$ apt install libtool```]
-* [```txt2man```](https://github.com/mvertes/txt2man) [```$ apt install txt2man```]
+* [```autoconf```](https://github.com/autotools-mirror/autoconf) [```$ sudo apt install autoconf```]
+* [```automake```](https://github.com/autotools-mirror/automake) [```$ sudo apt install automake```]
+* [```libtool```](https://github.com/autotools-mirror/libtool) [```$ sudo apt install libtool```]
+* [```txt2man```](https://github.com/mvertes/txt2man) [```$ sudo apt install txt2man```]
 
 ## Downloading
 
