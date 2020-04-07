@@ -15,6 +15,11 @@
 #include<string.h>
 #include<unistd.h>
 
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
 struct data_bag* hdr_bag;
 
 void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
@@ -667,9 +672,27 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--version") || !strcmp(argv[counter],"-v"))
+		else if(!strcmp(argv[counter],"--version") || !strcmp(argv[counter],"-V"))
 		{
-			fprintf(stderr,"MID version 1.0.0 (linux-gnu)\n\n");
+			printf("\n");
+			printf("%s version %s (%s) ",PACKAGE_NAME,PACKAGE_VERSION,HOST_ARCH);
+
+#ifdef LIBSSL_SANE
+			printf("+ssl +crypto");
+#else
+			printf("-ssl -crypto");
+#endif
+
+#ifdef LIBZ_SANE
+			printf(" +z");
+#else
+			printf(" -z");
+#endif
+
+			printf("\n\n");
+			printf("Project homepage: <%s>",PACKAGE_URL);
+			printf("\n\n");
+
 			exit(1);
 		}
 
@@ -704,14 +727,14 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--verbose") || !strcmp(argv[counter],"-V")) // --verbose || -V
+		else if(!strcmp(argv[counter],"--verbose") || !strcmp(argv[counter],"-v")) // --verbose || -v
 		{
 			args->verbose_flag=1;
 
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--vverbose") || !strcmp(argv[counter],"-VV")) // --vverbose || -VV
+		else if(!strcmp(argv[counter],"--vverbose") || !strcmp(argv[counter],"-vv")) // --vverbose || -vv
 		{
 			args->verbose_flag=1;
 			args->vverbose_flag=1;
@@ -802,11 +825,11 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"  --unit-sleep-time x                  -Us x               Download unit sleeps for x seconds before retrying. \n");
 	fprintf(stderr,"  --progress-update-time x             -Pu x               Information related to download progress updates after every x seconds. \n");
 	fprintf(stderr,"  --detailed-progress                  -Pd                 Show detailed download progress. \n");
-	fprintf(stderr,"  --version                            -v                  Print the version and exit. \n");
+	fprintf(stderr,"  --version                            -V                  Print the version and exit. \n");
 	fprintf(stderr,"  --header h=v                         -H h=v              Add custom headers to HTTP request message (option can be used multiple times to add multiple headers). \n");
 	fprintf(stderr,"  --quiet                              -q                  Silent mode, don't output anything. \n");
-	fprintf(stderr,"  --verbose                            -V                  Print the verbose information. \n");
-	fprintf(stderr,"  --vverbose                           -VV                 Print the very verbose information. \n");
+	fprintf(stderr,"  --verbose                            -v                  Print the verbose information. \n");
+	fprintf(stderr,"  --vverbose                           -vv                 Print the very verbose information. \n");
 	fprintf(stderr,"  --surpass-root-check                 -s                  If had the sufficient permissions, use -s to surpass the root-check. \n");
 	fprintf(stderr,"  --conf file                          -c file             Specify the configuration file path. Preference order: cmd_line > conf_file > default_values \n");
 	fprintf(stderr,"\n");

@@ -87,6 +87,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
+build_triplet = @build@
+host_triplet = @host@
 bin_PROGRAMS = MID$(EXEEXT)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -209,11 +211,13 @@ AM_RECURSIVE_TARGETS = cscope
 am__DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.in \
 	$(srcdir)/config.h.in $(srcdir)/doc/Makefile.am \
 	$(srcdir)/src/Makefile.am $(top_srcdir)/build-aux/compile \
+	$(top_srcdir)/build-aux/config.guess \
+	$(top_srcdir)/build-aux/config.sub \
 	$(top_srcdir)/build-aux/depcomp \
 	$(top_srcdir)/build-aux/install-sh \
 	$(top_srcdir)/build-aux/missing COPYING INSTALL TODO \
-	build-aux/compile build-aux/depcomp build-aux/install-sh \
-	build-aux/missing
+	build-aux/compile build-aux/config.guess build-aux/config.sub \
+	build-aux/depcomp build-aux/install-sh build-aux/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -290,14 +294,22 @@ am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
 bindir = @bindir@
+build = @build@
 build_alias = @build_alias@
+build_cpu = @build_cpu@
+build_os = @build_os@
+build_vendor = @build_vendor@
 builddir = @builddir@
 datadir = @datadir@
 datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
+host = @host@
 host_alias = @host_alias@
+host_cpu = @host_cpu@
+host_os = @host_os@
+host_vendor = @host_vendor@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@

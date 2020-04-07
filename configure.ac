@@ -1,7 +1,7 @@
 
 # Initate configure.ac 
 
-AC_INIT(MID,[1.0])
+AC_INIT(MID,[1.0],,,[https://github.com/m0hithreddy/MID])
 
 # Safety check in case user overwritten --srcdir
 
@@ -87,7 +87,7 @@ time.h \
 pthread.h \
 ctype.h],
 [],
-[AC_MSG_ERROR([$ac_header is required but not found. Headers provided by libc, installed by default in all distributions.])]
+[AC_MSG_ERROR([${ac_header} is required but not found. Headers provided by libc, installed by default in all distributions.])]
 )
 
 # Checks for system functions
@@ -139,7 +139,7 @@ inet_ntop \
 isalpha \
 tolower],
 [],
-[AC_MSG_ERROR([$ac_func is required but not found. Should be included in libc, check the libc variant installed in your system.])]
+[AC_MSG_ERROR([${ac_func} is required but not found. Should be included in libc, check the libc variant installed in your system.])]
 )
 
 # Pthread library checks
@@ -154,7 +154,7 @@ pthread_mutex_lock \
 pthread_mutex_unlock \
 pthread_mutex_destroy],
 [],
-[AC_MSG_ERROR([$ac_func required but not found. Function provided by libpthread, installed by default in all distributions])]
+[AC_MSG_ERROR([${ac_func} required but not found. Function provided by libpthread, installed by default in all distributions])]
 )
 
 #SSL library checks
@@ -245,6 +245,11 @@ fi
 
 fi
 
+# System Architecture
+
+AC_CANONICAL_HOST
+AC_DEFINE_UNQUOTED([HOST_ARCH], ["$host_os"], ["Host architecture"])
+ 
 # Conclude configure.ac 
 
 AM_INIT_AUTOMAKE([subdir-objects])

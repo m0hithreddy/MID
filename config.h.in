@@ -316,6 +316,9 @@
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
 
+/* "Host architecture" */
+#undef HOST_ARCH
+
 /* "libssl installed and found all required headers and functions and symbols"
    */
 #undef LIBSSL_SANE

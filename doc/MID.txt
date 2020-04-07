@@ -39,15 +39,15 @@ OPTIONS
 
    --detailed-progress                  -Pd                 Show detailed download progress.
 
-   --version                            -v                  Print the version and exit.
+   --version                            -V                  Print the version and exit.
 
    --header h=v                         -H h=v              Add custom headers to HTTP request message (option can be used multiple times to add multiple headers).
 
    --quiet                              -q                  Silent mode, don't output anything.
 
-   --verbose                            -V                  Print the verbose information.
+   --verbose                            -v                  Print the verbose information.
 
-   --vverbose                           -VV                 Print the very verbose information.
+   --vverbose                           -vv                 Print the very verbose information.
 
    --surpass-root-check                 -s                  If had the sufficient permissions, use -s to surpass the root-check.
 
