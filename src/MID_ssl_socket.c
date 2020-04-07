@@ -90,7 +90,7 @@ SSL* ssl_open_connection(int sockfd,char* hostname)
 int ssl_sock_write(SSL* ssl,struct network_data* n_data)
 {
 	https_quit();
-	return NULL;
+	return -1;
 }
 
 struct network_data* ssl_sock_read(SSL* ssl)
