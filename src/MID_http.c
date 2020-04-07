@@ -20,6 +20,7 @@
 #include<sys/socket.h>
 #include<arpa/inet.h>
 #include<limits.h>
+#include<zlib.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -391,6 +392,7 @@ void* send_https_request(int sockfd,struct network_data* request,char* hostname,
 void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag)
 {
 	https_quit();
+	return NULL;
 }
 #endif
 
@@ -743,7 +745,59 @@ int handle_chunked_encoding(struct encoding_info* en_info)
 #ifdef LIBZ_SANE
 int handle_gzipped_encoding(struct encoding_info* en_info)
 {
-	return 0;
+	if(en_info->data==NULL)
+	{
+		en_info->data=calloc(1,sizeof(z_stream)+sizeof(int));
+
+		((z_stream*)en_info->data)->zalloc = Z_NULL;
+		((z_stream*)en_info->data)->zfree = Z_NULL;
+		((z_stream*)en_info->data)->opaque = Z_NULL;
+		((z_stream*)en_info->data)->avail_in = 0;
+		((z_stream*)en_info->data)->next_in = Z_NULL;
+
+		if(inflateInit2((z_stream*)en_info->data,MAX_WBITS+16)!=Z_OK)
+			return EN_ERROR;
+
+		*((int*)(en_info->data+sizeof(z_stream)))=0;
+	}
+
+	z_stream* strm=(z_stream*)(en_info->data);
+	int* init_flag=(int*)(en_info->data+sizeof(z_stream));
+
+	if(!(*init_flag))
+	{
+		strm->next_in = en_info->in;
+		strm->avail_in = en_info->in_max;
+		*init_flag=1;
+	}
+
+	strm->avail_out = en_info->out_max;
+	strm->next_out = en_info->out;
+
+	int ret = inflate(strm, Z_FINISH);
+
+	if( ret == Z_DATA_ERROR || ret == Z_NEED_DICT || ret == Z_MEM_ERROR )
+	{
+		inflateEnd(strm);
+		return EN_ERROR;
+	}
+
+
+	en_info->out_len = en_info->out_max - strm->avail_out;
+
+	if(strm->avail_out!=0)
+	{
+		*init_flag=0;
+		en_info->in_len=en_info->in_max;
+	}
+
+	if(ret==Z_STREAM_END)
+	{
+		inflateEnd(strm);
+		return EN_END;
+	}
+
+	return EN_OK;
 }
 #endif
 
@@ -803,10 +857,12 @@ struct encoding_info* determine_encodings(char* encoding_str)
 	}
 
 #ifdef LIBZ_SANE
-	else if(strcmp(encoding_str,"gzip"))
+	else if(!strcmp(encoding_str,"gzip"))
 	{
 		struct encoding_info* en_info=(struct encoding_info*)calloc(1,sizeof(struct encoding_info));
 
+		if(en_info==NULL)
+			return NULL;
 		en_info->encoding=GZIPPED_ENCODING;
 		en_info->in=NULL;
 		en_info->in_len=0;
@@ -815,6 +871,8 @@ struct encoding_info* determine_encodings(char* encoding_str)
 		en_info->out_len=0;
 		en_info->out_max=GZIPPED_ENCODING_BUFFER_SIZE;
 		en_info->data=NULL;
+
+		return en_info;
 	}
 #endif
 

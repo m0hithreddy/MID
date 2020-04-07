@@ -224,7 +224,7 @@ void* unit(void* info)
 
 		pthread_mutex_unlock(&unit_info->lock);
 
-		struct encoding_info* en_info=determine_encodings(s_response->content_encoding);
+		struct encoding_info* en_info=determine_encodings(s_response->transfer_encoding);
 
 		if(en_info==NULL)
 		{
