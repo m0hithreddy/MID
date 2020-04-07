@@ -34,6 +34,7 @@ struct unit_info
 	pthread_t unit_id;
 	pthread_mutex_t lock;
 	char* file;
+	char* up_file;
 	char* if_name;
 	long if_id;
 	long current_size; // Amount downloaded in a given range

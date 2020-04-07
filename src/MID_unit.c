@@ -200,7 +200,7 @@ void* unit(void* info)
 
 		// Open the file and write the over eaten data and remaining download data to the file
 
-		FILE* fp=fopen(unit_info->file,"r+");
+		FILE* fp=fopen(unit_info->up_file,"r+");
 
 		if(fp==NULL)
 		{
@@ -228,7 +228,7 @@ void* unit(void* info)
 
 		if(en_info==NULL)
 		{
-			goto fatal_error;
+			exit(3);
 		}
 
 		int en_status=EN_OK;

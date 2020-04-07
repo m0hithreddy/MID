@@ -24,6 +24,11 @@
 #include<pthread.h>
 #include "MID_unit.h"
 
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
 struct mid_args* args;
 
 int main(int argc, char **argv) {
@@ -136,6 +141,9 @@ int main(int argc, char **argv) {
 	s_request->host=purl->host;
 	s_request->port=purl->port;
 	s_request->user_agent=MID_USER_AGENT;
+#ifdef LIBZ_SANE
+	s_request->accept_encoding="gzip";
+#endif
 	s_request->connection="close";
 	s_request->url=args->url;
 	s_request->hostip=hostip;
@@ -346,6 +354,23 @@ int main(int argc, char **argv) {
 	else
 		base_unit_info->file=determine_filename(purl->path);
 
+	if(gl_s_response->content_encoding!=NULL)
+	{
+		long tmp_len=strlen(base_unit_info->file);
+		char tmp_up_file[tmp_len+4];
+
+		memcpy(tmp_up_file,base_unit_info->file,tmp_len);
+
+		tmp_up_file[tmp_len]='.';
+		tmp_up_file[tmp_len+1]='u';
+		tmp_up_file[tmp_len+2]='p';
+		tmp_up_file[tmp_len+3]='\0';
+
+		base_unit_info->up_file=determine_filename(tmp_up_file);
+	}
+	else
+		base_unit_info->up_file=base_unit_info->file;
+
 	base_unit_info->if_name=ok_net_if[0].name;
 	base_unit_info->if_id=0;
 	base_unit_info->current_size=0;
@@ -379,14 +404,19 @@ int main(int argc, char **argv) {
 
 	base_unit_info->unit_ranges=create_data_bag();
 
-	//Creating the file
+	//Creating the files
 
-	if(!args->quiet_flag)
+	if(!args->quiet_flag && gl_s_response->content_encoding == NULL)
 	{
 		printf("\nOpening File: %s\n",base_unit_info->file);
 	}
+	else if(!args->quiet_flag)
+	{
+		printf("\nOpening Unprocessed File: %s\n",base_unit_info->up_file);
+	}
 
 	fclose(fopen(base_unit_info->file,"w"));
+	fclose(fopen(base_unit_info->up_file,"w"));
 
 
 
@@ -681,10 +711,129 @@ int main(int argc, char **argv) {
 
 	if(err!=NULL)
 	{
-		fprintf(stderr,"\nMID: Error downloading chunk\nExiting...\n\n");
+		if(!args->quiet_flag)
+			fprintf(stderr,"\nMID: Error downloading chunk\nExiting...\n\n");
+
 		exit(2);
 	}
 
+	if(gl_s_response->content_encoding != NULL)
+	{
+		if(!args->quiet_flag)
+			printf("Decoding the file: %s\n",base_unit_info->up_file);
+
+		struct encoding_info* en_info=determine_encodings(gl_s_response->content_encoding);
+
+		if(en_info==NULL)
+		{
+			if(!args->quiet_flag)
+				fprintf(stderr,"\nMID: Content-Encoding unknown, not removing the unprocessed file %s\nExiting...\n\n",base_unit_info->up_file);
+
+			exit(3);
+		}
+
+		FILE* u_fp=fopen(base_unit_info->up_file,"r");
+
+		if(u_fp==NULL)
+		{
+			if(!args->quiet_flag)
+				fprintf(stderr,"\nMID: The just now downloaded %s vanished!\nExiting...\n\n",base_unit_info->up_file);
+
+			exit(2);
+		}
+
+		FILE* fp=fopen(base_unit_info->file,"w");
+
+		if(fp==NULL)
+		{
+			fclose(u_fp);
+
+			if(!args->quiet_flag)
+				fprintf(stderr,"\nMID: Error opening the output file %s\nExiting...\n\n",base_unit_info->file);
+
+			exit(2);
+		}
+		else if(!args->quiet_flag)
+		{
+			printf("\nOpening File: %s\n\n",base_unit_info->file);
+		}
+
+		char uf_data[MAX_TRANSACTION_SIZE];
+		int status;
+		int en_status=EN_OK;
+
+		en_info->in=uf_data;
+		en_info->in_max=MAX_TRANSACTION_SIZE;
+
+		while(1)
+		{
+			status=read(fileno(u_fp),uf_data,MAX_TRANSACTION_SIZE);
+
+			if(status<0)
+			{
+				fclose(fp);
+				fclose(u_fp);
+
+				if(!args->quiet_flag)
+					fprintf(stderr,"\nMID: Error reading the file %s\nExiting...\n\n",base_unit_info->up_file);
+
+				exit(2);
+			}
+			else if(status==0)
+			{
+				fclose(fp);
+				fclose(u_fp);
+
+				break;
+			}
+			en_info->in_len=status;
+
+			while(en_info->in_len!=en_info->in_max)
+			{
+				if(en_status==EN_END)
+				{
+					fclose(fp);
+					fclose(u_fp);
+
+					if(!args->quiet_flag)
+						fprintf(stderr,"\nMID: Misc data found at the end of the file %s\n\n",base_unit_info->up_file);
+
+					exit(4);
+				}
+
+				en_status=handle_encodings(en_info);
+
+				if(en_status!=EN_OK && en_status!=EN_END)
+				{
+					fclose(fp);
+					fclose(u_fp);
+
+					if(!args->quiet_flag)
+						fprintf(stderr,"\nMID: Error encountered when decoding the file %s\nExiting...\n",base_unit_info->up_file);
+
+					exit(2);
+				}
+
+				if(write(fileno(fp),en_info->out,en_info->out_len)!=en_info->out_len)
+				{
+					fclose(fp);
+					fclose(u_fp);
+
+					if(!args->quiet_flag)
+						fprintf(stderr,"\nMID: Error writing to the file %s\nExiting...\n\n",base_unit_info->file);
+
+					exit(2);
+				}
+
+			}
+		}
+
+	}
+
+	if(gl_s_response->content_encoding!=NULL)
+	{
+		remove(base_unit_info->up_file);
+	}
 
 	exit(0);
 

@@ -4555,6 +4555,7 @@ bzero \
 fileno \
 fopen \
 fclose \
+remove \
 time \
 memcpy \
 memset \
@@ -4958,12 +4959,14 @@ fi
 done
 
 
-for ac_func in inflate
+for ac_func in inflate \
+inflateEnd
 do :
-  ac_fn_c_check_func "$LINENO" "inflate" "ac_cv_func_inflate"
-if test "x$ac_cv_func_inflate" = xyes; then :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_INFLATE 1
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
 
 else
@@ -4972,13 +4975,117 @@ fi
 done
 
 
-if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" ; then
+ac_fn_c_check_decl "$LINENO" "inflateInit2" "ac_cv_have_decl_inflateInit2" "#include <zlib.h>
+
+"
+if test "x$ac_cv_have_decl_inflateInit2" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_INFLATEINIT2 $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  zlib_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "Z_FINISH" "ac_cv_have_decl_Z_FINISH" "#include <zlib.h>
+
+"
+if test "x$ac_cv_have_decl_Z_FINISH" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_Z_FINISH $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  zlib_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "Z_DATA_ERROR" "ac_cv_have_decl_Z_DATA_ERROR" "#include <zlib.h>
+
+"
+if test "x$ac_cv_have_decl_Z_DATA_ERROR" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_Z_DATA_ERROR $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  zlib_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "Z_NEED_DICT" "ac_cv_have_decl_Z_NEED_DICT" "#include <zlib.h>
+
+"
+if test "x$ac_cv_have_decl_Z_NEED_DICT" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_Z_NEED_DICT $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  zlib_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "Z_MEM_ERROR" "ac_cv_have_decl_Z_MEM_ERROR" "#include <zlib.h>
+
+"
+if test "x$ac_cv_have_decl_Z_MEM_ERROR" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_Z_MEM_ERROR $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  zlib_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "Z_STREAM_END" "ac_cv_have_decl_Z_STREAM_END" "#include <zlib.h>
+
+"
+if test "x$ac_cv_have_decl_Z_STREAM_END" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_Z_STREAM_END $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  zlib_symbol_not_found="yes"
+fi
+
+
+if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" && test "x${zlib_symbol_not_found}" != "xyes" ; then
 
 $as_echo "#define LIBZ_SANE 1" >>confdefs.h
 
 else
-{ $as_echo "$as_me:${as_lineno-$LINENO}: libz installed, but required headers or functions not found. Disabling the GZIP support!" >&5
-$as_echo "$as_me: libz installed, but required headers or functions not found. Disabling the GZIP support!" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: libz installed, but required headers or functions or symbols not found. Disabling the GZIP support!" >&5
+$as_echo "$as_me: libz installed, but required headers or functions or symbols not found. Disabling the GZIP support!" >&6;}
 fi
 
 fi

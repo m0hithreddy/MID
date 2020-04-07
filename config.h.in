@@ -27,6 +27,10 @@
 /* Define to 1 if you have the <ctype.h> header file. */
 #undef HAVE_CTYPE_H
 
+/* Define to 1 if you have the declaration of `inflateInit2', and to 0 if you
+   don't. */
+#undef HAVE_DECL_INFLATEINIT2
+
 /* Define to 1 if you have the declaration of `OpenSSL_add_all_algorithms',
    and to 0 if you don't. */
 #undef HAVE_DECL_OPENSSL_ADD_ALL_ALGORITHMS
@@ -42,6 +46,26 @@
 /* Define to 1 if you have the declaration of `SSL_set_tlsext_host_name', and
    to 0 if you don't. */
 #undef HAVE_DECL_SSL_SET_TLSEXT_HOST_NAME
+
+/* Define to 1 if you have the declaration of `Z_DATA_ERROR', and to 0 if you
+   don't. */
+#undef HAVE_DECL_Z_DATA_ERROR
+
+/* Define to 1 if you have the declaration of `Z_FINISH', and to 0 if you
+   don't. */
+#undef HAVE_DECL_Z_FINISH
+
+/* Define to 1 if you have the declaration of `Z_MEM_ERROR', and to 0 if you
+   don't. */
+#undef HAVE_DECL_Z_MEM_ERROR
+
+/* Define to 1 if you have the declaration of `Z_NEED_DICT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_Z_NEED_DICT
+
+/* Define to 1 if you have the declaration of `Z_STREAM_END', and to 0 if you
+   don't. */
+#undef HAVE_DECL_Z_STREAM_END
 
 /* Define to 1 if you have the <errno.h> header file. */
 #undef HAVE_ERRNO_H
@@ -93,6 +117,9 @@
 
 /* Define to 1 if you have the `inflate' function. */
 #undef HAVE_INFLATE
+
+/* Define to 1 if you have the `inflateEnd' function. */
+#undef HAVE_INFLATEEND
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
@@ -180,6 +207,9 @@
 
 /* Define to 1 if you have the `read' function. */
 #undef HAVE_READ
+
+/* Define to 1 if you have the `remove' function. */
+#undef HAVE_REMOVE
 
 /* Define to 1 if you have the `setsockopt' function. */
 #undef HAVE_SETSOCKOPT

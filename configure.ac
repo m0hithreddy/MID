@@ -118,6 +118,7 @@ bzero \
 fileno \
 fopen \
 fclose \
+remove \
 time \
 memcpy \
 memset \
@@ -219,14 +220,27 @@ AC_CHECK_HEADERS(
 [zlib_header_not_found=yes])
 
 AC_CHECK_FUNCS(
-[inflate],
+[inflate \
+inflateEnd],
 [],
 [zlib_func_not_found=yes])
 
-if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" ; then
+AC_CHECK_DECLS(
+[inflateInit2,
+Z_FINISH,
+Z_DATA_ERROR,
+Z_NEED_DICT,
+Z_MEM_ERROR,
+Z_STREAM_END],
+[],
+[zlib_symbol_not_found="yes"],
+[[#include <zlib.h>]]
+)
+
+if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" && test "x${zlib_symbol_not_found}" != "xyes" ; then
 AC_DEFINE([LIBZ_SANE],[1],["libz installed and found all required headers and functions"])
 else
-AC_MSG_NOTICE([libz installed, but required headers or functions not found. Disabling the GZIP support!])
+AC_MSG_NOTICE([libz installed, but required headers or functions or symbols not found. Disabling the GZIP support!])
 fi 
 
 fi
