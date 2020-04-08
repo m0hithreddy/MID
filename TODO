@@ -1,8 +1,14 @@
 -> Logging mechanism
 
--> Resume download 
+-> Resume download
 
 -> Implementing own URL parser
+
+-> Download across mirros
+
+-> IPV6 support
+
+-> I/O time out
 
 -> Continue Download if some interfaces fail (later)
 
