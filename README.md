@@ -30,7 +30,7 @@ The list of dependencies required for the compiling, running and building from t
 
 Obtain the latest stable MID sources by cloning from GitHub mirror
 
-	$ git clone https://github.com/m0hithreddy/MID.git
+	$ git clone https://github.com/m0hithreddy/MID.git && cd MID
 
 Also you can fetch the archive of master branch or particular relase as follows
 
