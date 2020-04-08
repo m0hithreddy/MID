@@ -882,7 +882,7 @@ struct encoding_info* determine_encodings(char* encoding_str)
 #ifndef LIBSSL_SANE
 void https_quit()
 {
-	fprintf(stderr,"\nMID: HTTPS URL encountered! MID is not built with the SSL support. Please recompile MID with the SSL support\nExiting...\n\n");
+	fprintf(stderr,"\nMID: HTTPS URL encountered! MID is not built with the SSL support. Please recompile MID with the SSL support. Exiting...\n\n");
 	exit(3);
 }
 #endif

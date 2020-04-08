@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 
 	if( !args->surpass_root_check && getuid()!=0 && geteuid()!=0)
 	{
-		mid_help("\nMID: SO_BINDTODEVICE socket-option is used to bind to an interface, which requires root permissions and CAP_NET_RAW capability. If you believe the current UID is having the sufficient permissions then try using --surpass-root-check flag");
+		mid_help("\nMID: SO_BINDTODEVICE socket-option is used to bind to an interface, which requires root permissions and CAP_NET_RAW capability. If you believe the current UID is having the sufficient permissions then try using --surpass-root-check flag.");
 	}
 
 	//Parse the URL
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 	if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Not a HTTP or HTTPS URL\nExiting...\n\n");
+			fprintf(stderr,"\nMID: Not a HTTP or HTTPS URL. Exiting...\n\n");
 
 		exit(1);
 	}
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
 	if(hostip==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Unable to find the IPV4 address of %s\nExiting...\n\n",purl->host);
+			fprintf(stderr,"\nMID: Unable to find the IPV4 address of %s. Exiting...\n\n",purl->host);
 
 		exit(1);
 	}
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 	if(net_if[0]==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: No network-interface found for downloading\nExiting...\n\n");
+			fprintf(stderr,"\nMID: No network-interface found for downloading. Exiting...\n\n");
 
 		exit(1);
 	}
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 	if(servaddr==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error Checking partial content support\nExiting...\n\n");
+			fprintf(stderr,"\nMID: Error Checking partial content support. Exiting...\n\n");
 
 		exit(1);
 	}
@@ -248,7 +248,7 @@ int main(int argc, char **argv) {
 	if(gl_s_response==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error reading server response\nExiting...\n\n");
+			fprintf(stderr,"\nMID: Error reading server response. Exiting...\n\n");
 
 		exit(1);
 	}
@@ -257,21 +257,21 @@ int main(int argc, char **argv) {
 		if(gl_s_response->status_code[0]=='4')
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Client Side Error, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+				fprintf(stderr,"\nMID: Client Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 
 			exit(1);
 		}
 		else if(gl_s_response->status_code[0]=='5')
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Server Side Error, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+				fprintf(stderr,"\nMID: Server Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 
 			exit(1);
 		}
 		else if(gl_s_response->status_code[0]!='2')
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Unknown error reported by server, Status-Code: %s , Status: %s\nExiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+				fprintf(stderr,"\nMID: Unknown error reported by server, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 
 			exit(1);
 		}
@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
 	if(net_if_data==NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: No suitable network-interface found for downloading\nExiting...\n\n");
+			fprintf(stderr,"\nMID: No suitable network-interface found for downloading. Exiting...\n\n");
 
 		exit(1);
 	}
@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
 	if(ok_net_if_len==0)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: No suitable network-interface found for downloading\nExiting...\n\n");
+			fprintf(stderr,"\nMID: No suitable network-interface found for downloading. Exiting...\n\n");
 
 		exit(1);
 	}
@@ -712,7 +712,7 @@ int main(int argc, char **argv) {
 	if(err!=NULL)
 	{
 		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error downloading chunk\nExiting...\n\n");
+			fprintf(stderr,"\nMID: Error downloading chunk. Exiting...\n\n");
 
 		exit(2);
 	}
@@ -727,7 +727,7 @@ int main(int argc, char **argv) {
 		if(en_info==NULL)
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Content-Encoding unknown, not removing the unprocessed file %s\nExiting...\n\n",base_unit_info->up_file);
+				fprintf(stderr,"\nMID: Content-Encoding unknown, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file);
 
 			exit(3);
 		}
@@ -737,7 +737,7 @@ int main(int argc, char **argv) {
 		if(u_fp==NULL)
 		{
 			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: The just now downloaded %s vanished!\nExiting...\n\n",base_unit_info->up_file);
+				fprintf(stderr,"\nMID: The just now downloaded %s vanished!. Exiting...\n\n",base_unit_info->up_file);
 
 			exit(2);
 		}
@@ -749,7 +749,7 @@ int main(int argc, char **argv) {
 			fclose(u_fp);
 
 			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Error opening the output file %s\nExiting...\n\n",base_unit_info->file);
+				fprintf(stderr,"\nMID: Error opening the output file %s. Exiting...\n\n",base_unit_info->file);
 
 			exit(2);
 		}
@@ -775,7 +775,7 @@ int main(int argc, char **argv) {
 				fclose(u_fp);
 
 				if(!args->quiet_flag)
-					fprintf(stderr,"\nMID: Error reading the file %s\nExiting...\n\n",base_unit_info->up_file);
+					fprintf(stderr,"\nMID: Error reading the file %s. Exiting...\n\n",base_unit_info->up_file);
 
 				exit(2);
 			}
@@ -809,7 +809,7 @@ int main(int argc, char **argv) {
 					fclose(u_fp);
 
 					if(!args->quiet_flag)
-						fprintf(stderr,"\nMID: Error encountered when decoding the file %s\nExiting...\n",base_unit_info->up_file);
+						fprintf(stderr,"\nMID: Error encountered when decoding the file %s. Exiting...\n",base_unit_info->up_file);
 
 					exit(2);
 				}
@@ -820,7 +820,7 @@ int main(int argc, char **argv) {
 					fclose(u_fp);
 
 					if(!args->quiet_flag)
-						fprintf(stderr,"\nMID: Error writing to the file %s\nExiting...\n\n",base_unit_info->file);
+						fprintf(stderr,"\nMID: Error writing to the file %s. Exiting...\n\n",base_unit_info->file);
 
 					exit(2);
 				}
