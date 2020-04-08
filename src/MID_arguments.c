@@ -560,7 +560,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--url")) // --url
+		else if(!strcmp(argv[counter],"--url") || !strcmp(argv[counter],"-u") )  // --url || -u
 		{
 			char* value=NULL;
 
@@ -763,9 +763,9 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 	}
 
-	if(args->url==NULL) // mandatory argument --url
+	if(args->url==NULL) // mandatory argument [--url | -u]
 	{
-		mid_help("MID: URL must be specified using --url option");
+		mid_help("MID: URL must be specified using {--url | -u} option");
 	}
 
 	if(hdr_bag->n_pockets!=0) // collect the custom http headers across the configuration file and command line arguments
@@ -812,12 +812,12 @@ void mid_help(char* err_msg)
 		exit(1);
 	}
 
-	fprintf(stderr,"Usage: MID --url URL [options]\n\n");
+	fprintf(stderr,"Usage: {MID | mid} {--url | -u} URL [OPTIONS]\n\n");
 	fprintf(stderr,"  --output-file file                   -o file             Specify the output file, if not specified MID will automatically detect from the URL. \n");
 	fprintf(stderr,"  --interfaces nic1,nic2...            -i nic1,nic2...     Network-interfaces which are used in the file download. \n");
 	fprintf(stderr,"  --exclude-interfaces nic1,nic2...    -ni nic1,nic2...    Network-interfaces which are excluded from the file download. \n");
 	fprintf(stderr,"  --help                               -h                  Print this help message. \n");
-	fprintf(stderr,"* --url URL                            nil                 URL to be downloaded. \n");
+	fprintf(stderr,"* --url URL                            -u URL              File at the URL to be downloaded. \n");
 	fprintf(stderr,"  --max-parallel-downloads x           -n x                Maximum x number of parallel connections are allowed. \n");
 	fprintf(stderr,"  --max-unit-retries x                 -Ur x               Maximum x number of retries are made by a unit to download a chunk. If failed, the download is terminated. \n");
 	fprintf(stderr,"  --max-redirects x                    -R x                Maximum x number of HTTP redirects are followed. \n");

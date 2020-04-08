@@ -66,11 +66,11 @@ After installing dependencies, obtaining MID sources and changing to the source 
 
 ## Usage
 
-Verify the installation with ```$ [MID | mid] -v```. Now you can download the file from URL as follows
+Verify the installation with ```$ {MID | mid} -V```. Now you can download the file from URL as follows
 			
-	$ sudo [MID | mid] --url URL [--detailed-progress | -Pd] [--exclude-interfaces lo | -ni lo]
+	$ sudo {MID | mid} --url URL [--detailed-progress | -Pd] [--exclude-interfaces lo | -ni lo]
 
-Check ```$ [MID | mid] --help``` for more options and ```/usr/local/etc/MID.conf``` can be used to make the settings persistent
+Check ```$ {MID | mid} --help``` for more options and ```/usr/local/etc/MID.conf``` can be used to make the settings persistent
 
 ## Reporting
 

@@ -2,7 +2,7 @@ NAME
  MID - Multiple Interface Downloader
 
 SYNOPSIS
- [MID | mid] --url URL [OPTIONS]
+ {MID | mid} {--url | -u}  URL [OPTIONS]
 
 DESCRIPTION
  MID is a HTTP[S] download accelarator. MID tries to send HTTP range requests through multiple network-interfaces to boost the download speed.
@@ -23,7 +23,7 @@ OPTIONS
 
    --help                               -h                  Print the help message and exit.
 
-   --url URL                            nil                 URL to be downloaded.
+   --url URL                            -u URL              File at the URL to be downloaded.
 
    --max-parallel-downloads x           -n x                Maximum x number of parallel connections are allowed.
 
@@ -52,14 +52,12 @@ OPTIONS
    --surpass-root-check                 -s                  If had the sufficient permissions, use -s to surpass the root-check.
 
    --conf file                          -c file             Specify the configuration file path. Preference order: cmd_line > conf_file > default_values
-   
-   * marked arguments are mandatory
-    
+       
 NOTE
  For binding to a network-interface, MID uses SO_BINDTODEVICE socket-option. This generally requires elevated (super user) permissions and CAP_NET_RAW capability.
  So super user check is performed when application is invoked. If the program is not invoked as super user, it terminates printing the mentioned note. 
- If you beleive you have sufficient permissions, then pass [--surpass-root-check | -s] argument to surpass the super user check.
- But note that the program wont complain, it just hangs at that point and terminates after sometime (after --max-tcp-syn-retransmits). 
+ If you beleive you have sufficient permissions, then pass {--surpass-root-check | -s} argument to surpass the super user check.
+ But note that the program wont complain, it just hangs and terminates after sometime (after --max-tcp-syn-retransmits). 
 
 RETURN VALUE
  The program returns 0 when the download was successful. 1 if error occured before the download was started. 2 if the download started and was interuptted.
@@ -68,24 +66,24 @@ RETURN VALUE
 EXAMPLES
  The trivial file download is performed as follows:
  	
- 	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso
+ 	# {MID | mid} --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso
 
- The [--detailed-progress | -Pd] argment can be used to make MID display the detailed stats
+ The {--detailed-progress | -Pd} argment can be used to make MID display the detailed stats
  	
- 	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -Pd
+ 	# {MID | mid} --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -Pd
 
- The [--include-interfaces | -i] and [--exclude-interfaces | -ni] can be configured to limit MID to use particular network-interfaces in the file download.
+ The {--include-interfaces | -i} and {--exclude-interfaces | -ni} can be configured to limit MID to use particular network-interfaces in the file download.
  Both options can be configured together and MID performs include-interfaces - exclude-interfaces to determine the interfaces which are used in the download
  	
- 	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni lo
+ 	# {MID | mid} --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni lo
  	
 	(Loopback interface is excluded and all other interfaces are used in the download)
 	
-	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -i eth0,wlan0
+	# {MID | mid} --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -i eth0,wlan0
 	
 	(Only eth0,wlan0 are used in the file download)
 	
-	# [MID | mid] --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni eth1 -i eth0,eth1
+	# {MID | mid} --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -ni eth1 -i eth0,eth1
 	
 	(Only eth0 is used in the file download)
 	
