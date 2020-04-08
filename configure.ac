@@ -159,6 +159,10 @@ pthread_mutex_destroy],
 
 #SSL library checks
 
+AC_ARG_WITH([ssl], AC_HELP_STRING([--without-ssl],[disable SSL support]), [], [with_ssl=yes])
+
+if test "x${with_ssl}" == "xyes" ; then 
+
 AC_CHECK_LIB(crypto,BIO_new,, [])
 
 AC_CHECK_LIB(ssl,SSL_new,, [], [-lcrypto] ) 
@@ -199,7 +203,8 @@ SSL_set_tlsext_host_name],
 )
 
 if test "x${ssl_header_not_found}" != "xyes" && test "x${ssl_func_not_found}" != "xyes" && test "x${ssl_symbol_not_found}" != "xyes" ; then
-AC_DEFINE([LIBSSL_SANE],[1],["libssl installed and found all required headers and functions and symbols"])
+AC_DEFINE([LIBSSL_SANE],[1],["libssl installed and found all required headers, functions and symbols"])
+AC_MSG_NOTICE([libssl and libcrytpo sane, enabling SSL support!])
 else
 AC_MSG_NOTICE([libssl and libcrypto are installed, but required headers or functions or symbols not found. Disabling the SSL support!])
 fi
@@ -208,7 +213,15 @@ else
 AC_MSG_NOTICE([libssl or libcrypto not found! Support for SSL is disabled, try installing libssl-dev or similar packages and recompile the source for enabling the SSL support])
 fi
 
+else
+AC_MSG_NOTICE([Disabling SSL support as per user requested!])
+fi
+
 # Zlib checks
+
+AC_ARG_WITH([z], AC_HELP_STRING([--without-z],[disable GZIP support]), [], [with_z=yes])
+
+if test "x${with_z}" == "xyes" ; then
 
 AC_CHECK_LIB(z,inflate,[],[AC_MSG_NOTICE([libz not found! Support for gzipped encodings is disabled, try installing zlib1g-dev or similar packages and recompile the source for enabling the GZIP support])]) 
 
@@ -238,11 +251,16 @@ Z_STREAM_END],
 )
 
 if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" && test "x${zlib_symbol_not_found}" != "xyes" ; then
-AC_DEFINE([LIBZ_SANE],[1],["libz installed and found all required headers and functions"])
+AC_DEFINE([LIBZ_SANE],[1],["libz installed and found all required headers, functions and symbols"])
+AC_MSG_NOTICE([libz sane, enabling GZIP support!])
 else
 AC_MSG_NOTICE([libz installed, but required headers or functions or symbols not found. Disabling the GZIP support!])
 fi 
 
+fi
+
+else
+AC_MSG_NOTICE([Disabling GZIP support as per user requested!])
 fi
 
 # System Architecture

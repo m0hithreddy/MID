@@ -725,6 +725,8 @@ am__quote'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_ssl
+with_z
 enable_dependency_tracking
 enable_silent_rules
 '
@@ -1372,6 +1374,12 @@ Optional Features:
                           speeds up one-time build
   --enable-silent-rules   less verbose build output (undo: "make V=1")
   --disable-silent-rules  verbose build output (undo: "make V=0")
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --without-ssl           disable SSL support
+  --without-z             disable GZIP support
 
 Some influential environment variables:
   CC          C compiler command
@@ -4676,6 +4684,17 @@ done
 
 #SSL library checks
 
+
+# Check whether --with-ssl was given.
+if test "${with_ssl+set}" = set; then :
+  withval=$with_ssl;
+else
+  with_ssl=yes
+fi
+
+
+if test "x${with_ssl}" == "xyes" ; then
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BIO_new in -lcrypto" >&5
 $as_echo_n "checking for BIO_new in -lcrypto... " >&6; }
 if ${ac_cv_lib_crypto_BIO_new+:} false; then :
@@ -4894,6 +4913,8 @@ if test "x${ssl_header_not_found}" != "xyes" && test "x${ssl_func_not_found}" !=
 
 $as_echo "#define LIBSSL_SANE 1" >>confdefs.h
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: libssl and libcrytpo sane, enabling SSL support!" >&5
+$as_echo "$as_me: libssl and libcrytpo sane, enabling SSL support!" >&6;}
 else
 { $as_echo "$as_me:${as_lineno-$LINENO}: libssl and libcrypto are installed, but required headers or functions or symbols not found. Disabling the SSL support!" >&5
 $as_echo "$as_me: libssl and libcrypto are installed, but required headers or functions or symbols not found. Disabling the SSL support!" >&6;}
@@ -4904,7 +4925,23 @@ else
 $as_echo "$as_me: libssl or libcrypto not found! Support for SSL is disabled, try installing libssl-dev or similar packages and recompile the source for enabling the SSL support" >&6;}
 fi
 
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: Disabling SSL support as per user requested!" >&5
+$as_echo "$as_me: Disabling SSL support as per user requested!" >&6;}
+fi
+
 # Zlib checks
+
+
+# Check whether --with-z was given.
+if test "${with_z+set}" = set; then :
+  withval=$with_z;
+else
+  with_z=yes
+fi
+
+
+if test "x${with_z}" == "xyes" ; then
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for inflate in -lz" >&5
 $as_echo_n "checking for inflate in -lz... " >&6; }
@@ -5096,11 +5133,18 @@ if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" 
 
 $as_echo "#define LIBZ_SANE 1" >>confdefs.h
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: libz sane, enabling GZIP support!" >&5
+$as_echo "$as_me: libz sane, enabling GZIP support!" >&6;}
 else
 { $as_echo "$as_me:${as_lineno-$LINENO}: libz installed, but required headers or functions or symbols not found. Disabling the GZIP support!" >&5
 $as_echo "$as_me: libz installed, but required headers or functions or symbols not found. Disabling the GZIP support!" >&6;}
 fi
 
+fi
+
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: Disabling GZIP support as per user requested!" >&5
+$as_echo "$as_me: Disabling GZIP support as per user requested!" >&6;}
 fi
 
 # System Architecture

@@ -319,11 +319,10 @@
 /* "Host architecture" */
 #undef HOST_ARCH
 
-/* "libssl installed and found all required headers and functions and symbols"
-   */
+/* "libssl installed and found all required headers, functions and symbols" */
 #undef LIBSSL_SANE
 
-/* "libz installed and found all required headers and functions" */
+/* "libz installed and found all required headers, functions and symbols" */
 #undef LIBZ_SANE
 
 /* Name of package */
