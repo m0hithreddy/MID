@@ -4,11 +4,11 @@
 
 ## Overview
 
-* MID is a HTTP download accelerator.
+* MID is a HTTP[S] download accelerator.
  
-* Traditional HTTP download accelerators use HTTP range requests to achieve this. 
+* Traditional HTTP[S] download accelerators use HTTP range requests to achieve this. 
 
-* MID also uses HTTP range requests to achieve download acceleration but it takes it to the next level by involving multiple network-interfaces in the download (hence bandwidth boost)
+* MID also uses HTTP range requests to achieve the download acceleration but it takes it to the next level by involving multiple network-interfaces in the download (hence bandwidth boost)
  
 ## Dependencies
 
