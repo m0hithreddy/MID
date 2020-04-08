@@ -46,5 +46,6 @@ struct network_data* sock_read(int sockfd,long limit);
 
 char* resolve_dns(char* hostname);
 
+char** resolve_dns_mirros(char* hostname,long* n_mirrors);
 
 #endif /* MID_SOCKET_H_ */

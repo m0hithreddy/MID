@@ -14,6 +14,7 @@
 #include<stdio.h>
 #include<string.h>
 #include<unistd.h>
+#include<limits.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -164,6 +165,14 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		args->max_tcp_syn_retransmits=atol(value);
 	}
 
+	else if(!strcmp(key,"max-mirrors"))
+	{
+		args->max_mirrors=atol(value);
+
+		if(args->max_mirrors<=0)
+			args->max_mirrors=LONG_MAX;
+	}
+
 	else if(!strcmp(key,"unit-sleep-time"))
 	{
 		args->unit_retry_sleep_time=atol(value);
@@ -306,6 +315,7 @@ void read_conf(char* conf,struct mid_args* args)
 	args->max_redirects=DEFAULT_MAX_HTTP_REDIRECTS;
 	args->max_parallel_downloads=MAX_PARALLEL_DOWNLOADS;
 	args->max_tcp_syn_retransmits=MAX_TCP_SYN_RETRANSMITS;
+	args->max_mirrors=DEFAULT_MAX_MIRRORS;
 	args->unit_retry_sleep_time=UNIT_RETRY_SLEEP_TIME;
 	args->progress_update_time=PROGRESS_UPDATE_TIME;
 
@@ -486,12 +496,12 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 		{
 			FILE* fp=fopen(DEFAULT_CONFIG_FILE,"r");
 
-			if(fp!=NULL)
+			if(fp!=NULL) // Default config file exits use it.
 			{
 				fclose(fp);
 				read_conf(DEFAULT_CONFIG_FILE,args);
 			}
-			else
+			else // No file exits, call the read_conf with NULL to initialize args with default parameters
 			{
 				read_conf(NULL,args);
 			}
@@ -640,6 +650,22 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
+		else if(!strcmp(argv[counter],"--max-mirrors") || !strcmp(argv[counter],"-m")) // --max-mirrors || -m
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("max-mirrors",value,args,0);
+
+			counter++;
+		}
+
 		else if(!strcmp(argv[counter],"--unit-sleep-time") || !strcmp(argv[counter],"-Us")) // --unit-sleep-time || -Us
 		{
 			char* value=NULL;
@@ -690,7 +716,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 #endif
 
 			printf("\n\n");
-			printf("Project homepage: <%s>",PACKAGE_URL);
+			printf("Project homepage: < %s >",PACKAGE_URL);
 			printf("\n\n");
 
 			exit(1);
@@ -808,7 +834,7 @@ void mid_help(char* err_msg)
 	if(err_msg!=NULL)
 	{
 		fprintf(stderr,"\n%s\n\n",err_msg);
-		fprintf(stderr,"Try MID --help for more information \n\n");
+		fprintf(stderr,"Try {MID | mid} --help for more information \n\n");
 		exit(1);
 	}
 
@@ -822,6 +848,7 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"  --max-unit-retries x                 -Ur x               Maximum x number of retries are made by a unit to download a chunk. If failed, the download is terminated. \n");
 	fprintf(stderr,"  --max-redirects x                    -R x                Maximum x number of HTTP redirects are followed. \n");
 	fprintf(stderr,"  --max-tcp-syn-retransmits x          -Sr x               At max x TCP SYN are retransmitted when initiating a TCP connection. \n");
+	fprintf(stderr,"  --max-mirrors x                      -m x                If x is positive at max x mirrors are used in the download. If zero or less than zero all mirrors are used. \n");
 	fprintf(stderr,"  --unit-sleep-time x                  -Us x               Download unit sleeps for x seconds before retrying. \n");
 	fprintf(stderr,"  --progress-update-time x             -Pu x               Information related to download progress updates after every x seconds. \n");
 	fprintf(stderr,"  --detailed-progress                  -Pd                 Show detailed download progress. \n");
@@ -835,5 +862,7 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"\n");
 	fprintf(stderr,"  * marked arguments are mandatory \n");
 	fprintf(stderr,"\n");
+	fprintf(stderr,"Project homepage: < %s >",PACKAGE_URL);
+	fprintf(stderr,"\n\n");
 	exit(1);
 }

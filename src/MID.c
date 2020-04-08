@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 
 	if( !args->surpass_root_check && getuid()!=0 && geteuid()!=0)
 	{
-		mid_help("\nMID: SO_BINDTODEVICE socket-option is used to bind to an interface, which requires root permissions and CAP_NET_RAW capability. If you believe the current UID is having the sufficient permissions then try using --surpass-root-check flag.");
+		mid_help("MID: SO_BINDTODEVICE socket-option is used to bind to an interface, which requires root permissions and CAP_NET_RAW capability. If you believe the current UID is having sufficient permissions then try using {--surpass-root-check flag | -s}.");
 	}
 
 	//Parse the URL
@@ -328,6 +328,24 @@ int main(int argc, char **argv) {
 	if(gl_s_response->accept_ranges==NULL || strcmp(gl_s_response->accept_ranges,"bytes") || gl_s_response->content_length==NULL)
 		pc_flag=0;
 
+	//Final values for Host Port and URL scheme after redirects
+
+	struct parsed_url* fin_purl=parse_url(gl_s_request->url);
+
+	char* fin_host=strdup(fin_purl->host);
+	char* fin_scheme=strdup(fin_purl->scheme);
+	long fin_port=atoi((fin_purl->port!=NULL)? fin_purl->port:(!(strcmp(fin_scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT));
+
+	char** fin_hostips=resolve_dns_mirros(fin_host,&(args->max_mirrors));
+
+	if(fin_hostips==NULL)
+	{
+		if(!args->quiet_flag)
+			fprintf(stderr,"\nMID: Unable to find at least one mirror of %s. Exiting...\n\n",fin_host);
+
+		exit(1);
+	}
+
 	//Base client socket_info structure
 
 	struct socket_info* base_socket_info=(struct socket_info*)malloc(sizeof(struct socket_info));
@@ -372,6 +390,8 @@ int main(int argc, char **argv) {
 		base_unit_info->up_file=base_unit_info->file;
 
 	base_unit_info->if_name=ok_net_if[0].name;
+	base_unit_info->scheme=fin_scheme;
+	base_unit_info->host=fin_host;
 	base_unit_info->if_id=0;
 	base_unit_info->current_size=0;
 	base_unit_info->total_size=0;
@@ -392,8 +412,7 @@ int main(int argc, char **argv) {
 	base_unit_info->cli_info=base_socket_info;
 	base_unit_info->unit_ranges=NULL;
 
-	purl=parse_url(gl_s_request->url);
-	base_unit_info->servaddr=create_sockaddr_in(gl_s_request->hostip,atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),DEFAULT_HTTP_SOCKET_FAMILY);
+	base_unit_info->servaddr=create_sockaddr_in(*fin_hostips,fin_port,DEFAULT_HTTP_SOCKET_FAMILY);
 
 	base_unit_info->s_request=(struct http_request*)malloc(sizeof(struct http_request));
 	memcpy(base_unit_info->s_request,gl_s_request,sizeof(struct http_request));
@@ -532,6 +551,7 @@ int main(int argc, char **argv) {
 		// Scheduling download across different interfaces
 
 		long if_id=0;
+		long hostip_id=0;
 		struct unit_info* largest=NULL;
 		struct unit_info* update=NULL;
 		struct unit_info* new=NULL;
@@ -605,6 +625,8 @@ int main(int argc, char **argv) {
 				new->cli_info->sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*2);
 				memcpy(new->cli_info->sock_opts,base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
 
+				new->servaddr=create_sockaddr_in(fin_hostips[hostip_id], fin_port, DEFAULT_HTTP_SOCKET_FAMILY);
+
 				new->s_request=(struct http_request*)malloc(sizeof(struct http_request));
 				memcpy(new->s_request,gl_s_request,sizeof(struct http_request));
 
@@ -654,6 +676,9 @@ int main(int argc, char **argv) {
 			update->range->start=largest->range->end+1;
 
 			pthread_mutex_unlock(&largest->lock);
+
+			hostip_id=(hostip_id+1)%args->max_mirrors;
+			update->servaddr=create_sockaddr_in(fin_hostips[hostip_id], fin_port, DEFAULT_HTTP_SOCKET_FAMILY);
 
 			// Assign task to the unit
 

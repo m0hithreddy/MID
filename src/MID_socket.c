@@ -165,3 +165,50 @@ char* resolve_dns(char* hostname)
 	return hostip;
 
 }
+
+char** resolve_dns_mirros(char* hostname,long* n_mirrors)
+{
+	struct hostent *dnsptr=gethostbyname(hostname);
+
+	if(dnsptr==NULL)
+	{
+		*n_mirrors=0;
+		return NULL;
+	}
+
+	if(dnsptr->h_addrtype!=AF_INET) //Confining the application to IPV4
+	{
+		*n_mirrors=0;
+		return NULL;
+	}
+
+	char** n_hosts=dnsptr->h_addr_list;
+
+	char** hostip_ptr;
+	struct network_data ip_data;
+	struct data_bag* hostsbag=create_data_bag();
+
+	long mirrors_count=0;
+
+	for( ; *n_hosts!=NULL && mirrors_count<*n_mirrors; n_hosts++)
+	{
+		hostip_ptr=(char**)malloc(sizeof(char*));
+		*hostip_ptr=(char*)malloc(sizeof(char)*INET_ADDRSTRLEN);
+
+		inet_ntop(dnsptr->h_addrtype,*n_hosts,*hostip_ptr,INET_ADDRSTRLEN);
+
+		ip_data.data=hostip_ptr;
+		ip_data.len=sizeof(char*);
+
+		place_data(hostsbag,&ip_data);
+		mirrors_count++;
+	}
+
+	*n_mirrors=mirrors_count;
+
+	if(mirrors_count==0)
+		return NULL;
+	else
+		return ((char**)(flatten_data_bag(hostsbag)->data));
+
+}

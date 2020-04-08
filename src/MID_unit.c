@@ -106,17 +106,11 @@ void* unit(void* info)
 		if(unit_info->quit==1)
 			return NULL;
 
-		struct parsed_url* purl=parse_url(unit_info->s_request->url);
-
-		if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
-		{
-			goto fatal_error;
-		}
 
 		SSL* ssl;
 		int http_flag;
 
-		if(!strcmp(purl->scheme,"http"))
+		if(!strcmp(unit_info->scheme,"http"))
 		{
 			http_flag=1;
 			send_http_request(sockfd,request,NULL,JUST_SEND);
@@ -124,7 +118,7 @@ void* unit(void* info)
 		else
 		{
 			http_flag=0;
-			ssl=(SSL*)send_https_request(sockfd,request,purl->host,JUST_SEND);
+			ssl=(SSL*)send_https_request(sockfd,request,unit_info->host,JUST_SEND);
 
 			if(ssl==NULL)
 			{

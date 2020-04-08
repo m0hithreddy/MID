@@ -36,6 +36,8 @@ struct unit_info
 	char* file;
 	char* up_file;
 	char* if_name;
+	char* scheme;
+	char* host;
 	long if_id;
 	long current_size; // Amount downloaded in a given range
 	long total_size;   // Total data fetched by unit

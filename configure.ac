@@ -114,6 +114,7 @@ strcat \
 strlen \
 strstr \
 strcasestr \
+strdup \
 bzero \
 fileno \
 fopen \

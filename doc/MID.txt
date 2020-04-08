@@ -33,6 +33,8 @@ OPTIONS
 
    --max-tcp-syn-retransmits x          -Sr x               At max x TCP SYN are retransmitted when initiating a TCP connection.
 
+   --max-mirrors x                      -m x                If x is positive at max x mirrors are used in the download. If zero or less than zero all mirrors are used.
+  
    --unit-sleep-time x                  -Us x               Download unit sleeps for x seconds before retrying.
 
    --progress-update-time x             -Pu x               Information related to download progress updates after every x seconds.
