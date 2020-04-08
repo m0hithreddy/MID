@@ -1,6 +1,6 @@
 # Contributing
 
-As a budding developer, it makes me enthusiastic to collaborate with the other developers around; exploring their coding style, getting some knowledge, and improving my proficiency. If you are intrested in contributing to the MID... You can send patches
+As a budding developer, it makes me enthusiastic to collaborate with the other developers around; exploring their coding style, gaining some knowledge, and improving my proficiency. If you are intrested in contributing to the MID... You can send patches
 
 * which implements any new feature that are mentioned in the TODO list 
 
