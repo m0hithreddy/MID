@@ -192,14 +192,14 @@ void* unit(void* info)
 			continue;
 		}
 
-		// Open the file and write the over eaten data and remaining download data to the file
+		// Determine the file and write the over eaten data and remaining download data to the file
 
-		FILE* fp=fopen(unit_info->up_file,"r+");
+		FILE* fp;
 
-		if(fp==NULL)
-		{
-			goto fatal_error;
-		}
+		if(s_response->content_encoding!=NULL)
+			fp=u_fp;
+		else
+			fp=o_fp;
 
 		char* data_buf=eat_buf;
 		status=s_response->body->len;

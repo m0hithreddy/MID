@@ -13,7 +13,10 @@
 
 #include"MID_arguments.h"
 #include"MID_functions.h"
+#include<stdio.h>
 
 extern struct mid_args* args;
+extern FILE* o_fp;
+extern FILE* u_fp;
 
 #endif /* MID_H_ */

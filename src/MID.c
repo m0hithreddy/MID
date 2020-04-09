@@ -12,6 +12,7 @@
 #include"MID_http.h"
 #include"MID_ssl_socket.h"
 #include"MID_interfaces.h"
+#include"MID_unit.h"
 #include"url_parser.h"
 #include<string.h>
 #include<stdio.h>
@@ -22,7 +23,8 @@
 #include<unistd.h>
 #include<netinet/tcp.h>
 #include<pthread.h>
-#include "MID_unit.h"
+#include<sys/file.h>
+#include<stddef.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -30,6 +32,9 @@
 #endif
 
 struct mid_args* args;
+
+FILE* o_fp=NULL;
+FILE* u_fp=NULL;
 
 int main(int argc, char **argv) {
 
@@ -368,9 +373,9 @@ int main(int argc, char **argv) {
 	struct unit_info* base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
 
 	if(args->output_file!=NULL)
-		base_unit_info->file=determine_filename(args->output_file);
+		base_unit_info->file=determine_filename(args->output_file,&o_fp);
 	else
-		base_unit_info->file=determine_filename(purl->path);
+		base_unit_info->file=determine_filename(purl->path,&o_fp);
 
 	if(gl_s_response->content_encoding!=NULL)
 	{
@@ -384,7 +389,7 @@ int main(int argc, char **argv) {
 		tmp_up_file[tmp_len+2]='p';
 		tmp_up_file[tmp_len+3]='\0';
 
-		base_unit_info->up_file=determine_filename(tmp_up_file);
+		base_unit_info->up_file=determine_filename(tmp_up_file,&u_fp);
 	}
 	else
 		base_unit_info->up_file=base_unit_info->file;
@@ -423,7 +428,7 @@ int main(int argc, char **argv) {
 
 	base_unit_info->unit_ranges=create_data_bag();
 
-	//Creating the files
+	// Printing file names
 
 	if(!args->quiet_flag && gl_s_response->content_encoding == NULL)
 	{
@@ -433,10 +438,6 @@ int main(int argc, char **argv) {
 	{
 		printf("\nOpening Unprocessed File: %s\n",base_unit_info->up_file);
 	}
-
-	fclose(fopen(base_unit_info->file,"w"));
-	fclose(fopen(base_unit_info->up_file,"w"));
-
 
 
 	// Initiating download
@@ -757,28 +758,7 @@ int main(int argc, char **argv) {
 			exit(3);
 		}
 
-		FILE* u_fp=fopen(base_unit_info->up_file,"r");
-
-		if(u_fp==NULL)
-		{
-			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: The just now downloaded %s vanished!. Exiting...\n\n",base_unit_info->up_file);
-
-			exit(2);
-		}
-
-		FILE* fp=fopen(base_unit_info->file,"w");
-
-		if(fp==NULL)
-		{
-			fclose(u_fp);
-
-			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Error opening the output file %s. Exiting...\n\n",base_unit_info->file);
-
-			exit(2);
-		}
-		else if(!args->quiet_flag)
+		if(!args->quiet_flag)
 		{
 			printf("\nOpening File: %s\n\n",base_unit_info->file);
 		}
@@ -792,36 +772,48 @@ int main(int argc, char **argv) {
 
 		while(1)
 		{
-			status=read(fileno(u_fp),uf_data,MAX_TRANSACTION_SIZE);
+			status=read(fileno(u_fp),uf_data,MAX_TRANSACTION_SIZE/2);
 
 			if(status<0)
 			{
-				fclose(fp);
+				flock(fileno(o_fp),LOCK_UN);
+				fclose(o_fp);
+
+				flock(fileno(u_fp),LOCK_UN);
 				fclose(u_fp);
 
 				if(!args->quiet_flag)
-					fprintf(stderr,"\nMID: Error reading the file %s. Exiting...\n\n",base_unit_info->up_file);
+					fprintf(stderr,"\nMID: Error reading the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
 
 				exit(2);
 			}
 			else if(status==0)
 			{
-				fclose(fp);
+				flock(fileno(o_fp),LOCK_UN);
+				fclose(o_fp);
+
+				flock(fileno(u_fp),LOCK_UN);
 				fclose(u_fp);
 
-				break;
+				remove(base_unit_info->up_file);
+
+				exit(0);
 			}
+
 			en_info->in_len=status;
 
 			while(en_info->in_len!=en_info->in_max)
 			{
 				if(en_status==EN_END)
 				{
-					fclose(fp);
+					flock(fileno(o_fp),LOCK_UN);
+					fclose(o_fp);
+
+					flock(fileno(u_fp),LOCK_UN);
 					fclose(u_fp);
 
 					if(!args->quiet_flag)
-						fprintf(stderr,"\nMID: Misc data found at the end of the file %s\n\n",base_unit_info->up_file);
+						fprintf(stderr,"\nMID: Misc data found at the end of the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
 
 					exit(4);
 				}
@@ -830,22 +822,28 @@ int main(int argc, char **argv) {
 
 				if(en_status!=EN_OK && en_status!=EN_END)
 				{
-					fclose(fp);
+					flock(fileno(o_fp),LOCK_UN);
+					fclose(o_fp);
+
+					flock(fileno(u_fp),LOCK_UN);
 					fclose(u_fp);
 
 					if(!args->quiet_flag)
-						fprintf(stderr,"\nMID: Error encountered when decoding the file %s. Exiting...\n",base_unit_info->up_file);
+						fprintf(stderr,"\nMID: Error encountered when decoding the file %s, not removing the unprocessed file %s. Exiting...\n",base_unit_info->up_file,base_unit_info->up_file);
 
 					exit(2);
 				}
 
-				if(write(fileno(fp),en_info->out,en_info->out_len)!=en_info->out_len)
+				if(write(fileno(o_fp),en_info->out,en_info->out_len)!=en_info->out_len)
 				{
-					fclose(fp);
+					flock(fileno(o_fp),LOCK_UN);
+					fclose(o_fp);
+
+					flock(fileno(u_fp),LOCK_UN);
 					fclose(u_fp);
 
 					if(!args->quiet_flag)
-						fprintf(stderr,"\nMID: Error writing to the file %s. Exiting...\n\n",base_unit_info->file);
+						fprintf(stderr,"\nMID: Error writing to the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->file,base_unit_info->up_file);
 
 					exit(2);
 				}
@@ -855,10 +853,8 @@ int main(int argc, char **argv) {
 
 	}
 
-	if(gl_s_response->content_encoding!=NULL)
-	{
-		remove(base_unit_info->up_file);
-	}
+	flock(fileno(o_fp),LOCK_UN);
+	fclose(o_fp);
 
 	exit(0);
 

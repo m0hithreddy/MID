@@ -21,6 +21,7 @@
 #include<arpa/inet.h>
 #include<limits.h>
 #include<zlib.h>
+#include<sys/file.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -550,10 +551,10 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 	return NULL;
 }
 
-char* determine_filename(char* path) // With out the beginning '/'
+char* determine_filename(char* path,FILE** fp_ptr) // With out the beginning '/' when passing url path
 {
 	if(path==NULL) //Default file
-		return determine_filename("index.html");
+		return determine_filename("index.html",fp_ptr);
 
 	char* current=path;
 	char* prev=current;
@@ -586,9 +587,32 @@ char* determine_filename(char* path) // With out the beginning '/'
 		fp=fopen(fin_name,"r");
 
 		if(fp==NULL)
-			return fin_name;
+		{
+			*fp_ptr=fopen(fin_name,"a+");
 
-		fclose(fp);
+			if(*fp_ptr==NULL)
+				goto skip_if;
+
+			fclose(*fp_ptr);
+
+			*fp_ptr=fopen(fin_name,"r+");
+
+			if(*fp_ptr==NULL)
+				goto skip_if;
+
+			if(flock(fileno(*fp_ptr),LOCK_EX | LOCK_NB)!=0)
+			{
+				fclose(*fp_ptr);
+				goto skip_if;
+			}
+
+			return fin_name;
+		}
+
+		skip_if:
+
+		if(fp!=NULL)
+			fclose(fp);
 
 		sprintf(fin_name,"%s(%ld)",pre_name,counter);
 		counter++;

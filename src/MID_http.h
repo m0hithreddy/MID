@@ -52,6 +52,7 @@
 #include"MID_structures.h"
 #include"MID_socket.h"
 #include"url_parser.h"
+#include<stdio.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -173,7 +174,7 @@ void* send_https_request(int sockfd,struct network_data* request,char* hostname,
 
 void* follow_redirects(struct http_request* c_s_request,struct network_data* response,long max_redirects,struct socket_info* cli_info,int flag);
 
-char* determine_filename(char* path); // With out the beginning '/'
+char* determine_filename(char* path,FILE** fp_ptr); // With out the beginning '/'
 
 int handle_identity_encoding(struct encoding_info* en_info);
 

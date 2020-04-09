@@ -72,6 +72,7 @@ AC_CHECK_HEADERS(
 stdlib.h \
 stddef.h \
 string.h \
+sys/file.h \
 unistd.h \
 netdb.h \
 netinet/in.h \
@@ -119,6 +120,7 @@ bzero \
 fileno \
 fopen \
 fclose \
+flock \
 remove \
 time \
 memcpy \
@@ -141,6 +143,26 @@ isalpha \
 tolower],
 [],
 [AC_MSG_ERROR([${ac_func} is required but not found. Should be included in libc, check the libc variant installed in your system.])]
+)
+
+# Checks for system symbols
+
+AC_CHECK_DECLS(
+[NULL,
+EINTR,
+INET_ADDRSTRLEN,
+LONG_MAX,
+LONG_MIN,
+LOCK_EX,
+LOCK_UN,
+LOCK_NB],
+[],
+[AC_MSG_ERROR([Symbol required but not found. Should be included in libc, check the libc variant installed in your system.])],
+[[#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>]]
 )
 
 # Pthread library checks
@@ -205,7 +227,7 @@ SSL_set_tlsext_host_name],
 
 if test "x${ssl_header_not_found}" != "xyes" && test "x${ssl_func_not_found}" != "xyes" && test "x${ssl_symbol_not_found}" != "xyes" ; then
 AC_DEFINE([LIBSSL_SANE],[1],["libssl installed and found all required headers, functions and symbols"])
-AC_MSG_NOTICE([libssl and libcrytpo sane, enabling SSL support!])
+AC_MSG_NOTICE([libssl and libcrytpo sane, enabling SSL support...])
 else
 AC_MSG_NOTICE([libssl and libcrypto are installed, but required headers or functions or symbols not found. Disabling the SSL support!])
 fi
@@ -253,7 +275,7 @@ Z_STREAM_END],
 
 if test "x${zlib_header_not_found}" != "xyes" && test "x${zlib_func_not_found}" != "xyes" && test "x${zlib_symbol_not_found}" != "xyes" ; then
 AC_DEFINE([LIBZ_SANE],[1],["libz installed and found all required headers, functions and symbols"])
-AC_MSG_NOTICE([libz sane, enabling GZIP support!])
+AC_MSG_NOTICE([libz sane, enabling GZIP support...])
 else
 AC_MSG_NOTICE([libz installed, but required headers or functions or symbols not found. Disabling the GZIP support!])
 fi 
