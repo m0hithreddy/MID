@@ -72,11 +72,13 @@ AC_CHECK_HEADERS(
 stdlib.h \
 stddef.h \
 string.h \
-sys/file.h \
 unistd.h \
 netdb.h \
 netinet/in.h \
 sys/socket.h \
+sys/file.h \
+sys/stat.h \
+sys/types.h \
 arpa/inet.h \
 limits.h \
 bits/sockaddr.h \
@@ -102,6 +104,7 @@ fprintf \
 snprintf \
 sprintf \
 pwrite \
+pread \ 
 exit \
 atoi \
 atol \
@@ -121,6 +124,8 @@ fileno \
 fopen \
 fclose \
 flock \
+fstat \
+lseek \
 remove \
 time \
 memcpy \
@@ -155,14 +160,16 @@ LONG_MAX,
 LONG_MIN,
 LOCK_EX,
 LOCK_UN,
-LOCK_NB],
+LOCK_NB,
+SEEK_SET],
 [],
 [AC_MSG_ERROR([Symbol required but not found. Should be included in libc, check the libc variant installed in your system.])],
 [[#include<stddef.h>
 #include<limits.h>
 #include<sys/file.h>
 #include<errno.h>
-#include<netinet/in.h>]]
+#include<netinet/in.h>
+#include<fcntl.h>]]
 )
 
 # Pthread library checks
@@ -196,7 +203,8 @@ AC_CHECK_HEADERS(
 [openssl/ssl.h \
 openssl/err.h \
 openssl/evp.h \
-openssl/tls1.h],
+openssl/tls1.h \
+openssl/md5.h],
 [],
 [ssl_header_not_found="yes"]
 )
@@ -208,7 +216,10 @@ SSL_new \
 SSL_set_fd \
 SSL_connect \
 SSL_write \
-SSL_read],
+SSL_read \
+MD5_Init \
+MD5_Update \
+MD5_Final],
 [],
 [ssl_func_not_found="yes"]
 )
@@ -217,12 +228,14 @@ AC_CHECK_DECLS(
 [SSL_library_init,
 OpenSSL_add_all_algorithms,
 SSL_load_error_strings,
-SSL_set_tlsext_host_name],
+SSL_set_tlsext_host_name,
+MD5_DIGEST_LENGTH],
 [],
 [ssl_symbol_not_found="yes"],
 [[#include <openssl/ssl.h>
 #include <openssl/evp.h>
-#include <openssl/tls1.h>]]
+#include <openssl/tls1.h>
+#include<openssl/md5.h>]]
 )
 
 if test "x${ssl_header_not_found}" != "xyes" && test "x${ssl_func_not_found}" != "xyes" && test "x${ssl_symbol_not_found}" != "xyes" ; then

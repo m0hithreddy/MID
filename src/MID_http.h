@@ -22,6 +22,7 @@
 #define DEFAULT_MAX_MIRRORS 1
 #define MID_HTTP_TOKEN_DELIMITERS "\r\n: "
 #define MID_HTTP_VALUE_DELIMITERS "\r\n"
+#define MAX_URL_SIZE 2000
 #define SEND_RECEIVE 11
 #define JUST_SEND 10
 #define JUST_RECEIVE 01
@@ -174,7 +175,11 @@ void* send_https_request(int sockfd,struct network_data* request,char* hostname,
 
 void* follow_redirects(struct http_request* c_s_request,struct network_data* response,long max_redirects,struct socket_info* cli_info,int flag);
 
-char* determine_filename(char* path,FILE** fp_ptr); // With out the beginning '/'
+char* determine_filename(char* path,FILE** fp_ptr);
+
+char* path_to_filename(char* path,FILE** fp_ptr); // path is passed with out the beginning of '/'
+
+char* url_to_filename(char* url);
 
 int handle_identity_encoding(struct encoding_info* en_info);
 

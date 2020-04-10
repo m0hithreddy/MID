@@ -10,11 +10,18 @@
 
 #define DEFAULT_CONFIG_FILE "/usr/local/etc/MID.conf"
 
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
 struct mid_args
 {
 	char* cmd;
 	char* output_file;
 	char* url;
+	char* up_file;
+	char* ms_file;
 	char** include_ifs;
 	char** exclude_ifs;
 	char*** custom_headers;
@@ -28,7 +35,15 @@ struct mid_args
 	long max_mirrors;
 	long unit_retry_sleep_time;
 	long progress_update_time;
+	long entry_number;
 	int detailed_progress;
+	int read_ms;
+	int clear_ms;
+	int force_resume;
+	int no_resume;
+#ifdef LIBSSL_SANE
+	int detailed_save;
+#endif
 	int quiet_flag;
 	int verbose_flag;
 	int vverbose_flag ;

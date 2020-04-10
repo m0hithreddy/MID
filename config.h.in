@@ -59,6 +59,10 @@
    don't. */
 #undef HAVE_DECL_LONG_MIN
 
+/* Define to 1 if you have the declaration of `MD5_DIGEST_LENGTH', and to 0 if
+   you don't. */
+#undef HAVE_DECL_MD5_DIGEST_LENGTH
+
 /* Define to 1 if you have the declaration of `NULL', and to 0 if you don't.
    */
 #undef HAVE_DECL_NULL
@@ -66,6 +70,10 @@
 /* Define to 1 if you have the declaration of `OpenSSL_add_all_algorithms',
    and to 0 if you don't. */
 #undef HAVE_DECL_OPENSSL_ADD_ALL_ALGORITHMS
+
+/* Define to 1 if you have the declaration of `SEEK_SET', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SEEK_SET
 
 /* Define to 1 if you have the declaration of `SSL_library_init', and to 0 if
    you don't. */
@@ -122,6 +130,9 @@
 
 /* Define to 1 if you have the `free' function. */
 #undef HAVE_FREE
+
+/* Define to 1 if you have the `fstat' function. */
+#undef HAVE_FSTAT
 
 /* Define to 1 if you have the `geteuid' function. */
 #undef HAVE_GETEUID
@@ -180,8 +191,20 @@
 /* Define to 1 if you have the <linux/if_link.h> header file. */
 #undef HAVE_LINUX_IF_LINK_H
 
+/* Define to 1 if you have the `lseek' function. */
+#undef HAVE_LSEEK
+
 /* Define to 1 if you have the `malloc' function. */
 #undef HAVE_MALLOC
+
+/* Define to 1 if you have the `MD5_Final' function. */
+#undef HAVE_MD5_FINAL
+
+/* Define to 1 if you have the `MD5_Init' function. */
+#undef HAVE_MD5_INIT
+
+/* Define to 1 if you have the `MD5_Update' function. */
+#undef HAVE_MD5_UPDATE
 
 /* Define to 1 if you have the `memcmp' function. */
 #undef HAVE_MEMCMP
@@ -207,11 +230,17 @@
 /* Define to 1 if you have the <openssl/evp.h> header file. */
 #undef HAVE_OPENSSL_EVP_H
 
+/* Define to 1 if you have the <openssl/md5.h> header file. */
+#undef HAVE_OPENSSL_MD5_H
+
 /* Define to 1 if you have the <openssl/ssl.h> header file. */
 #undef HAVE_OPENSSL_SSL_H
 
 /* Define to 1 if you have the <openssl/tls1.h> header file. */
 #undef HAVE_OPENSSL_TLS1_H
+
+/* Define to 1 if you have the `pread' function. */
+#undef HAVE_PREAD
 
 /* Define to 1 if you have the `printf' function. */
 #undef HAVE_PRINTF

@@ -10,6 +10,7 @@
 #include"MID_structures.h"
 #include"MID_socket.h"
 #include"MID_unit.h"
+#include"MID.h"
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
@@ -59,8 +60,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 	if(!strcmp(key,"output-file"))
 	{
-		args->output_file=(char*)malloc(sizeof(char)*(strlen(value)+1));
-		memcpy(args->output_file,value,strlen(value)+1);
+		args->output_file=strdup(value);
 	}
 
 	else if(!strcmp(key,"interfaces") || !strcmp(key,"exclude-interfaces"))
@@ -141,9 +141,14 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 	else if(!strcmp(key,"url"))
 	{
-		args->url=(char*)malloc(sizeof(char)*(strlen(value)+1));
-		memcpy(args->url,value,strlen(value)+1);
+		args->url=strdup(value);
 	}
+
+	else if(!strcmp(key,"unprocessed-file"))
+	{
+		args->up_file=strdup(value);
+	}
+
 
 	else if(!strcmp(key,"max-parallel-downloads"))
 	{
@@ -181,6 +186,33 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	else if(!strcmp(key,"progress-update-time"))
 	{
 		args->progress_update_time=atol(value);
+	}
+
+	else if(!strcmp(key,"entry-number"))
+	{
+		args->entry_number=atol(value);
+
+		if(args->entry_number<0)
+			args->entry_number=0;
+	}
+
+	else if(!strcmp(key,"ms-file"))
+	{
+		args->ms_file=strdup(value);
+	}
+
+	else if(!strcmp(key,"print-ms"))
+	{
+		args->read_ms=1;
+		args->ms_file=strdup(value);
+
+	}
+
+	else if(!strcmp(key,"delete-ms"))
+	{
+		args->clear_ms=1;
+		args->ms_file=strdup(value);
+
 	}
 
 	else if(!strcmp(key,"header"))
@@ -231,6 +263,42 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		}
 	}
 
+	else if(!strcmp(key,"force-resume"))
+	{
+		if(atol(value)<=0)
+		{
+			args->force_resume=0;
+		}
+		else
+		{
+			args->force_resume=1;
+		}
+	}
+
+	else if(!strcmp(key,"no-resume"))
+	{
+		if(atol(value)<=0)
+		{
+			args->no_resume=0;
+		}
+		else
+		{
+			args->no_resume=1;
+		}
+	}
+#ifdef LIBSSL_SANE
+	else if(!strcmp(key,"detailed-save"))
+	{
+		if(atol(value)<=0)
+		{
+			args->detailed_save=0;
+		}
+		else
+		{
+			args->detailed_save=1;
+		}
+	}
+#endif
 	else if(!strcmp(key,"quiet"))
 	{
 		if(atol(value)<=0)
@@ -586,6 +654,22 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
+		else if( !strcmp(argv[counter],"--unprocessed-file") || !strcmp(argv[counter],"-up") ) // --unprocessed-file || -up
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("unprocessed-file",value,args,0);
+
+			counter++;
+		}
+
 		else if( !strcmp(argv[counter],"--max-parallel-downloads") || !strcmp(argv[counter],"-n")) // --max-parallel-downloads || -n
 		{
 			char* value=NULL;
@@ -602,7 +686,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--max-unit-retries") || !strcmp(argv[counter],"-Ur")) // --max-unit-retries || -Ur
+		else if(!strcmp(argv[counter],"--max-unit-retries") || !strcmp(argv[counter],"-ur")) // --max-unit-retries || -ur
 		{
 			char* value=NULL;
 
@@ -618,7 +702,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--max-redirects") || !strcmp(argv[counter],"-R")) // --max-redirects || -r
+		else if(!strcmp(argv[counter],"--max-redirects") || !strcmp(argv[counter],"-R")) // --max-redirects || -R
 		{
 			char* value=NULL;
 
@@ -634,7 +718,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--max-tcp-syn-retransmits") || !strcmp(argv[counter],"-Sr")) // --max-tcp-syn-retransmits || -Sr
+		else if(!strcmp(argv[counter],"--max-tcp-syn-retransmits") || !strcmp(argv[counter],"-sr")) // --max-tcp-syn-retransmits || -sr
 		{
 			char* value=NULL;
 
@@ -666,7 +750,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--unit-sleep-time") || !strcmp(argv[counter],"-Us")) // --unit-sleep-time || -Us
+		else if(!strcmp(argv[counter],"--unit-sleep-time") || !strcmp(argv[counter],"-us")) // --unit-sleep-time || -us
 		{
 			char* value=NULL;
 
@@ -682,7 +766,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--progress-update-time") || !strcmp(argv[counter],"-Pu")) // --progress-update-time || -Pu
+		else if(!strcmp(argv[counter],"--progress-update-time") || !strcmp(argv[counter],"-pu")) // --progress-update-time || -pu
 		{
 			char* value=NULL;
 
@@ -716,7 +800,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 #endif
 
 			printf("\n\n");
-			printf("Project homepage: < %s >",PACKAGE_URL);
+			printf("Project homepage: [ %s ]",PACKAGE_URL);
 			printf("\n\n");
 
 			exit(1);
@@ -739,9 +823,94 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 		}
 
-		else if(!strcmp(argv[counter],"--detailed-progress") || !strcmp(argv[counter],"-Pd")) // --detailed-progress || -Pd
+		else if(!strcmp(argv[counter],"--detailed-progress") || !strcmp(argv[counter],"-pd")) // --detailed-progress || -pd
 		{
 			args->detailed_progress=1;
+
+			counter++;
+		}
+
+		else if(!strcmp(argv[counter],"--force-resume") || !strcmp(argv[counter],"-fr")) // --force-resume || -fr
+		{
+			args->force_resume=1;
+
+			counter++;
+		}
+
+		else if(!strcmp(argv[counter],"--no-resume") || !strcmp(argv[counter],"-nr")) // --no-resume || -nr
+		{
+			args->no_resume=1;
+
+			counter++;
+		}
+#ifdef LIBSSL_SANE
+		else if(!strcmp(argv[counter],"--detailed-save") || !strcmp(argv[counter],"-ds")) // --detailed-save || -ds
+		{
+			args->detailed_save=1;
+
+			counter++;
+		}
+#endif
+		else if(!strcmp(argv[counter],"--entry-number") || !strcmp(argv[counter],"-e")) // --entry-number || -e
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("entry-number",value,args,0);
+
+			counter++;
+		}
+
+		else if( !strcmp(argv[counter],"--ms-file") || !strcmp(argv[counter],"-ms") ) // --ms-file || -ms
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("ms-file",value,args,0);
+
+			counter++;
+		}
+
+		else if(!strcmp(argv[counter],"--print-ms") || !strcmp(argv[counter],"-pm") )  // --read-ms || -pm
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("print-ms",value,args,0);
+
+			counter++;
+		}
+
+		else if(!strcmp(argv[counter],"--delete-ms") || !strcmp(argv[counter],"-dm") )  // --delete-ms || -dm
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("delete-ms",value,args,0);
 
 			counter++;
 		}
@@ -789,12 +958,34 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 	}
 
-	if(args->url==NULL) // mandatory argument [--url | -u]
+	// If read_ms flag is set
+
+	if(args->read_ms)
+	{
+		read_ms_file(args->ms_file,args->entry_number,MS_PRINT);
+
+		exit(0);
+	}
+
+	// If clear_ms flag is set
+
+	if(args->clear_ms)
+	{
+		clear_ms_entry(args->ms_file,args->entry_number,MS_PRINT);
+
+		exit(0);
+	}
+
+	// Check for mandatory URL argument {--url | -u}
+
+	if(args->url==NULL)
 	{
 		mid_help("MID: URL must be specified using {--url | -u} option");
 	}
 
-	if(hdr_bag->n_pockets!=0) // collect the custom http headers across the configuration file and command line arguments
+	// Collect and fill the custom HTTP headers from conf_file and cmd_line
+
+	if(hdr_bag->n_pockets!=0)
 	{
 		if(hdr_bag->n_pockets%2!=0)
 		{
@@ -838,31 +1029,41 @@ void mid_help(char* err_msg)
 		exit(1);
 	}
 
-	fprintf(stderr,"Usage: {MID | mid} {--url | -u} URL [OPTIONS]\n\n");
-	fprintf(stderr,"  --output-file file                   -o file             Specify the output file, if not specified MID will automatically detect from the URL. \n");
-	fprintf(stderr,"  --interfaces nic1,nic2...            -i nic1,nic2...     Network-interfaces which are used in the file download. \n");
-	fprintf(stderr,"  --exclude-interfaces nic1,nic2...    -ni nic1,nic2...    Network-interfaces which are excluded from the file download. \n");
-	fprintf(stderr,"  --help                               -h                  Print this help message. \n");
-	fprintf(stderr,"* --url URL                            -u URL              File at the URL to be downloaded. \n");
-	fprintf(stderr,"  --max-parallel-downloads x           -n x                Maximum x number of parallel connections are allowed. \n");
-	fprintf(stderr,"  --max-unit-retries x                 -Ur x               Maximum x number of retries are made by a unit to download a chunk. If failed, the download is terminated. \n");
-	fprintf(stderr,"  --max-redirects x                    -R x                Maximum x number of HTTP redirects are followed. \n");
-	fprintf(stderr,"  --max-tcp-syn-retransmits x          -Sr x               At max x TCP SYN are retransmitted when initiating a TCP connection. \n");
-	fprintf(stderr,"  --max-mirrors x                      -m x                If x is positive at max x mirrors are used in the download. If zero or less than zero all mirrors are used. \n");
-	fprintf(stderr,"  --unit-sleep-time x                  -Us x               Download unit sleeps for x seconds before retrying. \n");
-	fprintf(stderr,"  --progress-update-time x             -Pu x               Information related to download progress updates after every x seconds. \n");
-	fprintf(stderr,"  --detailed-progress                  -Pd                 Show detailed download progress. \n");
-	fprintf(stderr,"  --version                            -V                  Print the version and exit. \n");
-	fprintf(stderr,"  --header h=v                         -H h=v              Add custom headers to HTTP request message (option can be used multiple times to add multiple headers). \n");
-	fprintf(stderr,"  --quiet                              -q                  Silent mode, don't output anything. \n");
-	fprintf(stderr,"  --verbose                            -v                  Print the verbose information. \n");
-	fprintf(stderr,"  --vverbose                           -vv                 Print the very verbose information. \n");
-	fprintf(stderr,"  --surpass-root-check                 -s                  If had the sufficient permissions, use -s to surpass the root-check. \n");
-	fprintf(stderr,"  --conf file                          -c file             Specify the configuration file path. Preference order: cmd_line > conf_file > default_values \n");
+	fprintf(stderr,"Usage: {MID | mid} --url URL [OPTIONS]\n\n");
+	fprintf(stderr,"   --output-file file                     -o file               Use this output file instead of determining from the URL. \n");
+	fprintf(stderr,"   --interfaces nic1,nic2...              -i nic1,nic2...       Network-interfaces which are used in the file download. \n");
+	fprintf(stderr,"   --exclude-interfaces nic1,nic2...      -ni nic1,nic2...      Network-interfaces which are excluded from the file download. \n");
+	fprintf(stderr,"   --help                                 -h                    Print this help message. \n");
+	fprintf(stderr,"*  --url URL                              -u URL                URL to be used in the download. \n");
+	fprintf(stderr,"   --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. \n");
+	fprintf(stderr,"   --max-parallel-downloads x             -n x                  At max x parallel connections are opened. \n");
+	fprintf(stderr,"   --max-unit-retries x                   -ur x                 At max x retries are made by a unit to download a chunk. \n");
+	fprintf(stderr,"   --max-redirects x                      -R x                  At max x HTTP redirects are followed. \n");
+	fprintf(stderr,"   --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted. \n");
+	fprintf(stderr,"   --max-mirrors x                        -m x                  x > 0 => At max x mirrors are used. x <= 0 => All mirrors are used. \n");
+	fprintf(stderr,"   --unit-sleep-time x                    -us x                 Download unit sleeps for x seconds before retrying. \n");
+	fprintf(stderr,"   --progress-update-time x               -pu x                 Progress information update interval. \n");
+	fprintf(stderr,"   --detailed-progress                    -pd                   Show detailed download progress. \n");
+	fprintf(stderr,"   --force-resume                         -fr                   Skip the checks and start the download. \n");
+	fprintf(stderr,"   --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume. \n");
+#ifdef LIBSSL_SANE
+	fprintf(stderr,"   --detailed-save                        -ds                   Save the hashes of partially downloaded content. Default action is not to save. \n");
+#endif
+	fprintf(stderr,"   --entry-number x                       -e x                  If multiple partial downloads exists, select the x-th download. \n");
+	fprintf(stderr,"   --ms-file file                         -ms file              Use this .ms file instead of determining from the URL. \n");
+	fprintf(stderr,"   --print-ms file                        -pm file              Print the MID state information and exit. \n");
+	fprintf(stderr,"   --delete-ms file                       -dm file              Delete ms entry, entry number should be specified with option -e. \n");
+	fprintf(stderr,"   --version                              -V                    Print the version and exit. \n");
+	fprintf(stderr,"   --header h=v                           -H h=v                Add custom headers to HTTP request message (can be used multiple times). \n");
+	fprintf(stderr,"   --quiet                                -q                    Silent mode, don't output anything. \n");
+	fprintf(stderr,"   --verbose                              -v                    Print the verbose information. \n");
+	fprintf(stderr,"   --vverbose                             -vv                   Print the very verbose information. \n");
+	fprintf(stderr,"   --surpass-root-check                   -s                    If had the sufficient permissions, use -s to surpass the root-check. \n");
+	fprintf(stderr,"   --conf file                            -c file               Specify the conf file. Preference order: cmd_line > conf_file > default_values. \n");
 	fprintf(stderr,"\n");
-	fprintf(stderr,"  * marked arguments are mandatory \n");
+	fprintf(stderr,"   * marked arguments are mandatory \n");
 	fprintf(stderr,"\n");
-	fprintf(stderr,"Project homepage: < %s >",PACKAGE_URL);
+	fprintf(stderr,"Project homepage: [ %s ]",PACKAGE_URL);
 	fprintf(stderr,"\n\n");
 	exit(1);
 }

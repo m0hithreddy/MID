@@ -416,6 +416,9 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 	{
 		s_response=parse_http_response(response);
 
+		if(s_response==NULL)
+			return NULL;
+
 		if(s_response->status_code[0]!='3' || s_response->location==NULL)
 		{
 			break;
@@ -551,34 +554,14 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 	return NULL;
 }
 
-char* determine_filename(char* path,FILE** fp_ptr) // With out the beginning '/' when passing url path
+char* determine_filename(char* pre_name,FILE** fp_ptr)
 {
-	if(path==NULL) //Default file
-		return determine_filename("index.html",fp_ptr);
 
-	char* current=path;
-	char* prev=current;
-
-	if(args->output_file==NULL)
-	{
-		while(1)
-		{
-			current=strlocate(current,"/",0,strlen(current));
-			if(current==NULL)
-				break;
-			current=current+1;
-			prev=current;
-		}
-	}
-
-	char pre_name[strlen(prev)+1];
-
-	memcpy(pre_name,prev,sizeof(pre_name));
+	char* fin_name=(char*)malloc(sizeof(char)*(strlen(pre_name)+64+3));
+	strcpy(fin_name,pre_name);
 
 	long counter=1;
 	FILE* fp;
-	char* fin_name=(char*)malloc(sizeof(char)*(sizeof(pre_name)+64+2));
-	strcpy(fin_name,pre_name);
 
 	// Check whether file is already there or not
 
@@ -619,6 +602,42 @@ char* determine_filename(char* path,FILE** fp_ptr) // With out the beginning '/'
 	}
 
 	return fin_name;
+}
+
+char* path_to_filename(char* path,FILE** fp_ptr)
+{
+	if(path==NULL || strlen(path)==0) //Default file
+		return determine_filename("index.html",fp_ptr);
+
+	char* current=path;
+	char* prev=current;
+
+	while(1)
+	{
+		current=strlocate(current,"/",0,strlen(current));
+		if(current==NULL)
+			break;
+		current=current+1;
+		prev=current;
+	}
+
+	if(strlen(prev)==0)
+		return determine_filename("index.html",fp_ptr);
+
+	return determine_filename(prev,fp_ptr);
+}
+
+char* url_to_filename(char* url)
+{
+	char* file=strdup(url);
+
+	for(long i=0;i<strlen(file);i++)
+	{
+		if(file[i]=='/')
+			file[i]='_';
+	}
+
+	return file;
 }
 
 int handle_identity_encoding(struct encoding_info* en_info)

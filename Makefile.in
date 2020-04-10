@@ -1002,6 +1002,8 @@ distclean-local:
 	rm -rf autom4te.cache
 	rm -rf $(distdir)*
 
+re-install: uninstall install
+
 @TXT2MAN_TRUE@.txt.1:
 @TXT2MAN_TRUE@	$$(txt2man \
 @TXT2MAN_TRUE@		   -t $$(echo $$(echo $< | sed 's/.txt.*//').1) \

@@ -270,6 +270,9 @@ int place_data(struct data_bag *bag,struct network_data *n_data)
 struct network_data* flatten_data_bag(struct data_bag *bag)
 {
 
+	if(bag==NULL)
+		return NULL;
+
 	struct network_data* n_data=(struct network_data*)malloc(sizeof(struct network_data));
 
 	struct data_pocket *pocket=bag->first;

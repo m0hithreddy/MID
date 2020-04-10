@@ -67,6 +67,9 @@ void* unit(void* info)
 			continue;
 		}
 
+		if(unit_info->quit==1)
+			return NULL;
+
 		sleep_time=MIN_UNIT_SLEEP_TIME;
 
 		pthread_mutex_lock(&unit_info->lock);
@@ -78,11 +81,22 @@ void* unit(void* info)
 
 		// Creating http/http-range request and sending request
 
-		if(unit_info->pc_flag && unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
+		if(unit_info->pc_flag)
 		{
-			char range[HTTP_REQUEST_HEADERS_MAX_LEN];
-			sprintf(range,"bytes=%ld-%ld",unit_info->range->start,unit_info->range->end);
-			unit_info->s_request->range=range;
+			if(unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
+			{
+				char range[HTTP_REQUEST_HEADERS_MAX_LEN];
+				sprintf(range,"bytes=%ld-%ld",unit_info->range->start,unit_info->range->end);
+				unit_info->s_request->range=range;
+			}
+			else
+			{
+				unit_info->resume=0;
+
+				pthread_mutex_unlock(&unit_info->lock);
+
+				continue;
+			}
 		}
 
 		unit_info->s_request->method="GET";
@@ -299,18 +313,18 @@ void* unit(void* info)
 
 		shutdown(sockfd,SHUT_RDWR);
 
+		pthread_mutex_lock(&unit_info->lock);
+
 		if(status<0 || unit_info->current_size < unit_info->range->end-unit_info->range->start+1)
 		{
-			pthread_mutex_lock(&unit_info->lock);
 
 			unit_info->range->start=*(long*)unit_info->unit_ranges->end->data+1;
+			unit_info->current_size=0;
 
 			pthread_mutex_unlock(&unit_info->lock);
 
 			goto self_repair;
 		}
-
-		pthread_mutex_lock(&unit_info->lock);
 
 		unit_info->resume=0;
 
@@ -323,7 +337,6 @@ void* unit(void* info)
 	pthread_mutex_lock(&unit_info->lock);
 
 	unit_info->resume=0;
-	unit_info->current_size=0;
 
 	if(retries_count<unit_info->max_unit_retries)
 	{
@@ -460,9 +473,11 @@ struct unit_info* largest_unit(struct unit_info** units,long units_len)
 	{
 		pthread_mutex_lock(&units[i]->lock);
 
-		if(units[i]->resume==1 && units[i]->range->end - units[i]->range->start + 1 - units[i]->current_size > current)
+		long left_over=units[i]->range->end - units[i]->range->start + 1 - units[i]->current_size;
+
+		if(units[i]->resume==1 && left_over > current && left_over > UNIT_BREAK_THRESHOLD_SIZE)
 		{
-			current=units[i]->range->end - units[i]->range->start + 1 -units[i]->current_size;
+			current=left_over;
 			largest=units[i];
 		}
 
@@ -694,10 +709,12 @@ struct units_progress* merge_units_progress(struct units_progress* progress)
 
 }
 
-struct units_progress* actual_progress(struct unit_info** units,long units_len)
+struct units_progress* get_units_progress(struct unit_info** units,long units_len)
 {
+	struct units_progress* progress=(struct units_progress*)calloc(1,sizeof(struct units_progress));
+
 	if(units==NULL || units_len==0 )
-		return NULL;
+		return progress;
 
 	struct data_bag* ranges_bag=create_data_bag();
 
@@ -717,9 +734,7 @@ struct units_progress* actual_progress(struct unit_info** units,long units_len)
 	struct network_data* n_ranges=flatten_data_bag(ranges_bag);
 
 	if(n_ranges==NULL)
-		return NULL;
-
-	struct units_progress* progress=(struct units_progress*)malloc(sizeof(struct units_progress));
+		return progress;
 
 	progress->ranges=(struct http_range*)n_ranges->data;
 	progress->n_ranges=ranges_counter;
@@ -728,7 +743,10 @@ struct units_progress* actual_progress(struct unit_info** units,long units_len)
 	struct units_progress* u_progress=merge_units_progress(progress);
 
 	if(u_progress==NULL || u_progress->ranges==NULL)
-		return NULL;
+	{
+		memset(progress,0,sizeof(struct units_progress));
+		return progress;
+	}
 
 	long content_length=0;
 
@@ -809,13 +827,13 @@ void* show_progress(void* s_progress_info)
 		units_len=p_info->units_bag->n_pockets;
 
 		current=get_interface_report(units, units_len, p_info->ifs, p_info->ifs_len, prev);
-		progress=actual_progress(units, units_len);
+		progress=get_units_progress(units, units_len);
 		ifs_len=p_info->ifs_len;
 		prev=current;
 
 		pthread_mutex_unlock(&p_info->lock);
 
-		if(current==NULL || progress==NULL)
+		if(current==NULL)
 		{
 			continue;
 		}

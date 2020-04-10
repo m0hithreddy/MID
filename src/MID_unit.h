@@ -15,6 +15,7 @@
 #define MIN_SCHED_SLEEP_TIME 3
 #define MAX_SCHED_SLEEP_TIME 7
 #define MAX_PARALLEL_DOWNLOADS 10
+#define UNIT_BREAK_THRESHOLD_SIZE 2*1024-1
 #define MAX_UNIT_RETRIES 3
 #define UNIT_RETRY_SLEEP_TIME 5
 #define ERR_CODE_503_HEALING_TIME 10
@@ -122,7 +123,7 @@ void* compare_units_progress(void* unit_a,void* unit_b);
 
 struct units_progress* merge_units_progress(struct units_progress* progress);
 
-struct units_progress* actual_progress(struct unit_info** units,long units_len);
+struct units_progress* get_units_progress(struct unit_info** units,long units_len);
 
 void skip_progress_text(long count);
 

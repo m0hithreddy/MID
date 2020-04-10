@@ -19,6 +19,7 @@
 #include<openssl/ssl.h>
 #include<openssl/err.h>
 #include<openssl/evp.h>
+#include<openssl/md5.h>
 #else
 typedef void* SSL;
 int SSL_read(void* ran1,void* ran2,long ran3);

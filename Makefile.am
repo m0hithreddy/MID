@@ -29,6 +29,8 @@ distclean-local:
 	rm -rf autom4te.cache
 	rm -rf $(distdir)*
 
+re-install: uninstall install
+
 include src/Makefile.am
 
 if TXT2MAN

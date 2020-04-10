@@ -4519,11 +4519,13 @@ for ac_header in stdio.h \
 stdlib.h \
 stddef.h \
 string.h \
-sys/file.h \
 unistd.h \
 netdb.h \
 netinet/in.h \
 sys/socket.h \
+sys/file.h \
+sys/stat.h \
+sys/types.h \
 arpa/inet.h \
 limits.h \
 bits/sockaddr.h \
@@ -4560,6 +4562,7 @@ fprintf \
 snprintf \
 sprintf \
 pwrite \
+pread \
 exit \
 atoi \
 atol \
@@ -4579,6 +4582,8 @@ fileno \
 fopen \
 fclose \
 flock \
+fstat \
+lseek \
 remove \
 time \
 memcpy \
@@ -4621,6 +4626,7 @@ ac_fn_c_check_decl "$LINENO" "NULL" "ac_cv_have_decl_NULL" "#include<stddef.h>
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_NULL" = xyes; then :
@@ -4642,6 +4648,7 @@ ac_fn_c_check_decl "$LINENO" "EINTR" "ac_cv_have_decl_EINTR" "#include<stddef.h>
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_EINTR" = xyes; then :
@@ -4663,6 +4670,7 @@ ac_fn_c_check_decl "$LINENO" "INET_ADDRSTRLEN" "ac_cv_have_decl_INET_ADDRSTRLEN"
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_INET_ADDRSTRLEN" = xyes; then :
@@ -4684,6 +4692,7 @@ ac_fn_c_check_decl "$LINENO" "LONG_MAX" "ac_cv_have_decl_LONG_MAX" "#include<std
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_LONG_MAX" = xyes; then :
@@ -4705,6 +4714,7 @@ ac_fn_c_check_decl "$LINENO" "LONG_MIN" "ac_cv_have_decl_LONG_MIN" "#include<std
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_LONG_MIN" = xyes; then :
@@ -4726,6 +4736,7 @@ ac_fn_c_check_decl "$LINENO" "LOCK_EX" "ac_cv_have_decl_LOCK_EX" "#include<stdde
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_LOCK_EX" = xyes; then :
@@ -4747,6 +4758,7 @@ ac_fn_c_check_decl "$LINENO" "LOCK_UN" "ac_cv_have_decl_LOCK_UN" "#include<stdde
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_LOCK_UN" = xyes; then :
@@ -4768,6 +4780,7 @@ ac_fn_c_check_decl "$LINENO" "LOCK_NB" "ac_cv_have_decl_LOCK_NB" "#include<stdde
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
+#include<fcntl.h>
 
 "
 if test "x$ac_cv_have_decl_LOCK_NB" = xyes; then :
@@ -4778,6 +4791,28 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_LOCK_NB $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "SEEK_SET" "ac_cv_have_decl_SEEK_SET" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+
+"
+if test "x$ac_cv_have_decl_SEEK_SET" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SEEK_SET $ac_have_decl
 _ACEOF
 if test $ac_have_decl = 1; then :
 
@@ -4967,7 +5002,8 @@ if test "x${ac_cv_lib_crypto_BIO_new}" == "xyes" && test "x${ac_cv_lib_ssl_SSL_n
 for ac_header in openssl/ssl.h \
 openssl/err.h \
 openssl/evp.h \
-openssl/tls1.h
+openssl/tls1.h \
+openssl/md5.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -4990,7 +5026,10 @@ SSL_new \
 SSL_set_fd \
 SSL_connect \
 SSL_write \
-SSL_read
+SSL_read \
+MD5_Init \
+MD5_Update \
+MD5_Final
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -5009,6 +5048,7 @@ done
 ac_fn_c_check_decl "$LINENO" "SSL_library_init" "ac_cv_have_decl_SSL_library_init" "#include <openssl/ssl.h>
 #include <openssl/evp.h>
 #include <openssl/tls1.h>
+#include<openssl/md5.h>
 
 "
 if test "x$ac_cv_have_decl_SSL_library_init" = xyes; then :
@@ -5028,6 +5068,7 @@ fi
 ac_fn_c_check_decl "$LINENO" "OpenSSL_add_all_algorithms" "ac_cv_have_decl_OpenSSL_add_all_algorithms" "#include <openssl/ssl.h>
 #include <openssl/evp.h>
 #include <openssl/tls1.h>
+#include<openssl/md5.h>
 
 "
 if test "x$ac_cv_have_decl_OpenSSL_add_all_algorithms" = xyes; then :
@@ -5047,6 +5088,7 @@ fi
 ac_fn_c_check_decl "$LINENO" "SSL_load_error_strings" "ac_cv_have_decl_SSL_load_error_strings" "#include <openssl/ssl.h>
 #include <openssl/evp.h>
 #include <openssl/tls1.h>
+#include<openssl/md5.h>
 
 "
 if test "x$ac_cv_have_decl_SSL_load_error_strings" = xyes; then :
@@ -5066,6 +5108,7 @@ fi
 ac_fn_c_check_decl "$LINENO" "SSL_set_tlsext_host_name" "ac_cv_have_decl_SSL_set_tlsext_host_name" "#include <openssl/ssl.h>
 #include <openssl/evp.h>
 #include <openssl/tls1.h>
+#include<openssl/md5.h>
 
 "
 if test "x$ac_cv_have_decl_SSL_set_tlsext_host_name" = xyes; then :
@@ -5076,6 +5119,26 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_SSL_SET_TLSEXT_HOST_NAME $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  ssl_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "MD5_DIGEST_LENGTH" "ac_cv_have_decl_MD5_DIGEST_LENGTH" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+#include<openssl/md5.h>
+
+"
+if test "x$ac_cv_have_decl_MD5_DIGEST_LENGTH" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_MD5_DIGEST_LENGTH $ac_have_decl
 _ACEOF
 if test $ac_have_decl = 1; then :
 
