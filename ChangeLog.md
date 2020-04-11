@@ -2,7 +2,7 @@
 
 ## MID Releases
 
-# [v1.0.0](https://github.com/m0hithreddy/MID/tree/v1.0.0) (2020-04-04)
+# [v1.0](https://github.com/m0hithreddy/MID/tree/v1.0) (2020-04-04)
 
 * ###### Mohith Reddy < m.mohithreddy99@gmail.com >
   
@@ -14,7 +14,7 @@
   
   * Autoconf build system.
   
-# [v2.0.0](https://github.com/m0hithreddy/MID/tree/v2.0.0) (2020-04-08)
+# [v1.1](https://github.com/m0hithreddy/MID/tree/v1.1) (2020-04-08)
 
 * ###### Mohith Reddy < m.mohithreddy99@gmail.com >
   

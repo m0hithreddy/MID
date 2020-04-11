@@ -40,11 +40,11 @@ Also you can fetch the archive of master branch or particular relase as follows
 	
 * Zip archive of particular release
 		
-		$ wget https://github.com/m0hithreddy/MID/archive/vx.y.z.zip && unzip vx.y.z.zip && cd MID-x.y.z
+		$ wget https://github.com/m0hithreddy/MID/archive/vx.y.zip && unzip vx.y.zip && cd MID-x.y
 
 * Gzipped Tar archive of particular release
 		
-		$ wget https://github.com/m0hithreddy/MID/archive/vx.y.z.tar.gz && tar -xvf vx.y.z.tar.gz && cd MID-x.y.z
+		$ wget https://github.com/m0hithreddy/MID/archive/vx.y.tar.gz && tar -xvf vx.y.tar.gz && cd MID-x.y
 
 ## Build and Install
 
