@@ -1,5 +1,5 @@
 
-AC_INIT(MID,[1.0.0])
+AC_INIT(MID,[1.0])
 
 #safety check in case user overwritten --srcdir
 AC_CONFIG_SRCDIR([src/MID.c])
