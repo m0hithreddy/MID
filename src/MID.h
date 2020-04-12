@@ -18,6 +18,7 @@
 #include"MID_structures.h"
 #include"MID_http.h"
 #include<stdio.h>
+#include<sys/file.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -71,7 +72,11 @@ struct d_ms_entry
 };
 #endif
 
+void close_files();
+
 void* signal_handler(void* v_s_hd_info);
+
+void deregister_handler();
 
 char* get_ms_filename();
 

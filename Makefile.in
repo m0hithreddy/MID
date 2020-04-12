@@ -363,6 +363,7 @@ MID_SOURCES = \
 			  src/MID_socket.h \
 			  src/MID_ssl_socket.h \
 			  src/MID_unit.h \
+			  src/MID_err.h \
 			  src/url_parser.h \
 			  config.h
 

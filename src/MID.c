@@ -13,6 +13,7 @@
 #include"MID_ssl_socket.h"
 #include"MID_interfaces.h"
 #include"MID_unit.h"
+#include"MID_err.h"
 #include"url_parser.h"
 #include<string.h>
 #include<stdio.h>
@@ -44,6 +45,9 @@ struct http_response* gl_s_response=NULL;
 
 struct unit_info* base_unit_info=NULL;
 
+int handler_registered=0;
+struct signal_handler_info* s_hd_info=NULL;
+
 struct data_bag* units_bag=NULL;
 
 long content_length=0;
@@ -51,8 +55,6 @@ long downloaded_length=0;
 
 int main(int argc, char **argv)
 {
-
-	int exit_code=0;
 
 	args=parse_mid_args(argv,argc);
 
@@ -68,12 +70,7 @@ int main(int argc, char **argv)
 
 
 	if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Not a HTTP or HTTPS URL. Exiting...\n\n");
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: Not a HTTP or HTTPS URL. Exiting...\n\n");
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -91,12 +88,7 @@ int main(int argc, char **argv)
 	char* hostip=resolve_dns(purl->host);
 
 	if(hostip==NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Unable to find the IPV4 address of %s. Exiting...\n\n",purl->host);
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: Unable to find the IPV4 address of %s. Exiting...\n\n",purl->host);
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -109,12 +101,7 @@ int main(int argc, char **argv)
 	struct network_interface** net_if=get_net_if_info(args->include_ifs,args->include_ifs_count,args->exclude_ifs,args->exclude_ifs_count);
 
 	if(net_if[0]==NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: No network-interface found for downloading. Exiting...\n\n");
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: No network-interface found for downloading. Exiting...\n\n");
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -129,13 +116,7 @@ int main(int argc, char **argv)
 	struct sockaddr *servaddr=create_sockaddr_in(hostip,atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),DEFAULT_HTTP_SOCKET_FAMILY);
 
 	if(servaddr==NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error Checking partial content support. Exiting...\n\n");
-
-		exit(1);
-	}
-
+		mid_flag_exit(1,"MID: Error Checking partial content support. Exiting...\n\n");
 
 	struct http_request* s_request=(struct http_request*)calloc(1,sizeof(struct http_request));
 
@@ -264,35 +245,15 @@ int main(int argc, char **argv)
 	}
 
 	if(gl_s_response==NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error reading server response. Exiting...\n\n");
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: Error reading server response. Exiting...\n\n");
 	else
 	{
 		if(gl_s_response->status_code[0]=='4')
-		{
-			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Client Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
-
-			exit(1);
-		}
+			mid_flag_exit(1,"MID: Client Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 		else if(gl_s_response->status_code[0]=='5')
-		{
-			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Server Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
-
-			exit(1);
-		}
+			mid_flag_exit(1,"MID: Server Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 		else if(gl_s_response->status_code[0]!='2')
-		{
-			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Unknown error reported by server, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
-
-			exit(1);
-		}
+			mid_flag_exit(1,"MID: Unknown error reported by server, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 	}
 
 	// Some debug information
@@ -315,12 +276,7 @@ int main(int argc, char **argv)
 	net_if_data=flatten_data_bag(net_if_bag);
 
 	if(net_if_data==NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: No suitable network-interface found for downloading. Exiting...\n\n");
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
 
 	struct network_interface* ok_net_if=(struct network_interface*)net_if_data->data;
 	long ok_net_if_len=net_if_bag->n_pockets;
@@ -338,12 +294,7 @@ int main(int argc, char **argv)
 
 
 	if(ok_net_if_len==0)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: No suitable network-interface found for downloading. Exiting...\n\n");
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
 
 	// Check for Range request support
 
@@ -363,12 +314,7 @@ int main(int argc, char **argv)
 	char** fin_hostips=resolve_dns_mirros(fin_host,&(args->max_mirrors));
 
 	if(fin_hostips==NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Unable to find at least one mirror of %s. Exiting...\n\n",fin_host);
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: No mirrors found for %s. Exiting...\n\n",fin_host);
 
 	//Base client socket_info structure
 
@@ -465,8 +411,8 @@ int main(int argc, char **argv)
 
 	// Registering thread to handle signals
 
-	int handler_registered=0;
-	struct signal_handler_info* s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
+	handler_registered=0;
+s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
 
 	sigset_t oldmask;
 
@@ -477,14 +423,7 @@ int main(int argc, char **argv)
 	sigaddset(&s_hd_info->mask, SIGQUIT);
 
 	if(pthread_sigmask(SIG_BLOCK, &s_hd_info->mask, &oldmask) != 0)  // Block SIGINT and SIGQUIT
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error initiating the signal handler. Exiting...\n\n");
-
-		exit_code=1;
-
-		goto close_files;
-	}
+		mid_flag_exit(1,"MID: Error initiating the signal handler. Exiting...\n\n");
 
 	pthread_mutex_init(&s_hd_info->lock,NULL);
 	pthread_create(&s_hd_info->tid, NULL,signal_handler,(void*)s_hd_info);
@@ -817,14 +756,7 @@ int main(int argc, char **argv)
 
 
 	if(err!=NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error downloading chunk. Exiting...\n\n");
-
-		exit_code=2;
-
-		goto close_files;
-	}
+		mid_flag_exit(2,"MID: Error downloading chunk. Exiting...\n\n");
 
 	pthread_mutex_lock(&s_hd_info->lock);
 	if(s_hd_info->quit)
@@ -832,15 +764,14 @@ int main(int argc, char **argv)
 		pthread_mutex_unlock(&s_hd_info->lock);
 		save_mid_state();
 
-		exit_code=1;
-		goto close_files;
+		mid_exit(1);
 	}
 	pthread_mutex_unlock(&s_hd_info->lock);
 
 	// Handle Content-Encoding
 
 	if(gl_s_response->content_encoding==NULL)
-		goto close_files;
+		mid_exit(0);
 
 	if(!args->quiet_flag)
 		printf("Decoding the file: %s\n",base_unit_info->up_file);
@@ -848,14 +779,7 @@ int main(int argc, char **argv)
 	struct encoding_info* en_info=determine_encodings(gl_s_response->content_encoding); // Determine the encodings
 
 	if(en_info==NULL)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Content-Encoding unknown, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file);
-
-		exit_code=3;
-
-		goto close_files;
-	}
+		mid_flag_exit(3,"MID: Content-Encoding unknown, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file);
 
 	if(!args->quiet_flag)
 		printf("\nOpening File: %s\n\n",base_unit_info->file);
@@ -874,30 +798,19 @@ int main(int argc, char **argv)
 			pthread_mutex_unlock(&s_hd_info->lock);
 			save_mid_state();
 
-			exit_code=2;
-			goto close_files;
+			mid_exit(2);
 		}
 		pthread_mutex_unlock(&s_hd_info->lock);
 
 		status=read(fileno(u_fp),uf_data,MAX_TRANSACTION_SIZE); // Read the unprocessed file.
 
 		if(status<0)
-		{
-			if(!args->quiet_flag)
-				fprintf(stderr,"\nMID: Error reading the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
-
-			exit_code=2;
-
-			goto close_files;
-		}
+			mid_flag_exit(2,"MID: Error reading the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
 		else if(status==0)
 		{
-
 			remove(base_unit_info->up_file);
 
-			exit_code=0;
-
-			goto close_files;
+			mid_exit(0);
 		}
 
 		en_info->in_max=status;
@@ -906,67 +819,37 @@ int main(int argc, char **argv)
 		while(en_info->in_len!=en_info->in_max) // Decode and write the data to the file.
 		{
 			if(en_status==EN_END)
-			{
-				if(!args->quiet_flag)
-					fprintf(stderr,"\nMID: Misc data found at the end of the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
-
-				exit_code=4;
-
-				goto close_files;
-			}
+				mid_flag_exit(4,"MID: Misc data found at the end of the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
 
 			en_status=handle_encodings(en_info);
 
 			if(en_status!=EN_OK && en_status!=EN_END)
-			{
-				if(!args->quiet_flag)
-					fprintf(stderr,"\nMID: Error encountered when decoding the file %s, not removing the unprocessed file %s. Exiting...\n",base_unit_info->up_file,base_unit_info->up_file);
-
-				exit_code=2;
-
-				goto close_files;
-			}
+				mid_flag_exit(2,"MID: Error encountered when decoding the file %s, not removing the unprocessed file %s. Exiting...\n",base_unit_info->up_file,base_unit_info->up_file);
 
 			if(write(fileno(o_fp),en_info->out,en_info->out_len)!=en_info->out_len)
-			{
-				if(!args->quiet_flag)
-					fprintf(stderr,"\nMID: Error writing to the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->file,base_unit_info->up_file);
-
-				exit_code=2;
-
-				goto close_files;
-			}
+				mid_flag_exit(2,"\nMID: Error writing to the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->file,base_unit_info->up_file);
 
 		}
 	}
 
+	mid_exit(0);
+}
 
-	close_files:
-
+void close_files()
+{
 	if(o_fp!=NULL)
 	{
 		flock(fileno(o_fp),LOCK_UN);
 		fclose(o_fp);
+		o_fp=NULL;
 	}
 
 	if(u_fp!=NULL)
 	{
-		flock(fileno(o_fp),LOCK_UN);
+		flock(fileno(u_fp),LOCK_UN);
 		fclose(u_fp);
+		u_fp=NULL;
 	}
-
-	deregister_handler:
-
-	if(handler_registered)
-	{
-		pthread_kill(s_hd_info->tid,SIGINT);
-
-		pthread_join(s_hd_info->tid,NULL);
-		pthread_mutex_destroy(&s_hd_info->lock);
-	}
-
-	exit(exit_code);
-
 }
 
 void* signal_handler(void* v_s_hd_info)
@@ -979,12 +862,7 @@ void* signal_handler(void* v_s_hd_info)
 	err=sigwait(&s_hd_info->mask, &signo);
 
 	if(err != 0)
-	{
-		if(!args->quiet_flag)
-			fprintf(stderr,"\nMID: Error initiating the signal handler. Exiting...\n\n");
-
-		exit(1);
-	}
+		mid_flag_exit(1,"MID: Error initiating the signal handler. Exiting...\n\n");
 
 	pthread_mutex_lock(&s_hd_info->lock);
 
@@ -993,6 +871,16 @@ void* signal_handler(void* v_s_hd_info)
 	pthread_mutex_unlock(&s_hd_info->lock);
 
 	return NULL;
+}
+
+void deregister_handler()
+{
+	if(handler_registered && s_hd_info!=NULL)
+	{
+		pthread_kill(s_hd_info->tid,SIGINT);
+		pthread_join(s_hd_info->tid,NULL);
+		pthread_mutex_destroy(&s_hd_info->lock);
+	}
 }
 
 char* get_ms_filename()
@@ -1691,28 +1579,16 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 
 	if(ms_fp==NULL)
 	{
-		if(flag==MS_PRINT)
-		{
-			fprintf(stderr,"\nMID: Unable to open the MID state file %s. Exiting...\n\n",ms_file);
+		mid_cond_exit(1,flag==MS_PRINT,"MID: Unable to open the MID state file %s. Exiting...\n\n",ms_file);
 
-			exit(1);
-		}
-		else
-			return NULL;
+		return NULL;
 	}
 
 	if(flock(fileno(ms_fp),LOCK_EX)!=0)
 	{
-		if(flag==MS_PRINT)
-		{
-			fprintf(stderr,"\nMID: Unable to acquire lock on the MID state file %s. Exiting...\n\n",ms_file);
+		mid_cond_exit(1,flag==MS_PRINT,"MID: Unable to acquire lock on the MID state file %s. Exiting...\n\n",ms_file);
 
-			fclose(ms_fp);
-
-			exit(1);
-		}
-		else
-			return NULL;
+		return NULL;
 	}
 
 	void* en_info=malloc(sizeof(long)+sizeof(int));
@@ -1826,7 +1702,7 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 			goto fatal_error;
 		}
 
-		if(entry_number) // If a entry number is set exit after that information
+		if(entry_number) // If a entry number is set exit after printing the information
 		{
 			goto normal_exit;
 		}
@@ -1837,14 +1713,9 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 	flock(fileno(ms_fp),LOCK_UN);
 	fclose(ms_fp);
 
-	if(flag==MS_PRINT)
-	{
-		fprintf(stderr,"\nMID: %s is broken, errors encountered when processing the MID state file. Exiting...\n\n",ms_file);
+	mid_cond_exit(1,flag==MS_PRINT,"MID: %s is broken, errors encountered when processing the MID state file. Exiting...\n\n",ms_file);
 
-		exit(1);
-	}
-	else
-		return NULL;
+	return NULL;
 
 	normal_exit:
 
@@ -1853,7 +1724,7 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 
 	if(flag==MS_PRINT)
 	{
-		exit(0);
+		mid_exit(0);
 	}
 	else
 		return NULL;
@@ -2002,5 +1873,3 @@ void init_resume()
 {
 	char* ms_file=get_ms_filename();
 }
-
-
