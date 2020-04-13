@@ -394,8 +394,7 @@ int main(int argc, char **argv)
 
 	base_unit_info->servaddr=create_sockaddr_in(*fin_hostips,fin_port,DEFAULT_HTTP_SOCKET_FAMILY);
 
-	base_unit_info->s_request=(struct http_request*)malloc(sizeof(struct http_request));
-	memcpy(base_unit_info->s_request,gl_s_request,sizeof(struct http_request));
+	base_unit_info->s_request=(struct http_request*)memndup(gl_s_request,sizeof(struct http_request));
 
 	base_unit_info->range=(struct http_range*)malloc(sizeof(struct http_range));
 	base_unit_info->range->start=0;
@@ -521,19 +520,15 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 
 		//Initiating the first range request
 
-		struct unit_info* unit_info=(struct unit_info*)malloc(sizeof(struct unit_info));
-		memcpy(unit_info,base_unit_info,sizeof(struct unit_info));
+		struct unit_info* unit_info=(struct unit_info*)memndup(base_unit_info,sizeof(struct unit_info));
 
 		unit_info->pc_flag=1;
 
-		unit_info->cli_info=(struct socket_info*)malloc(sizeof(struct socket_info));
-		memcpy(unit_info->cli_info,base_socket_info,sizeof(struct socket_info));
+		unit_info->cli_info=(struct socket_info*)memndup(base_socket_info,sizeof(struct socket_info));
 
-		unit_info->cli_info->sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*2);
-		memcpy(unit_info->cli_info->sock_opts,base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
+		unit_info->cli_info->sock_opts=(struct socket_opt*)memndup(base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
 
-		unit_info->s_request=(struct http_request*)malloc(sizeof(struct http_request));
-		memcpy(unit_info->s_request,gl_s_request,sizeof(struct http_request));
+		unit_info->s_request=(struct http_request*)memndup(gl_s_request,sizeof(struct http_request));
 
 		unit_info->range=(struct http_range*)malloc(sizeof(struct http_range));
 		unit_info->range->start=0;
@@ -623,22 +618,18 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 				if(units_bag->n_pockets>=max_parallel_downloads)
 					continue;
 
-				new=(struct unit_info*)malloc(sizeof(struct unit_info));
-				memcpy(new,base_unit_info,sizeof(struct unit_info));
+				new=(struct unit_info*)memndup(base_unit_info,sizeof(struct unit_info));
 
 				new->pc_flag=1;
 				new->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
 
-				new->cli_info=(struct socket_info*)malloc(sizeof(struct socket_info));
-				memcpy(new->cli_info,base_socket_info,sizeof(struct socket_info));
+				new->cli_info=(struct socket_info*)memndup(base_socket_info,sizeof(struct socket_info));
 
-				new->cli_info->sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*2);
-				memcpy(new->cli_info->sock_opts,base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
+				new->cli_info->sock_opts=(struct socket_opt*)memndup(base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
 
 				new->servaddr=create_sockaddr_in(fin_hostips[hostip_id], fin_port, DEFAULT_HTTP_SOCKET_FAMILY);
 
-				new->s_request=(struct http_request*)malloc(sizeof(struct http_request));
-				memcpy(new->s_request,gl_s_request,sizeof(struct http_request));
+				new->s_request=(struct http_request*)memndup(gl_s_request,sizeof(struct http_request));
 
 				new->range=(struct http_range*)malloc(sizeof(struct http_range));
 

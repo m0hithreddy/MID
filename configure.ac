@@ -153,6 +153,14 @@ tolower],
 [AC_MSG_ERROR([${ac_func} is required but not found. Should be included in libc, check the libc variant installed in your system.])]
 )
 
+#Checks for optional system functions
+
+AC_CHECK_FUNCS(
+[memndup],
+[],
+[] 
+)
+
 # Checks for system symbols
 
 AC_CHECK_DECLS(

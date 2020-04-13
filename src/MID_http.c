@@ -78,9 +78,7 @@ struct network_data* create_http_request(struct http_request* s_request)
 	char* index_buffer;
 	char* token_buffer;
 
-	char* rqst_hdrs=(char*)malloc(sizeof(char)*(strlen(HTTP_REQUEST_HEADERS)+1));
-
-	memcpy(rqst_hdrs,HTTP_REQUEST_HEADERS,strlen(HTTP_REQUEST_HEADERS)+1);
+	char* rqst_hdrs=(char*)memndup(HTTP_REQUEST_HEADERS,sizeof(char)*(strlen(HTTP_REQUEST_HEADERS)+1));
 
 	n_buf->data=rqst_hdrs;
 	n_buf->len=strlen(n_buf->data);
@@ -161,8 +159,7 @@ struct http_response* parse_http_response(struct network_data *response)
 	s_response->body=(struct network_data*)malloc(sizeof(struct network_data));
 
 	s_response->body->len=response->len-hdrs->len;
-	s_response->body->data=(char*)malloc(sizeof(char)*(s_response->body->len));
-	memcpy(s_response->body->data,response->data+hdrs->len,s_response->body->len);
+	s_response->body->data=(char*)memndup(response->data+hdrs->len,sizeof(char)*(s_response->body->len));
 
 	// Response Version
 
@@ -269,9 +266,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 			char** header_token=(char**)(v_s_response+(sizeof(char*)*(atoi(index_buffer)-1)));
 
-			*header_token=(char*)malloc(sizeof(char)*(strlen(value_buffer)+1));
-
-			memcpy(*header_token,value_buffer,strlen(value_buffer)+1);
+			*header_token=(char*)memndup(value_buffer,sizeof(char)*(strlen(value_buffer)+1));
 
 			continue;
 		}
@@ -301,10 +296,7 @@ struct http_response* parse_http_response(struct network_data *response)
 	{
 		s_response->custom_headers[i]=(char**)malloc(sizeof(char*)*2);
 
-		s_response->custom_headers[i][0]=(char*)malloc(sizeof(char)*pocket->len);
-		memcpy(s_response->custom_headers[i][0],pocket->data,pocket->len);
-
-		s_response->custom_headers[i][1]=(char*)malloc(sizeof(char)*pocket->len);
+		s_response->custom_headers[i][0]=(char*)memndup(pocket->data,pocket->len);
 
 		pocket=pocket->next;
 
@@ -314,11 +306,9 @@ struct http_response* parse_http_response(struct network_data *response)
 			break;
 		}
 
-		s_response->custom_headers[i][1]=(char*)malloc(sizeof(char)*pocket->len);
-		memcpy(s_response->custom_headers[i][1],pocket->data,pocket->len);
+		s_response->custom_headers[i][1]=(char*)memndup(pocket->data,pocket->len);
 
 		pocket=pocket->next;
-
 	}
 
 	s_response->custom_headers[cus_size-1]=NULL;
@@ -406,9 +396,7 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 	struct http_response* s_response;
 	struct parsed_url* purl;
 	struct network_data* request=create_http_request(c_s_request);
-	struct http_request* s_request=(struct http_request*)malloc(sizeof(struct http_request));
-
-	memcpy(s_request,c_s_request,sizeof(struct http_request));
+	struct http_request* s_request=(struct http_request*)memndup(c_s_request,sizeof(struct http_request));
 
 	long redirect_count=0;
 

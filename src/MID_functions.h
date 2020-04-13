@@ -10,6 +10,11 @@
 
 #include"MID_structures.h"
 
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
 typedef struct data_bag hashmap;
 
 typedef void* (*two_to_one_func)(void*,void*);
@@ -30,6 +35,10 @@ char* strcaselocate(char* haystack,char* needle,long start,long end);
 struct network_data* sseek(struct network_data* n_data,char* delimiter);
 
 struct network_data* scopy(struct network_data* n_data, char* delimiter, char** dest, long len); /*len<0 to neglect length*/
+
+#ifndef HAVE_MEMNDUP
+void* memndup(void* src,long n_bytes);
+#endif
 
 hashmap* init_hashmap();
 

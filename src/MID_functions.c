@@ -13,6 +13,11 @@
 #include<stdlib.h>
 #include<stdio.h>
 
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
 void sort(void* arr,long ele_size,long start,long end,two_to_one_func compare)
 {
 
@@ -149,6 +154,15 @@ struct network_data* scopy(struct network_data* n_data,char* delimiter,char** de
 
 	return update;
 }
+
+#ifndef HAVE_MEMNDUP
+void* memndup(void* src,long n_bytes)
+{
+	void* dest=malloc(n_bytes);
+	memcpy(dest,src,n_bytes);
+	return dest;
+}
+#endif
 
 hashmap* init_hashmap()
 {

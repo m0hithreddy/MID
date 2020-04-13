@@ -56,13 +56,13 @@ char* get_ms_filename()
 		ms_file[MD5_DIGEST_LENGTH+3]='\0';
 
 #else
-		ms_file=(char*)malloc(sizeof(char)*(4+strlen(gl_s_request->url)));
-		memcpy(ms_file,url_to_filename(gl_s_request->url),strlen(gl_s_request->url));
+		ms_file=(char*)malloc(sizeof(char)*(4+strlen(args->url)));
+		memcpy(ms_file,url_to_filename(args->url),strlen(args->url));
 
-		ms_file[strlen(gl_s_request->url)]='.';
-		ms_file[strlen(gl_s_request->url)+1]='m';
-		ms_file[strlen(gl_s_request->url)+2]='s';
-		ms_file[strlen(gl_s_request->url)+3]='\0';
+		ms_file[strlen(args->url)]='.';
+		ms_file[strlen(args->url)+1]='m';
+		ms_file[strlen(args->url)+2]='s';
+		ms_file[strlen(args->url)+3]='\0';
 #endif
 	}
 	else

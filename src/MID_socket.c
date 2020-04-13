@@ -7,6 +7,7 @@
 
 #include"MID_socket.h"
 #include"MID_structures.h"
+#include"MID_functions.h"
 #include<errno.h>
 #include<unistd.h>
 #include<string.h>
@@ -74,8 +75,7 @@ struct socket_opt create_socket_opt(int level,int optname,void* optval,socklen_t
 
 	opt.level=level;
 	opt.optname=optname;
-	opt.optval=(void*)malloc(optlen);
-	memcpy(opt.optval,optval,optlen);
+	opt.optval=(void*)memndup(optval,optlen);
 	opt.optlen=optlen;
 
 	return opt;

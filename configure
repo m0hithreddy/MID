@@ -4700,6 +4700,20 @@ fi
 done
 
 
+#Checks for optional system functions
+
+for ac_func in memndup
+do :
+  ac_fn_c_check_func "$LINENO" "memndup" "ac_cv_func_memndup"
+if test "x$ac_cv_func_memndup" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_MEMNDUP 1
+_ACEOF
+
+fi
+done
+
+
 # Checks for system symbols
 
 ac_fn_c_check_decl "$LINENO" "NULL" "ac_cv_have_decl_NULL" "#include<stddef.h>

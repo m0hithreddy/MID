@@ -7,6 +7,7 @@
 
 #include"MID_interfaces.h"
 #include"MID_structures.h"
+#include"MID_functions.h"
 #include<string.h>
 
 #define _GNU_SOURCE     /* To get defns of NI_MAXSERV and NI_MAXHOST */
@@ -154,8 +155,7 @@ struct network_interface** get_net_if_info(char** include_ifs,long include_ifs_c
 
 		//Popping the if_name
 
-		net_if[counter]->name=(char*)malloc(sizeof(char)*pocket->len);
-		memcpy(net_if[counter]->name,pocket->data,pocket->len);
+		net_if[counter]->name=(char*)memndup(pocket->data,pocket->len);
 
 		pocket=pocket->next;
 
@@ -167,8 +167,7 @@ struct network_interface** get_net_if_info(char** include_ifs,long include_ifs_c
 
 		//Popping the address
 
-		net_if[counter]->address=(char*)malloc(sizeof(char)*pocket->len);
-		memcpy(net_if[counter]->address,pocket->data,pocket->len);
+		net_if[counter]->address=(char*)memndup(pocket->data,pocket->len);
 
 		pocket=pocket->next;
 
@@ -180,8 +179,7 @@ struct network_interface** get_net_if_info(char** include_ifs,long include_ifs_c
 
 		//Popping the netmask
 
-		net_if[counter]->netmask=(char*)malloc(sizeof(char)*pocket->len);
-		memcpy(net_if[counter]->netmask,pocket->data,pocket->len);
+		net_if[counter]->netmask=(char*)memndup(pocket->data,pocket->len);
 
 		pocket=pocket->next;
 
