@@ -45,18 +45,8 @@ struct mid_args* args;
 FILE* o_fp=NULL;
 FILE* u_fp=NULL;
 
-struct http_request* gl_s_request=NULL;
-struct http_response* gl_s_response=NULL;
-
-struct unit_info* base_unit_info=NULL;
-
 int handler_registered=0;
 struct signal_handler_info* s_hd_info=NULL;
-
-struct data_bag* units_bag=NULL;
-
-long content_length=0;
-long downloaded_length=0;
 
 int main(int argc, char **argv)
 {
@@ -123,6 +113,7 @@ int main(int argc, char **argv)
 	if(servaddr==NULL)
 		mid_flag_exit(1,"MID: Error Checking partial content support. Exiting...\n\n");
 
+
 	struct http_request* s_request=(struct http_request*)calloc(1,sizeof(struct http_request));
 
 	s_request->method="HEAD";
@@ -167,6 +158,9 @@ int main(int argc, char **argv)
 	struct data_bag* net_if_bag=create_data_bag();
 
 	struct network_data* net_if_data=(struct network_data*)malloc(sizeof(struct network_data));
+
+	struct http_request* gl_s_request=NULL;
+	struct http_response* gl_s_response=NULL;
 
 	for (int i = 0; net_if[i]!=NULL ; i++) // for each network interface check whether server is accessible
 	{
@@ -340,7 +334,7 @@ int main(int argc, char **argv)
 
 	//Base unit_info structure
 
-	base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
+	struct unit_info* base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
 
 	if(args->output_file!=NULL)
 		base_unit_info->file=determine_filename(args->output_file,&o_fp);
@@ -368,6 +362,10 @@ int main(int argc, char **argv)
 			base_unit_info->up_file=determine_filename(tmp_up_file,&u_fp);
 		}
 	}
+
+
+	sigemptyset(&base_unit_info->sync_mask);
+	sigaddset(&base_unit_info->sync_mask,SIGRTMIN);
 
 	base_unit_info->if_name=ok_net_if[0].name;
 	base_unit_info->scheme=fin_scheme;
@@ -416,17 +414,19 @@ int main(int argc, char **argv)
 	// Registering thread to handle signals
 
 	handler_registered=0;
-s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
 
-	sigset_t oldmask;
+	s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
+
 
 	s_hd_info->quit=0;
+	s_hd_info->ptid=pthread_self();
 
 	sigemptyset(&s_hd_info->mask);
-	sigaddset(&s_hd_info->mask, SIGINT);
-	sigaddset(&s_hd_info->mask, SIGQUIT);
+	sigaddset(&s_hd_info->mask,SIGINT);
+	sigaddset(&s_hd_info->mask,SIGQUIT);
+	sigaddset(&s_hd_info->mask,SIGRTMIN);
 
-	if(pthread_sigmask(SIG_BLOCK, &s_hd_info->mask, &oldmask) != 0)  // Block SIGINT and SIGQUIT
+	if(pthread_sigmask(SIG_BLOCK, &s_hd_info->mask, NULL) != 0)  // Block SIGINT and SIGQUIT and SIGRTMIN (for giving signals for thread syncing)
 		mid_flag_exit(1,"MID: Error initiating the signal handler. Exiting...\n\n");
 
 	pthread_mutex_init(&s_hd_info->lock,NULL);
@@ -436,7 +436,7 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 
 	// Initiating download
 
-	units_bag=create_data_bag();
+	struct data_bag* units_bag=create_data_bag();
 	struct network_data* n_unit=(struct network_data*)malloc(sizeof(struct network_data));
 	struct unit_info** units=NULL;
 	long units_len=0;
@@ -446,8 +446,13 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 	struct unit_info* idle=NULL;
 	struct unit_info* err=NULL;
 	time_t start_time;
-	downloaded_length=0;
-	content_length=0;
+	long downloaded_length=0;
+	long content_length=0;
+	struct timespec sleep_time;
+	sigset_t sync_mask;
+
+	sigemptyset(&sync_mask);
+	sigaddset(&sync_mask,SIGRTMIN);
 
 	// Creating thread for Progress Display;
 
@@ -464,6 +469,8 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 		s_progress_info->sleep_time=args->progress_update_time;
 		s_progress_info->quit=0;
 		s_progress_info->detailed_progress=args->detailed_progress;
+		sigemptyset(&s_progress_info->sync_mask);
+		sigaddset(&s_progress_info->sync_mask,SIGRTMIN);
 
 		pthread_mutex_init(&s_progress_info->lock, NULL);
 		pthread_create(&s_progress_info->tid,NULL,show_progress,(void*)s_progress_info);
@@ -484,19 +491,16 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 		units=(struct unit_info**)flatten_data_bag(units_bag)->data;
 		units_len=units_bag->n_pockets;
 
+		sleep_time.tv_sec=SCHEDULER_DEFAULT_SLEEP_TIME;
+		sleep_time.tv_nsec=0;
 		while(1)
 		{
 			pthread_mutex_lock(&s_hd_info->lock);
 
-			if(s_hd_info->quit)
-			{
-				pthread_mutex_unlock(&s_hd_info->lock);
-				break;
-			}
-
 			pthread_mutex_unlock(&s_hd_info->lock);
 
-			sleep(SCHEDULER_DEFAULT_SLEEP_TIME);
+			if(sigtimedwait(&sync_mask,NULL,&sleep_time)!=-1)
+				break;
 
 			idle=idle_unit(units,units_len);
 
@@ -554,7 +558,6 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 		struct unit_info* update=NULL;
 		struct unit_info* new=NULL;
 
-		long sleep_time=MIN_SCHED_SLEEP_TIME;
 		long max_parallel_downloads=args->max_parallel_downloads;
 
 		struct scheduler_info* sch_info=(struct scheduler_info*)calloc(1,sizeof(struct scheduler_info));
@@ -569,23 +572,16 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 		sch_info->sleep_time=SCHEDULER_DEFAULT_SLEEP_TIME;
 		sch_info->probing_done=0;
 
+		sleep_time.tv_sec=sch_info->sleep_time;
+		sleep_time.tv_nsec=0;
 		while(1)
 		{
-			pthread_mutex_lock(&s_hd_info->lock);
-
-			if(s_hd_info->quit)
-			{
-				pthread_mutex_unlock(&s_hd_info->lock);
-				break;
-			}
-
-			pthread_mutex_unlock(&s_hd_info->lock);
 
 			units=(struct unit_info**)flatten_data_bag(units_bag)->data;
 			units_len=units_bag->n_pockets;
 
-			sleep(sch_info->sleep_time);
-
+			if(sigtimedwait(&sync_mask,NULL,&sleep_time)!=-1)
+				break;
 
 			current=get_interface_report(units,units_len,ok_net_if,ok_net_if_len,prev);
 
@@ -601,6 +597,7 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 			scheduler(sch_info); // Scheduler decision
 
 			if_id=sch_info->sch_id;
+			sleep_time.tv_sec=sch_info->sleep_time;
 
 			prev=current;
 
@@ -713,6 +710,7 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 			else
 			{
 				update->resume=1;
+				pthread_kill(update->unit_id,SIGRTMIN);
 			}
 		}
 	}
@@ -725,12 +723,9 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 
 	if(!args->quiet_flag)
 	{
-		pthread_mutex_lock(&s_progress_info->lock);
-
 		s_progress_info->quit=1;
 
-		pthread_mutex_unlock(&s_progress_info->lock);
-
+		pthread_kill(s_progress_info->tid,SIGRTMIN);
 		pthread_join(s_progress_info->tid,NULL);
 		pthread_mutex_destroy(&s_progress_info->lock);
 
@@ -831,23 +826,6 @@ s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_inf
 	mid_exit(0);
 }
 
-void close_files()
-{
-	if(o_fp!=NULL)
-	{
-		flock(fileno(o_fp),LOCK_UN);
-		fclose(o_fp);
-		o_fp=NULL;
-	}
-
-	if(u_fp!=NULL)
-	{
-		flock(fileno(u_fp),LOCK_UN);
-		fclose(u_fp);
-		u_fp=NULL;
-	}
-}
-
 void* signal_handler(void* v_s_hd_info)
 {
 
@@ -866,16 +844,35 @@ void* signal_handler(void* v_s_hd_info)
 
 	pthread_mutex_unlock(&s_hd_info->lock);
 
+	pthread_kill(s_hd_info->ptid,SIGRTMIN);
+
 	return NULL;
 }
 
-void deregister_handler()
+void deregister_handler(struct signal_handler_info* s_hd_info)
 {
 	if(handler_registered && s_hd_info!=NULL)
 	{
-		pthread_kill(s_hd_info->tid,SIGINT);
+		pthread_kill(s_hd_info->tid,SIGRTMIN);
 		pthread_join(s_hd_info->tid,NULL);
 		pthread_mutex_destroy(&s_hd_info->lock);
+	}
+}
+
+void close_files()
+{
+	if(o_fp!=NULL)
+	{
+		flock(fileno(o_fp),LOCK_UN);
+		fclose(o_fp);
+		o_fp=NULL;
+	}
+
+	if(u_fp!=NULL)
+	{
+		flock(fileno(u_fp),LOCK_UN);
+		fclose(u_fp);
+		u_fp=NULL;
 	}
 }
 

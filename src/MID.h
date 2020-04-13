@@ -34,6 +34,7 @@ extern FILE* u_fp;
 struct signal_handler_info
 {
 	pthread_t tid;
+	pthread_t ptid;
 	int quit;
 	sigset_t mask;
 	pthread_mutex_t lock;
@@ -45,7 +46,7 @@ void close_files();
 
 void* signal_handler(void* v_s_hd_info);
 
-void deregister_handler();
+void deregister_handler(struct signal_handler_info* s_hd_info);
 
 void init_resume();
 

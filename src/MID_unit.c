@@ -21,6 +21,7 @@
 #include<limits.h>
 #include<time.h>
 #include<pthread.h>
+#include<signal.h>
 
 void* unit(void* info)
 {
@@ -29,9 +30,11 @@ void* unit(void* info)
 
 	unit_info->total_size=0;
 
-	int sleep_time=MIN_UNIT_SLEEP_TIME;
-
 	long retries_count=0;
+	int signo;
+
+	struct timespec sleep_time;
+	sleep_time.tv_nsec=0;
 
 	while(1)
 	{
@@ -44,7 +47,9 @@ void* unit(void* info)
 
 		if(unit_info->self_repair==1)
 		{
-			sleep(unit_info->healing_time);
+			sleep_time.tv_sec=unit_info->healing_time;
+
+			sigtimedwait(&unit_info->sync_mask,NULL,&sleep_time);
 
 			pthread_mutex_lock(&unit_info->lock);
 
@@ -58,19 +63,12 @@ void* unit(void* info)
 		{
 			retries_count=0;
 
-			sleep(sleep_time);
+			sigwait(&unit_info->sync_mask,&signo);
 
-			sleep_time++;
-			if(sleep_time>MAX_UNIT_SLEEP_TIME)
-				sleep_time=MIN_UNIT_SLEEP_TIME;
-
-			continue;
 		}
 
 		if(unit_info->quit==1)
 			return NULL;
-
-		sleep_time=MIN_UNIT_SLEEP_TIME;
 
 		pthread_mutex_lock(&unit_info->lock);
 
@@ -628,19 +626,11 @@ long suspend_units(struct unit_info** units,long units_len)
 
 	for(long i=0;i<units_len;i++)
 	{
-
 		units[i]->quit=1;
-		counter++;
-	}
-
-	for(long i=0;i<units_len;i++)
-	{
+		pthread_kill(units[i]->unit_id,SIGRTMIN);
 		pthread_join(units[i]->unit_id,NULL);
-	}
-
-	for(long i=0;i<units_len;i++)
-	{
 		pthread_mutex_destroy(&units[i]->lock);
+		counter++;
 	}
 
 	return counter;
@@ -778,10 +768,14 @@ void* show_progress(void* s_progress_info)
 	struct interface_report* prev=NULL;
 	struct units_progress* progress=NULL;
 	struct unit_info** units=NULL;
+	struct timespec sleep_time;
+
+	sleep_time.tv_sec=p_info->sleep_time;
+	sleep_time.tv_nsec=0;
+
 	long units_len=0;
 	long ifs_len=0;
 
-	long sleep_time;
 	long quit_flag=0;
 
 	char* bar1=(char*)malloc(sizeof(char)*153);
@@ -810,16 +804,10 @@ void* show_progress(void* s_progress_info)
 			return NULL;
 		}
 
-		pthread_mutex_lock(&p_info->lock);
+		sigtimedwait(&p_info->sync_mask,NULL,&sleep_time);
 
 		if(p_info->quit==1)
-			quit_flag=1;
-
-		sleep_time=p_info->sleep_time;
-
-		pthread_mutex_unlock(&p_info->lock);
-
-		sleep(sleep_time);
+				quit_flag=1;
 
 		pthread_mutex_lock(&p_info->lock);
 

@@ -34,6 +34,7 @@ struct unit_info
 {
 	pthread_t unit_id;
 	pthread_mutex_t lock;
+	sigset_t sync_mask;
 	char* file;
 	char* up_file;
 	char* if_name;
@@ -83,6 +84,7 @@ struct show_progress_info
 {
 	pthread_t tid;
 	pthread_mutex_t lock;
+	sigset_t sync_mask;
 	struct data_bag* units_bag;
 	struct network_interface* ifs;
 	long ifs_len;

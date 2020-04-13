@@ -21,7 +21,7 @@
 			fprintf(stderr, fmt, ## exit_args);\
 		}\
 		close_files();\
-		deregister_handler();\
+		deregister_handler(s_hd_info);\
 		exit(exit_code);\
 	}while(0)
 
@@ -29,7 +29,7 @@
 	do\
 	{\
 		close_files();\
-		deregister_handler();\
+		deregister_handler(s_hd_info);\
 		exit(exit_code);\
 	}while(0)
 
