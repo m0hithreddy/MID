@@ -111,7 +111,8 @@ am_MID_OBJECTS = src/MID.$(OBJEXT) src/MID_structures.$(OBJEXT) \
 	src/MID_arguments.$(OBJEXT) src/MID_functions.$(OBJEXT) \
 	src/MID_http.$(OBJEXT) src/MID_interfaces.$(OBJEXT) \
 	src/MID_socket.$(OBJEXT) src/MID_ssl_socket.$(OBJEXT) \
-	src/MID_unit.$(OBJEXT) src/url_parser.$(OBJEXT)
+	src/MID_unit.$(OBJEXT) src/MID_state.$(OBJEXT) \
+	src/url_parser.$(OBJEXT)
 MID_OBJECTS = $(am_MID_OBJECTS)
 MID_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -133,8 +134,8 @@ am__depfiles_remade = src/$(DEPDIR)/MID.Po \
 	src/$(DEPDIR)/MID_arguments.Po src/$(DEPDIR)/MID_functions.Po \
 	src/$(DEPDIR)/MID_http.Po src/$(DEPDIR)/MID_interfaces.Po \
 	src/$(DEPDIR)/MID_socket.Po src/$(DEPDIR)/MID_ssl_socket.Po \
-	src/$(DEPDIR)/MID_structures.Po src/$(DEPDIR)/MID_unit.Po \
-	src/$(DEPDIR)/url_parser.Po
+	src/$(DEPDIR)/MID_state.Po src/$(DEPDIR)/MID_structures.Po \
+	src/$(DEPDIR)/MID_unit.Po src/$(DEPDIR)/url_parser.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -353,6 +354,7 @@ MID_SOURCES = \
 			  src/MID_socket.c \
 			  src/MID_ssl_socket.c \
 			  src/MID_unit.c \
+			  src/MID_state.c \
 			  src/url_parser.c \
 			  src/MID.h \
 			  src/MID_structures.h \
@@ -363,6 +365,7 @@ MID_SOURCES = \
 			  src/MID_socket.h \
 			  src/MID_ssl_socket.h \
 			  src/MID_unit.h \
+			  src/MID_state.h \
 			  src/MID_err.h \
 			  src/url_parser.h \
 			  config.h
@@ -490,6 +493,8 @@ src/MID_ssl_socket.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/MID_unit.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/MID_state.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/url_parser.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 
@@ -511,6 +516,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/MID_interfaces.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/MID_socket.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/MID_ssl_socket.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/MID_state.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/MID_structures.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/MID_unit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/url_parser.Po@am__quote@ # am--include-marker
@@ -878,6 +884,7 @@ distclean: distclean-am
 	-rm -f src/$(DEPDIR)/MID_interfaces.Po
 	-rm -f src/$(DEPDIR)/MID_socket.Po
 	-rm -f src/$(DEPDIR)/MID_ssl_socket.Po
+	-rm -f src/$(DEPDIR)/MID_state.Po
 	-rm -f src/$(DEPDIR)/MID_structures.Po
 	-rm -f src/$(DEPDIR)/MID_unit.Po
 	-rm -f src/$(DEPDIR)/url_parser.Po
@@ -936,6 +943,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f src/$(DEPDIR)/MID_interfaces.Po
 	-rm -f src/$(DEPDIR)/MID_socket.Po
 	-rm -f src/$(DEPDIR)/MID_ssl_socket.Po
+	-rm -f src/$(DEPDIR)/MID_state.Po
 	-rm -f src/$(DEPDIR)/MID_structures.Po
 	-rm -f src/$(DEPDIR)/MID_unit.Po
 	-rm -f src/$(DEPDIR)/url_parser.Po

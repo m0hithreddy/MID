@@ -13,33 +13,32 @@
 #include<stdio.h>
 #include<sys/file.h>
 
-#define mid_flag_exit(exit_code,fmt, exit_args...) do\
+#define mid_flag_exit(exit_code,fmt, exit_args...)\
+	do\
 	{\
-	if(args!= NULL && !args->quiet_flag)\
-	{\
-		fprintf(stderr, fmt, ## exit_args);\
-	}\
-	close_files();\
-	deregister_handler();\
-	exit(exit_code);\
+		if(args!= NULL && !args->quiet_flag)\
+		{\
+			fprintf(stderr, fmt, ## exit_args);\
+		}\
+		close_files();\
+		deregister_handler();\
+		exit(exit_code);\
 	}while(0)
 
-#define mid_exit(exit_code) do\
+#define mid_exit(exit_code)\
+	do\
 	{\
-	close_files();\
-	deregister_handler();\
-	exit(exit_code);\
+		close_files();\
+		deregister_handler();\
+		exit(exit_code);\
 	}while(0)
 
-#define mid_cond_exit(exit_code,cond,fmt, exit_args...)\
+#define mid_cond_print(cond,fmt, exit_args...)\
 	do\
 	{\
 		if(cond)\
 		{\
 			fprintf(stderr, fmt, ## exit_args);\
-			close_files();\
-			deregister_handler();\
-			exit(exit_code);\
 		}\
 	}while(0)
 

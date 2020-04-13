@@ -10,6 +10,7 @@ MID_SOURCES = \
 			  src/MID_socket.c \
 			  src/MID_ssl_socket.c \
 			  src/MID_unit.c \
+			  src/MID_state.c \
 			  src/url_parser.c \
 			  src/MID.h \
 			  src/MID_structures.h \
@@ -20,6 +21,7 @@ MID_SOURCES = \
 			  src/MID_socket.h \
 			  src/MID_ssl_socket.h \
 			  src/MID_unit.h \
+			  src/MID_state.h \
 			  src/MID_err.h \
 			  src/url_parser.h \
 			  config.h

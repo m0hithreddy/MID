@@ -10,7 +10,7 @@
 #include"MID_structures.h"
 #include"MID_socket.h"
 #include"MID_unit.h"
-#include"MID.h"
+#include"MID_state.h"
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>

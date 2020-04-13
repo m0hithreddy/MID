@@ -30,6 +30,8 @@ ${srcdir}/src/MID_unit.c
 ${srcdir}/src/MID_unit.h
 ${srcdir}/src/MID_functions.c
 ${srcdir}/src/MID_functions.h
+${srcdir}/src/MID_state.c
+${srcdir}/src/MID_state.h
 ${srcdir}/src/MID_err.h
 ${srcdir}/src/url_parser.c
 ${srcdir}/src/url_parser.h
