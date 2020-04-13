@@ -755,7 +755,7 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 
 				if((status=read(fileno(ms_fp),en_info,sizeof(long)))==0)
 				{
-					mid_cond_print(flag==MS_PRINT,"\nMID: End of the file, entry number %ld not found. Exiting...\n\n",entry_number);
+					mid_cond_print(flag==MS_PRINT,"MID: End of the file, entry number %ld not found. Exiting...\n\n",entry_number);
 
 					goto normal_exit;
 				}

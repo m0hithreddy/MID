@@ -25,7 +25,7 @@
 #include"config.h"
 #endif
 
-#define MID_USER_AGENT "MID/"PACKAGE_URL
+#define MID_USER_AGENT "MID/"PACKAGE_VERSION
 
 extern struct mid_args* args;
 extern FILE* o_fp;

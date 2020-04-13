@@ -784,7 +784,6 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 		else if(!strcmp(argv[counter],"--version") || !strcmp(argv[counter],"-V"))
 		{
-			printf("\n");
 			printf("%s version %s (%s) ",PACKAGE_NAME,PACKAGE_VERSION,HOST_ARCH);
 
 #ifdef LIBSSL_SANE
@@ -1024,7 +1023,7 @@ void mid_help(char* err_msg)
 {
 	if(err_msg!=NULL)
 	{
-		fprintf(stderr,"\n%s\n\n",err_msg);
+		fprintf(stderr,"%s\n\n",err_msg);
 		fprintf(stderr,"Try {MID | mid} --help for more information \n\n");
 		exit(1);
 	}
