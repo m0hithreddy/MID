@@ -203,15 +203,22 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 	else if(!strcmp(key,"print-ms"))
 	{
-		args->read_ms=1;
-		args->ms_file=strdup(value);
+		args->print_ms=1;
+		args->pm_file=strdup(value);
 
 	}
 
 	else if(!strcmp(key,"delete-ms"))
 	{
-		args->clear_ms=1;
-		args->ms_file=strdup(value);
+		args->delete_ms=1;
+		args->dm_file=strdup(value);
+
+	}
+
+	else if(!strcmp(key,"validate-ms"))
+	{
+		args->validate_ms=1;
+		args->cm_file=strdup(value);
 
 	}
 
@@ -386,6 +393,7 @@ void read_conf(char* conf,struct mid_args* args)
 	args->max_mirrors=DEFAULT_MAX_MIRRORS;
 	args->unit_retry_sleep_time=UNIT_RETRY_SLEEP_TIME;
 	args->progress_update_time=PROGRESS_UPDATE_TIME;
+	args->entry_number=0;
 
 	if(conf==NULL)
 		return;
@@ -914,6 +922,22 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
+		else if(!strcmp(argv[counter],"--validate-ms") || !strcmp(argv[counter],"-vm") )  // --validate-ms || -cm
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("validate-ms",value,args,0);
+
+			counter++;
+		}
+
 		else if(!strcmp(argv[counter],"--quiet") || !strcmp(argv[counter],"-q")) // --quiet || -q
 		{
 			args->quiet_flag=1;
@@ -959,18 +983,18 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 	// If read_ms flag is set
 
-	if(args->read_ms)
+	if(args->print_ms)
 	{
-		read_ms_file(args->ms_file,args->entry_number,MS_PRINT);
+		read_ms_entry(args->pm_file,args->entry_number,MS_PRINT);
 
 		exit(0);
 	}
 
 	// If clear_ms flag is set
 
-	if(args->clear_ms)
+	if(args->delete_ms)
 	{
-		clear_ms_entry(args->ms_file,args->entry_number,MS_PRINT);
+		delete_ms_entry(args->dm_file,args->entry_number,MS_PRINT);
 
 		exit(0);
 	}
@@ -1046,12 +1070,13 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --force-resume                         -fr                   Skip the checks and start the download. \n");
 	fprintf(stderr,"   --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume. \n");
 #ifdef LIBSSL_SANE
-	fprintf(stderr,"   --detailed-save                        -ds                   Save the hashes of partially downloaded content. Default action is not to save. \n");
+	fprintf(stderr,"   --detailed-save                        -ds                   Save the hashes of downloaded ranges to .ms file. Default action is not to save. \n");
 #endif
 	fprintf(stderr,"   --entry-number x                       -e x                  If multiple partial downloads exists, select the x-th download. \n");
 	fprintf(stderr,"   --ms-file file                         -ms file              Use this .ms file instead of determining from the URL. \n");
 	fprintf(stderr,"   --print-ms file                        -pm file              Print the MID state information and exit. \n");
 	fprintf(stderr,"   --delete-ms file                       -dm file              Delete ms entry, entry number should be specified with option -e. \n");
+	fprintf(stderr,"   --validate-ms file                     -vm file              Validate ms entry, entry number should be specified with option -e. \n");
 	fprintf(stderr,"   --version                              -V                    Print the version and exit. \n");
 	fprintf(stderr,"   --header h=v                           -H h=v                Add custom headers to HTTP request message (can be used multiple times). \n");
 	fprintf(stderr,"   --quiet                                -q                    Silent mode, don't output anything. \n");
@@ -1066,3 +1091,4 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"\n\n");
 	exit(1);
 }
+

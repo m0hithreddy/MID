@@ -22,6 +22,9 @@ struct mid_args
 	char* url;
 	char* up_file;
 	char* ms_file;
+	char* pm_file;
+	char* dm_file;
+	char* cm_file;
 	char** include_ifs;
 	char** exclude_ifs;
 	char*** custom_headers;
@@ -37,8 +40,9 @@ struct mid_args
 	long progress_update_time;
 	long entry_number;
 	int detailed_progress;
-	int read_ms;
-	int clear_ms;
+	int print_ms;
+	int delete_ms;
+	int validate_ms;
 	int force_resume;
 	int no_resume;
 #ifdef LIBSSL_SANE
@@ -59,3 +63,4 @@ struct mid_args* parse_mid_args(char** argv,long argc);
 void mid_help(char* err_msg);
 
 #endif /* MID_ARGUMENTS_H_ */
+

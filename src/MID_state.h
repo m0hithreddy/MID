@@ -11,6 +11,11 @@
 #define MS_PRINT 00
 #define MS_RETURN 01
 #define MS_SILENT 10
+#define MS_ERR_NO 000
+#define MS_ERROR_FPNULL 001
+#define MS_ERROR_LOCKEX 010
+#define MS_ERROR_EOF 011
+#define MS_ERROR_BROKEN 100
 
 #include"MID_http.h"
 #include"MID_unit.h"
@@ -72,20 +77,23 @@ struct ms_entry* process_ms_entry(FILE* ms_fp);
 
 void print_ms_entry(struct ms_entry* en);
 
-void check_ms_entry(struct ms_entry* en);
+int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag);
 
 #ifdef LIBSSL_SANE
-void dump_detailed_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
 
-struct d_ms_entry* process_detailed_ms_entry(FILE* ms_fp);
+struct d_ms_entry* process_d_ms_entry(FILE* ms_fp);
 
-void print_detailed_ms_entry(struct d_ms_entry* d_en);
+void print_d_ms_entry(struct d_ms_entry* d_en);
 
-void check_detailed_ms_entry(struct d_ms_entry* d_en);
+int validate_d_ms_entry(struct d_ms_entry* en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag);
 #endif
 
-void* read_ms_file(char* ms_file,long entry_number,int flag);
+void* read_ms_entry(char* ms_file,long entry_number,int flag);
 
-void clear_ms_entry(char* ms_file,long entry_number,int flag);
+void delete_ms_entry(char* ms_file,long entry_number,int flag);
+
+void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag);
 
 #endif /* SRC_MID_STATE_H_ */
+

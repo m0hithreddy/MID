@@ -29,6 +29,8 @@
 #include<openssl/md5.h>
 #endif
 
+int mid_error=0;
+
 char* get_ms_filename()
 {
 	char* ms_file;
@@ -114,7 +116,7 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 
 #ifdef LIBSSL_SANE
 	if(args->detailed_save)
-		dump_detailed_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+		dump_d_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 	else
 		dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 #else
@@ -350,7 +352,7 @@ struct ms_entry* process_ms_entry(FILE* ms_fp)
 
 void print_ms_entry(struct ms_entry* en)
 {
-	printf("\n|-->Type: MID state information entry (0)");
+	printf("\n|-->Type: MID State Entry (0)");
 
 	printf("\n|-->Initial URL: %s",en->in_url);
 
@@ -379,13 +381,193 @@ void print_ms_entry(struct ms_entry* en)
 	printf("\n");
 }
 
-void check_ms_entry(struct ms_entry* en)
+int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag)
 {
+	int return_code=0;
 
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Type: Validation of MID State Entry (0)");
+	}
+
+	// Initial URL ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Initial URL: %s",en->in_url);
+		printf(" || ");
+		printf("%s",args->url);
+	}
+	else
+	{
+		if(strcmp(en->in_url,args->url))
+		{
+			if(!args->force_resume)
+				return -1;
+
+			return_code=0;
+		}
+	}
+
+	// Final URL ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Redirected URL: %s",en->fin_url);
+		printf(" || ");
+		printf("%s",gl_s_request == NULL || gl_s_request->url == NULL ? "-" : gl_s_request->url);
+
+	}
+	else
+	{
+		if(gl_s_request == NULL || gl_s_request->url == NULL || strcmp(en->fin_url,gl_s_request->url))
+		{
+			if(!args->force_resume)
+				return -1;
+
+			return_code=1;
+		}
+	}
+
+	// Checking for File status;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->File: %s",en->file);
+		printf(" || ");
+
+		if(en->file!=NULL || en->file[0]!='\0')
+		{
+			FILE* fp=fopen(en->file,"r+");
+
+			if(fp!=NULL)
+			{
+				fclose(fp);
+				printf("RW");
+			}
+			else
+			{
+				fp=fopen(en->file,"r");
+				if(fp!=NULL)
+				{
+					fclose(fp);
+					printf("R");
+				}
+				else
+				{
+					printf("-");
+				}
+			}
+		}
+		else
+			printf("-");
+	}
+	else
+	{
+		if(en->file==NULL || en->file[0]=='\0')
+			return -1;
+
+		FILE* fp=fopen(en->file,"r+");
+
+		if(fp==NULL)
+			return -1;
+	}
+
+
+	// Check for Unprocessed file status ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Unprocessed-File: %s",en->up_file[0]=='\0' ? "-" : en->up_file);
+		printf(" || ");
+
+		if(en->up_file!=NULL && en->up_file[0]!='\0')
+		{
+			FILE* fp=fopen(en->up_file,"r+");
+
+			if(fp!=NULL)
+			{
+				fclose(fp);
+				printf("RW");
+			}
+			else
+			{
+				fp=fopen(en->up_file,"r");
+				if(fp!=NULL)
+				{
+					fclose(fp);
+					printf("R");
+				}
+				else
+				{
+					printf("-");
+				}
+			}
+		}
+		else
+			printf("-");
+	}
+	else
+	{
+		if(en->up_file!=NULL && en->up_file[0]!='\0')
+		{
+			FILE* fp=fopen(en->up_file,"r+");
+
+			if(fp==NULL)
+				return -1;
+		}
+	}
+
+	// Content Length ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Content-Length: %s",convert_data(en->content_length,0));
+		printf(" || ");
+
+		if(gl_s_response!=NULL || gl_s_response->content_length!=NULL)
+			printf("%s",convert_data(atol(gl_s_response->content_length),0));
+		else
+			printf("-");
+
+	}
+	else
+	{
+		if(gl_s_response!=NULL && gl_s_response->content_length!=NULL && atol(gl_s_response->content_length)!=en->content_length)
+		{
+			return -1;
+		}
+	}
+
+	// Downloaded Length + Number of Left Over Ranges + Left Over Ranges;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Downloaded-Length: %s",convert_data(en->downloaded_length,0));
+		printf(" || (no checks)");
+
+		printf("\n|-->Number of left over ranges: %ld",en->n_ranges);
+		printf(" || (no checks)");
+
+		printf("\n|-->Left over ranges:");
+
+		for(long i=0;i<en->n_ranges;i++)
+		{
+			printf(" (%ld, %ld)",en->ranges[i].start,en->ranges[i].end);
+
+			if(i!=en->n_ranges-1)
+				printf(" |");
+		}
+
+		printf(" || (no checks)");
+		printf("\n");
+	}
+
+	return return_code;
 }
 
 #ifdef LIBSSL_SANE
-void dump_detailed_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
 {
 	struct network_data* tmp=flatten_data_bag(units_bag);
 	struct unit_info** units= (struct unit_info**)(tmp==NULL ? NULL : tmp->data);
@@ -559,7 +741,7 @@ void dump_detailed_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struc
 
 }
 
-struct d_ms_entry* process_detailed_ms_entry(FILE* ms_fp)
+struct d_ms_entry* process_d_ms_entry(FILE* ms_fp)
 {
 	struct d_ms_entry* d_en=(struct d_ms_entry*)calloc(1,sizeof(struct d_ms_entry));
 
@@ -671,9 +853,9 @@ struct d_ms_entry* process_detailed_ms_entry(FILE* ms_fp)
 	return d_en;
 }
 
-void print_detailed_ms_entry(struct d_ms_entry* d_en)
+void print_d_ms_entry(struct d_ms_entry* d_en)
 {
-	printf("\n|-->Type: MID detailed state information entry (1)");
+	printf("\n|-->Type: MID Detailed State Entry (1)");
 
 	printf("\n|-->Initial URL: %s",d_en->in_url);
 
@@ -713,9 +895,313 @@ void print_detailed_ms_entry(struct d_ms_entry* d_en)
 
 	printf("\n");
 }
+
+int validate_d_ms_entry(struct d_ms_entry* d_en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag)
+{
+
+	int return_code=0;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Type: Validation of MID Detailed State Entry (1)");
+	}
+
+	// Initial URL ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Initial URL: %s",d_en->in_url);
+		printf(" || ");
+		printf("%s",args->url);
+	}
+	else
+	{
+		if(strcmp(d_en->in_url,args->url))
+		{
+			if(!args->force_resume)
+				return -1;
+
+			return_code=1;
+		}
+	}
+
+	// Final URL ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Redirected URL: %s",d_en->fin_url);
+		printf(" || ");
+		printf("%s",gl_s_request == NULL || gl_s_request->url == NULL ? "-" : gl_s_request->url);
+
+	}
+	else
+	{
+		if(gl_s_request == NULL || gl_s_request->url == NULL || strcmp(d_en->fin_url,gl_s_request->url))
+		{
+			if(!args->force_resume)
+				return -1;
+
+			return_code=1;
+		}
+	}
+
+	// Checking for File status;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->File: %s",d_en->file);
+		printf(" || ");
+
+		if(d_en->file!=NULL || d_en->file[0]!='\0')
+		{
+			FILE* fp=fopen(d_en->file,"r+");
+
+			if(fp!=NULL)
+			{
+				fclose(fp);
+				printf("RW");
+			}
+			else
+			{
+				fp=fopen(d_en->file,"r");
+				if(fp!=NULL)
+				{
+					fclose(fp);
+					printf("R");
+				}
+				else
+				{
+					printf("-");
+				}
+			}
+		}
+		else
+			printf("-");
+	}
+	else
+	{
+		if(d_en->file==NULL || d_en->file[0]=='\0')
+			return -1;
+
+		FILE* fp=fopen(d_en->file,"r+");
+
+		if(fp==NULL)
+			return -1;
+	}
+
+
+	// Check for Unprocessed file status ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Unprocessed-File: %s",d_en->up_file[0]=='\0' ? "-" : d_en->up_file);
+		printf(" || ");
+
+		if(d_en->up_file!=NULL && d_en->up_file[0]!='\0')
+		{
+			FILE* fp=fopen(d_en->up_file,"r+");
+
+			if(fp!=NULL)
+			{
+				fclose(fp);
+				printf("RW");
+			}
+			else
+			{
+				fp=fopen(d_en->up_file,"r");
+				if(fp!=NULL)
+				{
+					fclose(fp);
+					printf("R");
+				}
+				else
+				{
+					printf("-");
+				}
+			}
+		}
+		else
+			printf("-");
+	}
+	else
+	{
+		if(d_en->up_file!=NULL && d_en->up_file[0]!='\0')
+		{
+			FILE* fp=fopen(d_en->up_file,"r+");
+
+			if(fp==NULL)
+				return -1;
+		}
+	}
+
+	// Content Length ;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Content-Length: %s",convert_data(d_en->content_length,0));
+		printf(" || ");
+
+		if(gl_s_response!=NULL || gl_s_response->content_length!=NULL)
+			printf("%s",convert_data(atol(gl_s_response->content_length),0));
+		else
+			printf("-");
+
+	}
+	else
+	{
+		if(gl_s_response!=NULL && gl_s_response->content_length!=NULL && atol(gl_s_response->content_length)!=d_en->content_length)
+		{
+			return -1;
+		}
+	}
+
+	// Downloaded Length + Number of Left Over Ranges + Left Over Ranges;
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Downloaded-Length: %s",convert_data(d_en->downloaded_length,0));
+		printf(" || (no checks)");
+
+		printf("\n|-->Number of left over ranges: %ld",d_en->n_left_ranges);
+		printf(" || (no checks)");
+
+		printf("\n|-->Left over ranges:");
+
+		for(long i=0;i<d_en->n_left_ranges;i++)
+		{
+			printf(" (%ld, %ld)",d_en->left_ranges[i].start,d_en->left_ranges[i].end);
+
+			if(i!=d_en->n_left_ranges-1)
+				printf(" |");
+		}
+
+		printf(" || (no checks)");
+	}
+
+	// Number of Ranges + Ranges along with hashes
+
+	if(flag==MS_PRINT)
+	{
+		printf("\n|-->Number of fetched ranges: %ld",d_en->n_ranges);
+		printf(" || (no checks)");
+		printf("\n|-->Fetched ranges:");
+	}
+
+
+	FILE* fp=NULL;
+
+	if(d_en->up_file!=NULL && d_en->up_file[0]!='\0')
+		fp=fopen(d_en->up_file,"r");
+	else
+		fp=fopen(d_en->file,"r");
+
+	if(fp==NULL)
+	{
+		if(flag==MS_PRINT)
+			printf(" ! || ! \n");
+
+		return -1;
+	}
+
+	long chunk_len;
+	long status=0;
+	unsigned char md_result[MD5_DIGEST_LENGTH];
+	char f_buf[MAX_TRANSACTION_SIZE > (1+MD5_DIGEST_LENGTH*8/4) ? MAX_TRANSACTION_SIZE : (1+MD5_DIGEST_LENGTH*8/4)];
+
+	struct stat stat_buf;
+	fstat(fileno(fp),&stat_buf);
+
+	for(long i=0;i<d_en->n_ranges;i++)
+	{
+
+		if(flag==MS_PRINT)
+			printf(" (%ld, %ld) [%s",d_en->ranges[i].start,d_en->ranges[i].end,d_en->hashes[i]);
+
+		if(d_en->ranges[i].start >= stat_buf.st_size || d_en->ranges[i].end >= stat_buf.st_size)
+		{
+			if(flag==MS_PRINT)
+				printf(" || !]\n");
+
+			return -1;
+		}
+
+		if(lseek(fileno(fp),d_en->ranges[i].start,SEEK_SET)!=d_en->ranges[i].start)
+		{
+			if(flag==MS_PRINT)
+					printf(" || !]\n");
+
+			return -1;
+		}
+
+		chunk_len=d_en->ranges[i].end - d_en->ranges[i].start + 1;
+
+		// Determine MD5 hash
+
+		MD5_CTX md_context;
+
+		MD5_Init(&md_context);
+
+		while(1)
+		{
+			if(chunk_len<0)
+			{
+				if(flag==MS_PRINT)
+							printf(" || !]\n");
+
+				return -1;
+			}
+			else if(chunk_len==0)
+				break;
+
+			status=read(fileno(fp),f_buf,sizeof(f_buf) < chunk_len ? sizeof(f_buf) : chunk_len);
+
+			if(status<=0)
+			{
+				if(flag==MS_PRINT)
+							printf(" || !]\n");
+
+				return -1;
+			}
+
+			chunk_len=chunk_len-status;
+
+			MD5_Update(&md_context,f_buf,status);
+		}
+
+		MD5_Final(md_result, &md_context);
+
+		for(int i = 0; i < MD5_DIGEST_LENGTH; i++)
+			sprintf(f_buf+2*i,"%02x", md_result[i]);
+
+		if(flag==MS_PRINT)
+		{
+			printf(" || %s]",f_buf);
+		}
+		else
+		{
+			if(strcmp(d_en->hashes[i],f_buf) && !args->force_resume)
+			{
+				if(!args->force_resume)
+					return -1;
+
+				return_code=1;
+			}
+		}
+
+		if(flag==MS_PRINT)
+		{
+			if(i!=d_en->n_ranges-1)
+				printf(" |");
+		}
+	}
+
+	printf("\n");
+
+	return return_code;
+}
 #endif
 
-void* read_ms_file(char* ms_file,long entry_number,int flag)
+void* read_ms_entry(char* ms_file,long entry_number,int flag)
 {
 	FILE* ms_fp=fopen(ms_file,"r");
 
@@ -818,7 +1304,7 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 #ifdef LIBSSL_SANE
 		else if(*((int*)(en_info+sizeof(long)))==1)
 		{
-			d_en=process_detailed_ms_entry(ms_fp);
+			d_en=process_d_ms_entry(ms_fp);
 
 			if(d_en==NULL || d_en->d_en_len != *((long*)en_info))
 				goto fatal_error;
@@ -826,7 +1312,7 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 			if(flag==MS_PRINT)
 			{
 				printf("Entry Count: %ld\n",en_counter);
-				print_detailed_ms_entry(d_en);
+				print_d_ms_entry(d_en);
 				printf("\n");
 				en_counter++;
 			}
@@ -873,7 +1359,7 @@ void* read_ms_file(char* ms_file,long entry_number,int flag)
 
 }
 
-void clear_ms_entry(char* ms_file,long entry_number,int flag)
+void delete_ms_entry(char* ms_file,long entry_number,int flag)
 {
 	if(entry_number<=0)
 	{
@@ -1000,3 +1486,41 @@ void clear_ms_entry(char* ms_file,long entry_number,int flag)
 	return;
 
 }
+
+void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag)
+{
+	if(entry_number<=0)
+	{
+		mid_cond_print(flag==MS_PRINT,"MID: Entry number %ld is not valid. Exiting...\n\n",entry_number);
+
+		return;
+	}
+
+	void* entry;
+
+	entry=read_ms_entry(ms_file,entry_number,MS_RETURN);
+
+	if(entry==NULL)
+	{
+		mid_cond_print(flag==MS_PRINT,"MID: Error when fetching the given MID state entry. Returning...\n\n");
+		return;
+	}
+
+	if(flag==MS_PRINT)
+		printf("Entry Count: %ld\n",entry_number);
+
+	if(((struct ms_entry*)entry)->type==0)
+		validate_ms_entry((struct ms_entry*)entry,gl_s_request,gl_s_response,flag);
+#ifdef LIBSSL_SANE
+	else if(((struct ms_entry*)entry)->type==1)
+		validate_d_ms_entry((struct d_ms_entry*)entry,gl_s_request,gl_s_response,flag);
+#endif
+	else
+	{
+		mid_cond_print(flag==MS_PRINT,"MID: MS entry type unknown. Returning...\n\n");
+		return;
+	}
+
+}
+
+

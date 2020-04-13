@@ -237,6 +237,13 @@ int main(int argc, char **argv)
 			gl_s_response=tmp_s_response;
 		}
 
+		if(args->validate_ms)
+		{
+			check_ms_entry(args->cm_file,args->entry_number,gl_s_request,gl_s_response,MS_PRINT);
+			printf("\n");
+			exit(0);
+		}
+
 		net_if_data->data=(char*)net_if[i];
 		net_if_data->len=sizeof(struct network_interface);
 
@@ -880,3 +887,4 @@ void init_resume()
 {
 	char* ms_file=get_ms_filename();
 }
+
