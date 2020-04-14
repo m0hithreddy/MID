@@ -551,7 +551,13 @@ void scheduler(struct scheduler_info* sch_info)
 	if(t_conn >= sch_info->max_parallel_downloads)
 	{
 		sch_info->sch_id=-1;
+		return;
 		goto maxs_update;
+	}
+	else
+	{
+		sch_info->sch_id=0;
+		return;
 	}
 
 	if(!sch_info->probing_done && sch_info->sch_id==-1) // First scheduling decision

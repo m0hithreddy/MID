@@ -48,6 +48,8 @@ void* signal_handler(void* v_s_hd_info);
 
 void deregister_handler(struct signal_handler_info* s_hd_info);
 
-void init_resume();
+int init_resume();
+
+void finalize_resume();
 
 #endif /* MID_H_ */

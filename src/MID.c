@@ -48,6 +48,15 @@ FILE* u_fp=NULL;
 int handler_registered=0;
 struct signal_handler_info* s_hd_info=NULL;
 
+struct http_request* gl_s_request=NULL;
+struct http_response* gl_s_response=NULL;
+
+struct unit_info* base_unit_info=NULL;
+
+struct data_bag* resume_bag=NULL;
+
+void* entry=NULL;
+
 int main(int argc, char **argv)
 {
 
@@ -158,9 +167,6 @@ int main(int argc, char **argv)
 	struct data_bag* net_if_bag=create_data_bag();
 
 	struct network_data* net_if_data=(struct network_data*)malloc(sizeof(struct network_data));
-
-	struct http_request* gl_s_request=NULL;
-	struct http_response* gl_s_response=NULL;
 
 	// For each network interface check whether server is accessible
 
@@ -339,38 +345,45 @@ int main(int argc, char **argv)
 
 	base_socket_info->opts_len=2;
 
-
 	/* Base unit_info structure */
 
-	struct unit_info* base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
+	base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
 
-	if(args->output_file!=NULL)
-		base_unit_info->file=determine_filename(args->output_file,&o_fp);
-	else
-		base_unit_info->file=path_to_filename(purl->path,&o_fp);
+	resume_bag=create_data_bag(); // Checking for possibility of resuming the download.
+	int resume_status=0;
+	if(pc_flag==1)
+		resume_status=init_resume();
 
-	if(gl_s_response->content_encoding!=NULL)
+
+	if(!resume_status) // If resume_status ==1 , files already determined.
 	{
-		if(args->up_file!=NULL)
-		{
-			base_unit_info->up_file=determine_filename(args->up_file,&u_fp);
-		}
+		if(args->output_file!=NULL)
+			base_unit_info->file=determine_filename(args->output_file,&o_fp);
 		else
+			base_unit_info->file=path_to_filename(purl->path,&o_fp);
+
+		if(gl_s_response->content_encoding!=NULL)
 		{
-			long tmp_len=strlen(base_unit_info->file);
-			char tmp_up_file[tmp_len+4];
+			if(args->up_file!=NULL)
+			{
+				base_unit_info->up_file=determine_filename(args->up_file,&u_fp);
+			}
+			else
+			{
+				long tmp_len=strlen(base_unit_info->file);
+				char tmp_up_file[tmp_len+4];
 
-			memcpy(tmp_up_file,base_unit_info->file,tmp_len);
+				memcpy(tmp_up_file,base_unit_info->file,tmp_len);
 
-			tmp_up_file[tmp_len]='.';
-			tmp_up_file[tmp_len+1]='u';
-			tmp_up_file[tmp_len+2]='p';
-			tmp_up_file[tmp_len+3]='\0';
+				tmp_up_file[tmp_len]='.';
+				tmp_up_file[tmp_len+1]='u';
+				tmp_up_file[tmp_len+2]='p';
+				tmp_up_file[tmp_len+3]='\0';
 
-			base_unit_info->up_file=determine_filename(tmp_up_file,&u_fp);
+				base_unit_info->up_file=determine_filename(tmp_up_file,&u_fp);
+			}
 		}
 	}
-
 
 	sigemptyset(&base_unit_info->sync_mask);
 	sigaddset(&base_unit_info->sync_mask,SIGRTMIN);
@@ -395,6 +408,9 @@ int main(int argc, char **argv)
 
 	base_unit_info->unit_ranges=create_data_bag();
 
+	if(resume_status)
+		finalize_resume();
+
 	/* Printing file names */
 
 	if(!args->quiet_flag && gl_s_response->content_encoding == NULL)
@@ -411,7 +427,6 @@ int main(int argc, char **argv)
 	handler_registered=0;
 
 	s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
-
 
 	s_hd_info->quit=0;
 	s_hd_info->ptid=pthread_self();
@@ -438,6 +453,7 @@ int main(int argc, char **argv)
 	struct interface_report* prev=NULL;
 	struct interface_report* current=NULL;
 	struct units_progress* progress=NULL;
+	struct unit_info* new=NULL;
 	struct unit_info* idle=NULL;
 	struct unit_info* err=NULL;
 	time_t start_time;
@@ -516,23 +532,27 @@ int main(int argc, char **argv)
 		if(!args->quiet_flag)
 			s_progress_info->content_length=content_length;
 
+		base_unit_info->pc_flag=1;
+
 		//Initiating the first range request
 
-		struct unit_info* unit_info=unitdup(base_unit_info);
+		if(!resume_status)
+		{
+			new=unitdup(base_unit_info);
 
-		unit_info->pc_flag=1;
-		unit_info->range->start=0;
-		unit_info->range->end=content_length-1;
+			new->range->start=0;
+			new->range->end=content_length-1;
 
-		pthread_mutex_init(&unit_info->lock,NULL);
-		pthread_create(&unit_info->unit_id,NULL,unit,unit_info);
+			pthread_mutex_init(&new->lock,NULL);
+			pthread_create(&new->unit_id,NULL,unit,new);
 
-		// Push first unit info to units_bag
+			// Push first unit info to units_bag
 
-		n_unit->data=(void*)&unit_info;
-		n_unit->len=sizeof(struct unit_info*);
+			n_unit->data=(void*)&new;
+			n_unit->len=sizeof(struct unit_info*);
 
-		place_data(units_bag,n_unit);
+			place_data(units_bag,n_unit);
+		}
 
 		// Scheduling download across different interfaces
 
@@ -540,8 +560,7 @@ int main(int argc, char **argv)
 		long hostip_id=0;
 		struct unit_info* largest=NULL;
 		struct unit_info* update=NULL;
-		struct unit_info* new=NULL;
-
+		new=NULL;
 		long max_parallel_downloads=args->max_parallel_downloads;
 
 		// Initialize scheduler_info structure.
@@ -587,15 +606,25 @@ int main(int argc, char **argv)
 			if(if_id<0)
 				continue;
 
+			if(resume_bag->n_pockets!=0)
+			{
+				update=*((struct unit_info**)(resume_bag->first->data));
+				delete_data_pocket(resume_bag,resume_bag->first,DELETE_AT);
+
+				idle=NULL; // Should follow same initializations as that of idle==NULL;
+
+				goto fill_unit;
+			}
+
 			idle=idle_unit(units,units_len);
 
 			if(idle==NULL && new==NULL)
 			{
 				new=unitdup(base_unit_info);
-				new->pc_flag=1;
+
 				update=new;
 			}
-			else if(idle==NULL && new!=NULL)
+			else if(idle==NULL)
 			{
 				// Use already created but not used unit
 
@@ -612,14 +641,6 @@ int main(int argc, char **argv)
 				update=idle;
 			}
 
-			// Assign an network-interface
-
-			update->if_name=ok_net_if[if_id].name;
-			update->if_id=if_id;
-
-			update->cli_info->address=ok_net_if[if_id].address;
-			update->cli_info->sock_opts[0]=create_socket_opt(SOL_SOCKET,SO_BINDTODEVICE,ok_net_if[if_id].name,strlen(ok_net_if[if_id].name));
-
 			largest=largest_unit(units,units_len);
 
 			if(largest==NULL) // If all busy in error recovery
@@ -627,7 +648,7 @@ int main(int argc, char **argv)
 				continue;
 			}
 
-			// Break the unit into two
+			// Break the largest unit into two
 
 			pthread_mutex_lock(&largest->lock);
 
@@ -643,6 +664,16 @@ int main(int argc, char **argv)
 			update->range->start=largest->range->end+1;
 
 			pthread_mutex_unlock(&largest->lock);
+
+			fill_unit:
+
+			// Assign an network-interface
+
+			update->if_name=ok_net_if[if_id].name;
+			update->if_id=if_id;
+
+			update->cli_info->address=ok_net_if[if_id].address;
+			update->cli_info->sock_opts[0]=create_socket_opt(SOL_SOCKET,SO_BINDTODEVICE,ok_net_if[if_id].name,strlen(ok_net_if[if_id].name));
 
 			// Assign a mirror to download
 
@@ -837,21 +868,21 @@ void close_files()
 	}
 }
 
-void init_resume(struct http_request* gl_s_request,struct http_response* gl_s_response)
+int init_resume()
 {
 	char* ms_file=get_ms_filename();
 
-	void* entry=read_ms_entry(ms_file,args->entry_number <=0 ? 1 : args->entry_number,MS_RETURN);
+	entry=read_ms_entry(ms_file,args->entry_number <=0 ? 1 : args->entry_number,MS_RETURN);
 
 	if(entry==NULL)
 	{
 		if(args->entry_number > 0)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error retrieving the MS entry structure. Exiting...\n");
+			mid_cond_print(!args->quiet_flag,"MID: Error retrieving the MS entry structure. Exiting...\n\n");
 			exit(1);
 		}
 
-		// else fall back to fresh download
+		return 0;
 	}
 
 	int status;
@@ -860,6 +891,7 @@ void init_resume(struct http_request* gl_s_request,struct http_response* gl_s_re
 		status=validate_ms_entry(((struct ms_entry*)entry),gl_s_request,gl_s_response,MS_SILENT);
 	else if(((struct ms_entry*)entry)->type==1)
 		status=validate_d_ms_entry((struct d_ms_entry*)entry,gl_s_request,gl_s_response,MS_SILENT);
+
 
 	if(status==-1)
 	{
@@ -877,7 +909,118 @@ void init_resume(struct http_request* gl_s_request,struct http_response* gl_s_re
 	{
 		mid_cond_print(!args->quiet_flag,"MID: Force Resuming the download...\n\n");
 	}
+	else
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Partially downloaded file found and is sane. Resuming download...\n\n");
+	}
 
-	//
+	struct ms_entry* en;
+
+	if(((struct ms_entry*)entry)->type==0)
+		en=(struct ms_entry*)entry;
+	else if(((struct ms_entry*)entry)->type==1)
+		en=((struct d_ms_entry*)entry)->en;
+
+	if(en->file!=NULL && en->file[0]!='\0')
+	{
+		if((o_fp=fopen(en->file,"r+"))==NULL)
+		{
+			mid_cond_print(!args->quiet_flag,"MID: Error opening output file %s. Exiting...\n\n",en->file);
+
+			exit(1);
+		}
+
+		if(flock(fileno(o_fp),LOCK_EX)!=0)
+		{
+			mid_cond_print(!args->quiet_flag,"MID: Error acquiring lock on output file %s. Exiting...\n\n",en->file);
+
+			exit(1);
+		}
+	}
+
+	if(en->up_file!=NULL && en->up_file[0]!='\0')
+	{
+		if((u_fp=fopen(en->up_file,"r+"))==NULL)
+		{
+			mid_cond_print(!args->quiet_flag,"MID: Error opening unprocessed file %s. Exiting...\n\n",en->up_file);
+
+			exit(1);
+		}
+
+		if(flock(fileno(u_fp),LOCK_EX)!=0)
+		{
+			mid_cond_print(!args->quiet_flag,"MID: Error acquiring lock on unprocessed file %s. Exiting...\n\n",en->up_file);
+
+			exit(1);
+		}
+	}
+
+	base_unit_info->file= en->file==NULL || en->file[0]=='\0' ? NULL : en->file;
+	base_unit_info->up_file= en->up_file==NULL || en->up_file[0]=='\0' ? NULL : en->up_file;
+
+	return 1;
 }
 
+void finalize_resume()
+{
+	if(entry==NULL)
+		return;
+
+	struct http_range* ranges;
+	long n_ranges;
+
+	if(((struct ms_entry*)entry)->type==0)
+	{
+		ranges=((struct ms_entry*)entry)->l_ranges;
+		n_ranges=((struct ms_entry*)entry)->n_l_ranges;
+	}
+	else if(((struct ms_entry*)entry)->type==0)
+	{
+		ranges=((struct d_ms_entry*)entry)->en->l_ranges;
+		n_ranges=((struct d_ms_entry*)entry)->en->n_l_ranges;
+	}
+	else
+		return;
+
+	if(resume_bag==NULL)
+		resume_bag=create_data_bag();
+
+	if(!n_ranges)
+		return;
+
+	struct unit_info* new;
+	struct network_data n_data;
+
+	for(long i=0;i<n_ranges;i++)
+	{
+		new=unitdup(base_unit_info);
+
+		new->pc_flag=1;
+
+		// Range that need to be fetched
+
+		new->range->start=ranges[i].start;
+		new->range->end=ranges[i].end;
+
+		// Already fetched ranges are assigned to the units (one for each) for the purpose of progress indicator
+
+		append_data_pocket(new->unit_ranges,sizeof(long));
+		new->unit_ranges->end->len=sizeof(long);
+
+		if(i==0)
+			*(long*)new->unit_ranges->end->data=0;
+		else
+			*(long*)new->unit_ranges->end->data=ranges[i-1].end+1;
+
+		append_data_pocket(new->unit_ranges,sizeof(long));
+		new->unit_ranges->end->len=sizeof(long);
+		*(long*)new->unit_ranges->end->data=ranges[i].start-1;
+
+		n_data.data=(void*)&new;
+		n_data.len=sizeof(struct unit_info*);
+
+		place_data(resume_bag,&n_data);
+
+	}
+
+}

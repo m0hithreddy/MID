@@ -166,6 +166,8 @@ int insert_data_pocket(struct data_bag* bag,struct data_pocket* refer,struct dat
 
 int delete_data_pocket(struct data_bag* bag,struct data_pocket* refer,int flag)
 {
+	if(bag==NULL || bag->n_pockets==0 || refer==NULL)
+		return 0;
 
 	if(flag==DELETE_BEFORE)
 	{

@@ -261,12 +261,28 @@ struct data_bag* make_mid_state(struct http_request* gl_s_request,struct http_re
 			}
 		}
 
-		dump_long(state_bag,range_counter);
 
 		if(range_counter!=0)
 		{
-			place_data(state_bag,flatten_data_bag(ranges_bag));
+			struct units_progress* l_ranges=(struct units_progress*)malloc(sizeof(struct units_progress));
+
+			l_ranges->ranges=(struct http_range*)flatten_data_bag(ranges_bag)->data;
+			l_ranges->n_ranges=range_counter;
+
+			l_ranges=merge_units_progress(l_ranges);
+
+			struct network_data n_data;
+			n_data.data=l_ranges->ranges;
+			n_data.len=sizeof(struct http_range)*l_ranges->n_ranges;
+
+			dump_long(state_bag,l_ranges->n_ranges);
+			place_data(state_bag,&n_data);
 		}
+		else
+		{
+			dump_long(state_bag,0);
+		}
+
 	}
 
 	// Return the data;
