@@ -343,7 +343,7 @@ void* send_http_request(int sockfd,struct network_data* request,char* hostname,i
 		return (void*)status;
 	}
 
-	if(flag==JUST_RECEIVE || flag==SEND_RECEIVE)
+	if(flag==SEND_RECEIVE)
 	{
 		struct network_data* response=sock_read(sockfd,LONG_MAX);
 
