@@ -839,7 +839,9 @@ void* show_progress(void* s_progress_info)
 
 		// Progress Status Bar
 
-		if(p_info->content_length==0)
+		long marker_eq=p_info->content_length/150;
+
+		if(p_info->content_length==0 || marker_eq==0)
 		{
 
 			memcpy(bar2,bar1,153);
@@ -865,7 +867,6 @@ void* show_progress(void* s_progress_info)
 		{
 			memcpy(bar2,bar1,153);
 
-			long marker_eq=p_info->content_length/150;
 
 			for(long i=0;i<progress->n_ranges;i++)
 			{
@@ -938,7 +939,6 @@ void* show_progress(void* s_progress_info)
 
 
 }
-
 
 char* convert_speed(long speed)
 {
@@ -1042,3 +1042,25 @@ char* convert_time(long sec)
 
 	return time_str;
 }
+
+struct unit_info* unitdup(struct unit_info* src)
+{
+	struct unit_info* new=(struct unit_info*)memndup(src,sizeof(struct unit_info));
+
+	// No the exact dup!! Only replicating some sensitive fields (dependent on program logic !)
+
+	new->report_size=(long*)calloc(src->report_len,sizeof(long));
+
+	new->cli_info=(struct socket_info*)memndup(src->cli_info,sizeof(struct socket_info));
+
+	new->cli_info->sock_opts=(struct socket_opt*)memndup(src->cli_info->sock_opts,sizeof(struct socket_opt)*2);
+
+	new->s_request=(struct http_request*)memndup(src->s_request,sizeof(struct http_request));
+
+	new->range=(struct http_range*)malloc(sizeof(struct http_range));
+
+	new->unit_ranges=create_data_bag();
+
+	return new;
+}
+

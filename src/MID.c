@@ -162,7 +162,9 @@ int main(int argc, char **argv)
 	struct http_request* gl_s_request=NULL;
 	struct http_response* gl_s_response=NULL;
 
-	for (int i = 0; net_if[i]!=NULL ; i++) // for each network interface check whether server is accessible
+	// For each network interface check whether server is accessible
+
+	for (int i = 0; net_if[i]!=NULL ; i++)
 	{
 
 		if(net_if[i]->family!=AF_INET)
@@ -321,7 +323,7 @@ int main(int argc, char **argv)
 	if(fin_hostips==NULL)
 		mid_flag_exit(1,"MID: No mirrors found for %s. Exiting...\n\n",fin_host);
 
-	//Base client socket_info structure
+	/* Base client socket_info structure */
 
 	struct socket_info* base_socket_info=(struct socket_info*)malloc(sizeof(struct socket_info));
 
@@ -338,7 +340,7 @@ int main(int argc, char **argv)
 	base_socket_info->opts_len=2;
 
 
-	//Base unit_info structure
+	/* Base unit_info structure */
 
 	struct unit_info* base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
 
@@ -376,25 +378,12 @@ int main(int argc, char **argv)
 	base_unit_info->if_name=ok_net_if[0].name;
 	base_unit_info->scheme=fin_scheme;
 	base_unit_info->host=fin_host;
-	base_unit_info->if_id=0;
-	base_unit_info->current_size=0;
-	base_unit_info->total_size=0;
 	base_unit_info->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
 	base_unit_info->report_len=ok_net_if_len;
 	base_unit_info->max_unit_retries=args->max_unit_retries;
 	base_unit_info->resume=1;
-	base_unit_info->quit=0;
-	base_unit_info->pc_flag=0;
-	base_unit_info->err_flag=0;
-	base_unit_info->self_repair=0;
-	base_unit_info->status_code=0;
-	base_unit_info->transfer_encoding=0;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
-	base_unit_info->healing_time=0;
-	base_unit_info->start_time=0;
-
 	base_unit_info->cli_info=base_socket_info;
-	base_unit_info->unit_ranges=NULL;
 
 	base_unit_info->servaddr=create_sockaddr_in(*fin_hostips,fin_port,DEFAULT_HTTP_SOCKET_FAMILY);
 
@@ -406,7 +395,7 @@ int main(int argc, char **argv)
 
 	base_unit_info->unit_ranges=create_data_bag();
 
-	// Printing file names
+	/* Printing file names */
 
 	if(!args->quiet_flag && gl_s_response->content_encoding == NULL)
 	{
@@ -417,7 +406,7 @@ int main(int argc, char **argv)
 		printf("\nOpening Unprocessed File: %s\n",base_unit_info->up_file);
 	}
 
-	// Registering thread to handle signals
+	/* Registering thread to handle signals */
 
 	handler_registered=0;
 
@@ -440,7 +429,7 @@ int main(int argc, char **argv)
 
 	handler_registered=1;
 
-	// Initiating download
+	/* Initiating download */
 
 	struct data_bag* units_bag=create_data_bag();
 	struct network_data* n_unit=(struct network_data*)malloc(sizeof(struct network_data));
@@ -455,8 +444,7 @@ int main(int argc, char **argv)
 	long downloaded_length=0;
 	long content_length=0;
 	struct timespec sleep_time;
-	sigset_t sync_mask;
-
+	sigset_t sync_mask; // For handling user interrupts
 	sigemptyset(&sync_mask);
 	sigaddset(&sync_mask,SIGRTMIN);
 
@@ -466,14 +454,13 @@ int main(int argc, char **argv)
 
 	if(!args->quiet_flag)
 	{
-		s_progress_info=(struct show_progress_info*)malloc(sizeof(struct show_progress_info));
+		s_progress_info=(struct show_progress_info*)calloc(1,sizeof(struct show_progress_info));
 
 		s_progress_info->units_bag=units_bag;
 		s_progress_info->ifs=ok_net_if;
 		s_progress_info->ifs_len=ok_net_if_len;
 		s_progress_info->content_length=content_length;
 		s_progress_info->sleep_time=args->progress_update_time;
-		s_progress_info->quit=0;
 		s_progress_info->detailed_progress=args->detailed_progress;
 		sigemptyset(&s_progress_info->sync_mask);
 		sigaddset(&s_progress_info->sync_mask,SIGRTMIN);
@@ -499,7 +486,8 @@ int main(int argc, char **argv)
 
 		sleep_time.tv_sec=SCHEDULER_DEFAULT_SLEEP_TIME;
 		sleep_time.tv_nsec=0;
-		while(1)
+
+		while(1) // Downloading...
 		{
 			pthread_mutex_lock(&s_hd_info->lock);
 
@@ -530,21 +518,11 @@ int main(int argc, char **argv)
 
 		//Initiating the first range request
 
-		struct unit_info* unit_info=(struct unit_info*)memndup(base_unit_info,sizeof(struct unit_info));
+		struct unit_info* unit_info=unitdup(base_unit_info);
 
 		unit_info->pc_flag=1;
-
-		unit_info->cli_info=(struct socket_info*)memndup(base_socket_info,sizeof(struct socket_info));
-
-		unit_info->cli_info->sock_opts=(struct socket_opt*)memndup(base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
-
-		unit_info->s_request=(struct http_request*)memndup(gl_s_request,sizeof(struct http_request));
-
-		unit_info->range=(struct http_range*)malloc(sizeof(struct http_range));
 		unit_info->range->start=0;
 		unit_info->range->end=content_length-1;
-
-		unit_info->unit_ranges=create_data_bag();
 
 		pthread_mutex_init(&unit_info->lock,NULL);
 		pthread_create(&unit_info->unit_id,NULL,unit,unit_info);
@@ -566,6 +544,8 @@ int main(int argc, char **argv)
 
 		long max_parallel_downloads=args->max_parallel_downloads;
 
+		// Initialize scheduler_info structure.
+
 		struct scheduler_info* sch_info=(struct scheduler_info*)calloc(1,sizeof(struct scheduler_info));
 
 		sch_info->current=NULL;
@@ -574,13 +554,12 @@ int main(int argc, char **argv)
 		sch_info->max_speed=(long*)calloc(ok_net_if_len,sizeof(long));
 		sch_info->max_connections=(long*)calloc(ok_net_if_len,sizeof(long));
 		sch_info->max_parallel_downloads=max_parallel_downloads;
-		sch_info->sch_id=0;
 		sch_info->sleep_time=SCHEDULER_DEFAULT_SLEEP_TIME;
-		sch_info->probing_done=0;
 
 		sleep_time.tv_sec=sch_info->sleep_time;
 		sleep_time.tv_nsec=0;
-		while(1)
+
+		while(1) // Downloading....
 		{
 
 			units=(struct unit_info**)flatten_data_bag(units_bag)->data;
@@ -593,14 +572,12 @@ int main(int argc, char **argv)
 
 			progress=get_units_progress(units, units_len);
 
-			downloaded_length=progress->content_length;
-
-			if(downloaded_length==content_length) // Download complete
+			if(progress->content_length==content_length) // Download complete
 				break;
 
 			sch_info->current=current;
 
-			scheduler(sch_info); // Scheduler decision
+			scheduler(sch_info); // Contact the scheduler
 
 			if_id=sch_info->sch_id;
 			sleep_time.tv_sec=sch_info->sleep_time;
@@ -608,38 +585,15 @@ int main(int argc, char **argv)
 			prev=current;
 
 			if(if_id<0)
-			{
 				continue;
-			}
 
 			idle=idle_unit(units,units_len);
 
 			if(idle==NULL && new==NULL)
 			{
-				// Create a new unit
-
-				if(units_bag->n_pockets>=max_parallel_downloads)
-					continue;
-
-				new=(struct unit_info*)memndup(base_unit_info,sizeof(struct unit_info));
-
+				new=unitdup(base_unit_info);
 				new->pc_flag=1;
-				new->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
-
-				new->cli_info=(struct socket_info*)memndup(base_socket_info,sizeof(struct socket_info));
-
-				new->cli_info->sock_opts=(struct socket_opt*)memndup(base_socket_info->sock_opts,sizeof(struct socket_opt)*2);
-
-				new->servaddr=create_sockaddr_in(fin_hostips[hostip_id], fin_port, DEFAULT_HTTP_SOCKET_FAMILY);
-
-				new->s_request=(struct http_request*)memndup(gl_s_request,sizeof(struct http_request));
-
-				new->range=(struct http_range*)malloc(sizeof(struct http_range));
-
-				new->unit_ranges=create_data_bag();
-
 				update=new;
-
 			}
 			else if(idle==NULL && new!=NULL)
 			{
@@ -658,6 +612,8 @@ int main(int argc, char **argv)
 				update=idle;
 			}
 
+			// Assign an network-interface
+
 			update->if_name=ok_net_if[if_id].name;
 			update->if_id=if_id;
 
@@ -671,9 +627,9 @@ int main(int argc, char **argv)
 				continue;
 			}
 
-			pthread_mutex_lock(&largest->lock);
-
 			// Break the unit into two
+
+			pthread_mutex_lock(&largest->lock);
 
 			long rem_chunk=largest->range->end-largest->range->start+1-largest->current_size;
 
@@ -698,7 +654,7 @@ int main(int argc, char **argv)
 			if(idle==NULL)
 			{
 				pthread_mutex_init(&update->lock,NULL);
-				pthread_create(&update->unit_id,NULL,unit,update);
+				pthread_create(&update->unit_id,NULL,unit,update);   // Create new download unit
 
 				n_unit->data=(void*)&update;
 				n_unit->len=sizeof(struct unit_info*);
@@ -716,18 +672,18 @@ int main(int argc, char **argv)
 			else
 			{
 				update->resume=1;
-				pthread_kill(update->unit_id,SIGRTMIN);
+				pthread_kill(update->unit_id,SIGRTMIN); // Signal the unit to resume the work.
 			}
 		}
 	}
 
-	// End of the download
+	/* End of the download */
 
 	time_t end_time=time(NULL);
 
-	suspend_units((struct unit_info**)(flatten_data_bag(units_bag)->data),units_bag->n_pockets);
+	suspend_units((struct unit_info**)(flatten_data_bag(units_bag)->data),units_bag->n_pockets); // Suspend all download units.
 
-	if(!args->quiet_flag)
+	if(!args->quiet_flag) // Kill the show_progress thread.
 	{
 		s_progress_info->quit=1;
 
@@ -737,6 +693,7 @@ int main(int argc, char **argv)
 
 	}
 
+	// Get the latest download progress
 
 	units=(struct unit_info**)flatten_data_bag(units_bag)->data;
 	units_len=units_bag->n_pockets;
@@ -755,7 +712,7 @@ int main(int argc, char **argv)
 	if(err!=NULL)
 		mid_flag_exit(2,"MID: Error downloading chunk. Exiting...\n\n");
 
-	pthread_mutex_lock(&s_hd_info->lock);
+	pthread_mutex_lock(&s_hd_info->lock); // Check if user interrupted the download.
 	if(s_hd_info->quit)
 	{
 		pthread_mutex_unlock(&s_hd_info->lock);
@@ -789,7 +746,6 @@ int main(int argc, char **argv)
 
 	while(1)
 	{
-		pthread_mutex_lock(&s_hd_info->lock);
 		if(s_hd_info->quit)
 		{
 			pthread_mutex_unlock(&s_hd_info->lock);
@@ -797,7 +753,6 @@ int main(int argc, char **argv)
 
 			mid_exit(2);
 		}
-		pthread_mutex_unlock(&s_hd_info->lock);
 
 		status=read(fileno(u_fp),uf_data,MAX_TRANSACTION_SIZE); // Read the unprocessed file.
 
@@ -805,7 +760,7 @@ int main(int argc, char **argv)
 			mid_flag_exit(2,"MID: Error reading the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
 		else if(status==0)
 		{
-			remove(base_unit_info->up_file);
+			remove(base_unit_info->up_file); // Processed all data so need of for .up file.
 
 			mid_exit(0);
 		}

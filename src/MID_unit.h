@@ -137,4 +137,6 @@ char* convert_data(long data,long total_data);
 
 char* convert_time(long sec);
 
+struct unit_info* unitdup(struct unit_info* src);
+
 #endif /* MID_UNIT_H_ */
