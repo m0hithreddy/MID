@@ -19,6 +19,7 @@
 
 #include"MID_http.h"
 #include"MID_unit.h"
+#include"MID_structures.h"
 #include<stdio.h>
 
 #ifndef CONFIG_H
@@ -35,8 +36,8 @@ struct ms_entry
 	char* up_file;
 	long content_length;
 	long downloaded_length;
-	struct http_range* ranges;
-	long n_ranges;
+	struct http_range* l_ranges;
+	long n_l_ranges;
 	long en_len;
 };
 
@@ -44,14 +45,7 @@ struct ms_entry
 struct d_ms_entry
 {
 	int type;
-	char* in_url;
-	char* fin_url;
-	char* file;
-	char* up_file;
-	long content_length;
-	long downloaded_length;
-	struct http_range* left_ranges;
-	long n_left_ranges;
+	struct ms_entry* en;
 	struct http_range* ranges;
 	long n_ranges;
 	char** hashes;
@@ -71,7 +65,7 @@ void dump_string(struct data_bag* bag,char* string);
 
 char* extract_string(FILE* ms_fp);
 
-void dump_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+struct data_bag* make_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
 
 struct ms_entry* process_ms_entry(FILE* ms_fp);
 
@@ -80,7 +74,7 @@ void print_ms_entry(struct ms_entry* en);
 int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag);
 
 #ifdef LIBSSL_SANE
-void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+struct data_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
 
 struct d_ms_entry* process_d_ms_entry(FILE* ms_fp);
 
@@ -93,7 +87,7 @@ void* read_ms_entry(char* ms_file,long entry_number,int flag);
 
 void delete_ms_entry(char* ms_file,long entry_number,int flag);
 
-void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag);
+void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_request,struct http_response* gl_s_response);
 
 #endif /* SRC_MID_STATE_H_ */
 

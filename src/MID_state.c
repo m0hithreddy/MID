@@ -114,14 +114,28 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 		return;
 	}
 
+	struct data_bag* state_bag;
+
 #ifdef LIBSSL_SANE
 	if(args->detailed_save)
-		dump_d_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+		state_bag=make_d_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 	else
-		dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+		state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 #else
-	dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+	state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 #endif
+
+	struct network_data* state_data=flatten_data_bag(state_bag);
+
+	if(state_data==NULL || state_data->data==NULL)
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Error when making MID state, not saving the state information. Returning...\n\n");
+
+		return;
+	}
+
+	write(fileno(ms_fp),&state_data->len,sizeof(long));
+	write(fileno(ms_fp),state_data->data,state_data->len);
 
 	flock(fileno(ms_fp),LOCK_UN);
 	fclose(ms_fp);
@@ -177,7 +191,7 @@ char* extract_string(FILE* ms_fp)
 	return string;
 }
 
-void dump_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+struct data_bag* make_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
 {
 
 	struct network_data* tmp=flatten_data_bag(units_bag);
@@ -255,14 +269,9 @@ void dump_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_re
 		}
 	}
 
-	// Dump the data
+	// Return the data;
 
-	state_data=flatten_data_bag(state_bag);
-
-	write(fileno(ms_fp),&state_data->len,sizeof(long)); // Structure size
-
-	write(fileno(ms_fp),state_data->data,state_data->len); // Structure data
-
+	return state_bag;
 }
 
 struct ms_entry* process_ms_entry(FILE* ms_fp)
@@ -325,21 +334,21 @@ struct ms_entry* process_ms_entry(FILE* ms_fp)
 
 	// Number of left over ranges + left over ranges
 
-	if(read(fileno(ms_fp),&en->n_ranges,sizeof(long))!=sizeof(long))
+	if(read(fileno(ms_fp),&en->n_l_ranges,sizeof(long))!=sizeof(long))
 		return NULL;
 
 	en_len=en_len+sizeof(long);
 
-	en->ranges=(struct http_range*)malloc(sizeof(struct http_range)*en->n_ranges);
+	en->l_ranges=(struct http_range*)malloc(sizeof(struct http_range)*en->n_l_ranges);
 
-	for(long i=0;i<en->n_ranges;i++)
+	for(long i=0;i<en->n_l_ranges;i++)
 	{
-		if(read(fileno(ms_fp),&en->ranges[i].start,sizeof(long))!=sizeof(long))
+		if(read(fileno(ms_fp),&en->l_ranges[i].start,sizeof(long))!=sizeof(long))
 			return NULL;
 
 		en_len=en_len+sizeof(long);
 
-		if(read(fileno(ms_fp),&en->ranges[i].end,sizeof(long))!=sizeof(long))
+		if(read(fileno(ms_fp),&en->l_ranges[i].end,sizeof(long))!=sizeof(long))
 			return NULL;
 
 		en_len=en_len+sizeof(long);
@@ -352,7 +361,12 @@ struct ms_entry* process_ms_entry(FILE* ms_fp)
 
 void print_ms_entry(struct ms_entry* en)
 {
-	printf("\n|-->Type: MID State Entry (0)");
+	if(en->type==0)
+		printf("\n|-->Type: MID State Entry (0)");
+	else if(en->type==1)
+		printf("\n|-->Type: MID Detailed State Entry (1)");
+	else
+		return;
 
 	printf("\n|-->Initial URL: %s",en->in_url);
 
@@ -366,15 +380,15 @@ void print_ms_entry(struct ms_entry* en)
 
 	printf("\n|-->Downloaded-Length: %s",convert_data(en->downloaded_length,0));
 
-	printf("\n|-->Number of left over ranges: %ld",en->n_ranges);
+	printf("\n|-->Number of left over ranges: %ld",en->n_l_ranges);
 
 	printf("\n|-->Left over ranges:");
 
-	for(long i=0;i<en->n_ranges;i++)
+	for(long i=0;i<en->n_l_ranges;i++)
 	{
-		printf(" (%ld, %ld)",en->ranges[i].start,en->ranges[i].end);
+		printf(" (%ld, %ld)",en->l_ranges[i].start,en->l_ranges[i].end);
 
-		if(i!=en->n_ranges-1)
+		if(i!=en->n_l_ranges-1)
 			printf(" |");
 	}
 
@@ -383,11 +397,17 @@ void print_ms_entry(struct ms_entry* en)
 
 int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag)
 {
+	if(en->type!=0 && en->type!=1)
+		return -1;
+
 	int return_code=0;
 
 	if(flag==MS_PRINT)
 	{
-		printf("\n|-->Type: Validation of MID State Entry (0)");
+		if(en->type==0)
+			printf("\n|-->Type: Validation of MID State Entry (0)");
+		else
+			printf("\n|-->Type: Validation of MID Detailed State Entry (1)");
 	}
 
 	// Initial URL ;
@@ -546,16 +566,16 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 		printf("\n|-->Downloaded-Length: %s",convert_data(en->downloaded_length,0));
 		printf(" || (no checks)");
 
-		printf("\n|-->Number of left over ranges: %ld",en->n_ranges);
+		printf("\n|-->Number of left over ranges: %ld",en->n_l_ranges);
 		printf(" || (no checks)");
 
 		printf("\n|-->Left over ranges:");
 
-		for(long i=0;i<en->n_ranges;i++)
+		for(long i=0;i<en->n_l_ranges;i++)
 		{
-			printf(" (%ld, %ld)",en->ranges[i].start,en->ranges[i].end);
+			printf(" (%ld, %ld)",en->l_ranges[i].start,en->l_ranges[i].end);
 
-			if(i!=en->n_ranges-1)
+			if(i!=en->n_l_ranges-1)
 				printf(" |");
 		}
 
@@ -567,87 +587,21 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 }
 
 #ifdef LIBSSL_SANE
-void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+
+struct data_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
 {
-	struct network_data* tmp=flatten_data_bag(units_bag);
-	struct unit_info** units= (struct unit_info**)(tmp==NULL ? NULL : tmp->data);
-	long units_len= tmp==NULL ? 0 : units_bag->n_pockets;
+	struct data_bag* state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 
+	if(state_bag==NULL)
+		return NULL;
 
-	struct data_bag* state_bag=create_data_bag();
-	struct network_data* state_data;
+	*((int*)state_bag->first->data)=1;
 
-	// Type of file 0 => MID state file | 1 => MID detailed state file
-
-	dump_int(state_bag,1);
-
-	// in_url_len + in_url
-
-	dump_string(state_bag,args->url);
-
-	// fin_url_len + fin_url
-
-	dump_string(state_bag,gl_s_request->url);
-
-	// file_len + file
-
-	dump_string(state_bag,base_unit_info->file);
-
-	// up_file_len + up_file
-
-	if(base_unit_info->up_file==NULL)
-		dump_string(state_bag,"");
-	else
-		dump_string(state_bag,base_unit_info->up_file);
-
-	// content_length
-
-	dump_long(state_bag,atol(gl_s_response->content_length));
-
-	// downloaded_length
-
-	dump_long(state_bag,progress->content_length);
-
-	// number of left over ranges + left over ranges
-
-	struct data_bag* ranges_bag=create_data_bag();
-
-	if(units==NULL || units_len==0)
-	{
-		dump_long(state_bag,1);
-
-		dump_long(state_bag,0);
-
-		dump_long(state_bag,atol(gl_s_response->content_length)-1);
-
-	}
-	else
-	{
-		long range_counter=0;
-
-		for(long i=0;i<units_len;i++)
-		{
-			if(units[i]->range->end-units[i]->range->start+1-units[i]->current_size > 0)
-			{
-				range_counter++;
-
-				dump_long(ranges_bag,units[i]->range->start+units[i]->current_size);
-
-				dump_long(ranges_bag,units[i]->range->end);
-			}
-		}
-
-		dump_long(state_bag,range_counter);
-
-		if(range_counter!=0)
-		{
-			place_data(state_bag,flatten_data_bag(ranges_bag));
-		}
-	}
+	struct data_bag* d_state_bag=create_data_bag();
 
 	// Number of Ranges + Ranges along with their hashes
 
-	dump_long(state_bag,progress->n_ranges);
+	dump_long(d_state_bag,progress->n_ranges);
 
 	FILE* fp=NULL;
 
@@ -659,8 +613,7 @@ void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_
 
 	if(fp==NULL)
 	{
-		dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
-		return;
+		return state_bag;
 	}
 
 	unsigned char md_result[MD5_DIGEST_LENGTH];
@@ -678,20 +631,18 @@ void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_
 
 		if(progress->ranges[i].start >= stat_buf.st_size)
 		{
-			dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
-			return;
+			return state_bag;
 		}
 
-		dump_long(state_bag,progress->ranges[i].start);
+		dump_long(d_state_bag,progress->ranges[i].start);
 
-		dump_long(state_bag,progress->ranges[i].end);
+		dump_long(d_state_bag,progress->ranges[i].end);
 
 		chunk_len=progress->ranges[i].end - progress->ranges[i].start + 1;
 
 		if(lseek(fileno(fp),progress->ranges[i].start,SEEK_SET)!=progress->ranges[i].start)
 		{
-			dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
-			return;
+			return state_bag;
 		}
 
 		// Determine MD5 hash
@@ -704,8 +655,7 @@ void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_
 		{
 			if(chunk_len<0)
 			{
-				dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
-				return;
+				return state_bag;
 			}
 			else if(chunk_len==0)
 				break;
@@ -714,8 +664,7 @@ void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_
 
 			if(status<=0)
 			{
-				dump_mid_state(ms_fp,gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
-				return;
+				return state_bag;
 			}
 
 			chunk_len=chunk_len-status;
@@ -728,16 +677,14 @@ void dump_d_mid_state(FILE* ms_fp,struct http_request* gl_s_request,struct http_
 		for(int i = 0; i < MD5_DIGEST_LENGTH; i++)
 			sprintf(f_buf+2*i,"%02x", md_result[i]);
 
-		dump_string(state_bag,f_buf);
+		dump_string(d_state_bag,f_buf);
 	}
 
-	// Dump the data
+	// Return the data bag
 
-	state_data=flatten_data_bag(state_bag);
+	place_data(state_bag,flatten_data_bag(d_state_bag));
 
-	write(fileno(ms_fp),&state_data->len,sizeof(long)); // Structure size
-
-	write(fileno(ms_fp),state_data->data,state_data->len); // Structure data
+	return state_bag;
 
 }
 
@@ -745,88 +692,18 @@ struct d_ms_entry* process_d_ms_entry(FILE* ms_fp)
 {
 	struct d_ms_entry* d_en=(struct d_ms_entry*)calloc(1,sizeof(struct d_ms_entry));
 
+	d_en->en=process_ms_entry(ms_fp);
+
 	d_en->type=1;
-
-	long d_en_len=4; // Type of file
-
-	// Initial URL
-
-	d_en->in_url=extract_string(ms_fp);
-
-	if(d_en->in_url==NULL)
-		return NULL;
-
-	d_en_len=d_en_len+sizeof(long)+strlen(d_en->in_url)+1;
-
-	// Final URL
-
-	d_en->fin_url=extract_string(ms_fp);
-
-	if(d_en->fin_url==NULL)
-		return NULL;
-
-	d_en_len=d_en_len+sizeof(long)+strlen(d_en->fin_url)+1;
-
-	// File
-
-	d_en->file=extract_string(ms_fp);
-
-	if(d_en->file==NULL)
-		return NULL;
-
-	d_en_len=d_en_len+sizeof(long)+strlen(d_en->file)+1;
-
-	// Unprocessed File
-
-	d_en->up_file=extract_string(ms_fp);
-
-	if(d_en->up_file==NULL)
-		return NULL;
-
-	d_en_len=d_en_len+sizeof(long)+strlen(d_en->up_file)+1;
-
-	// Content Length
-
-	if(read(fileno(ms_fp),&d_en->content_length,sizeof(long))!=sizeof(long))
-		return NULL;
-
-	d_en_len=d_en_len+sizeof(long);
-
-	// Download Length
-
-	if(read(fileno(ms_fp),&d_en->downloaded_length,sizeof(long))!=sizeof(long))
-		return NULL;
-
-	d_en_len=d_en_len+sizeof(long);
-
-	// Number of left over ranges + left over ranges
-
-	if(read(fileno(ms_fp),&d_en->n_left_ranges,sizeof(long))!=sizeof(long))
-		return NULL;
-
-	d_en_len=d_en_len+sizeof(long);
-
-	d_en->left_ranges=(struct http_range*)malloc(sizeof(struct http_range)*d_en->n_left_ranges);
-
-	for(long i=0;i<d_en->n_left_ranges;i++)
-	{
-		if(read(fileno(ms_fp),&d_en->left_ranges[i].start,sizeof(long))!=sizeof(long))
-			return NULL;
-
-		d_en_len=d_en_len+sizeof(long);
-
-		if(read(fileno(ms_fp),&d_en->left_ranges[i].end,sizeof(long))!=sizeof(long))
-			return NULL;
-
-		d_en_len=d_en_len+sizeof(long);
-	}
+	d_en->en->type=1;
+	d_en->d_en_len=d_en->en->en_len;
 
 	// Number of Ranges + Ranges along with their hash
 
 	if(read(fileno(ms_fp),&d_en->n_ranges,sizeof(long))!=sizeof(long))
 		return NULL;
 
-	d_en_len=d_en_len+sizeof(long);
+	d_en->d_en_len=d_en->d_en_len+sizeof(long);
 
 	d_en->ranges=(struct http_range*)malloc(sizeof(struct http_range)*d_en->n_ranges);
 	d_en->hashes=(char**)malloc(sizeof(char*)*d_en->n_ranges);
@@ -836,52 +713,31 @@ struct d_ms_entry* process_d_ms_entry(FILE* ms_fp)
 		if(read(fileno(ms_fp),&d_en->ranges[i].start,sizeof(long))!=sizeof(long))
 			return NULL;
 
-		d_en_len=d_en_len+sizeof(long);
+		d_en->d_en_len=d_en->d_en_len+sizeof(long);
 
 		if(read(fileno(ms_fp),&d_en->ranges[i].end,sizeof(long))!=sizeof(long))
 			return NULL;
 
-		d_en_len=d_en_len+sizeof(long);
+		d_en->d_en_len=d_en->d_en_len+sizeof(long);
 
 		d_en->hashes[i]=extract_string(ms_fp);
 
-		d_en_len=d_en_len+sizeof(long)+strlen(d_en->hashes[i])+1;
+		d_en->d_en_len=d_en->d_en_len+sizeof(long)+strlen(d_en->hashes[i])+1;
 	}
-
-	d_en->d_en_len=d_en_len;
 
 	return d_en;
 }
 
 void print_d_ms_entry(struct d_ms_entry* d_en)
 {
-	printf("\n|-->Type: MID Detailed State Entry (1)");
+	if(d_en->type!=1)
+		return;
 
-	printf("\n|-->Initial URL: %s",d_en->in_url);
+	d_en->en->type=1;
 
-	printf("\n|-->Redirected URL: %s",d_en->fin_url);
+	print_ms_entry(d_en->en);
 
-	printf("\n|-->File: %s",d_en->file);
-
-	printf("\n|-->Unprocessed-File: %s",d_en->up_file[0]=='\0' ? "-" : d_en->up_file);
-
-	printf("\n|-->Content-Length: %s",convert_data(d_en->content_length,0));
-
-	printf("\n|-->Downloaded-Length: %s",convert_data(d_en->downloaded_length,0));
-
-	printf("\n|-->Number of left over ranges: %ld",d_en->n_left_ranges);
-
-	printf("\n|-->Left over ranges:");
-
-	for(long i=0;i<d_en->n_left_ranges;i++)
-	{
-		printf(" (%ld, %ld)",d_en->left_ranges[i].start,d_en->left_ranges[i].end);
-
-		if(i!=d_en->n_left_ranges-1)
-			printf(" |");
-	}
-
-	printf("\n|-->Number of fetched ranges: %ld",d_en->n_ranges);
+	printf("|-->Number of fetched ranges: %ld",d_en->n_ranges);
 
 	printf("\n|-->Fetched ranges:");
 
@@ -898,191 +754,26 @@ void print_d_ms_entry(struct d_ms_entry* d_en)
 
 int validate_d_ms_entry(struct d_ms_entry* d_en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag)
 {
+	if(d_en->type!=1)
+		return -1;
 
 	int return_code=0;
 
-	if(flag==MS_PRINT)
+	int en_status=validate_ms_entry(d_en->en,gl_s_request,gl_s_response,flag);
+
+	if(en_status!=0)
 	{
-		printf("\n|-->Type: Validation of MID Detailed State Entry (1)");
-	}
+		if(flag!=MS_PRINT && (en_status==-1 || args->force_resume==0))
+			return en_status;
 
-	// Initial URL ;
-
-	if(flag==MS_PRINT)
-	{
-		printf("\n|-->Initial URL: %s",d_en->in_url);
-		printf(" || ");
-		printf("%s",args->url);
-	}
-	else
-	{
-		if(strcmp(d_en->in_url,args->url))
-		{
-			if(!args->force_resume)
-				return -1;
-
-			return_code=1;
-		}
-	}
-
-	// Final URL ;
-
-	if(flag==MS_PRINT)
-	{
-		printf("\n|-->Redirected URL: %s",d_en->fin_url);
-		printf(" || ");
-		printf("%s",gl_s_request == NULL || gl_s_request->url == NULL ? "-" : gl_s_request->url);
-
-	}
-	else
-	{
-		if(gl_s_request == NULL || gl_s_request->url == NULL || strcmp(d_en->fin_url,gl_s_request->url))
-		{
-			if(!args->force_resume)
-				return -1;
-
-			return_code=1;
-		}
-	}
-
-	// Checking for File status;
-
-	if(flag==MS_PRINT)
-	{
-		printf("\n|-->File: %s",d_en->file);
-		printf(" || ");
-
-		if(d_en->file!=NULL || d_en->file[0]!='\0')
-		{
-			FILE* fp=fopen(d_en->file,"r+");
-
-			if(fp!=NULL)
-			{
-				fclose(fp);
-				printf("RW");
-			}
-			else
-			{
-				fp=fopen(d_en->file,"r");
-				if(fp!=NULL)
-				{
-					fclose(fp);
-					printf("R");
-				}
-				else
-				{
-					printf("-");
-				}
-			}
-		}
-		else
-			printf("-");
-	}
-	else
-	{
-		if(d_en->file==NULL || d_en->file[0]=='\0')
-			return -1;
-
-		FILE* fp=fopen(d_en->file,"r+");
-
-		if(fp==NULL)
-			return -1;
-	}
-
-
-	// Check for Unprocessed file status ;
-
-	if(flag==MS_PRINT)
-	{
-		printf("\n|-->Unprocessed-File: %s",d_en->up_file[0]=='\0' ? "-" : d_en->up_file);
-		printf(" || ");
-
-		if(d_en->up_file!=NULL && d_en->up_file[0]!='\0')
-		{
-			FILE* fp=fopen(d_en->up_file,"r+");
-
-			if(fp!=NULL)
-			{
-				fclose(fp);
-				printf("RW");
-			}
-			else
-			{
-				fp=fopen(d_en->up_file,"r");
-				if(fp!=NULL)
-				{
-					fclose(fp);
-					printf("R");
-				}
-				else
-				{
-					printf("-");
-				}
-			}
-		}
-		else
-			printf("-");
-	}
-	else
-	{
-		if(d_en->up_file!=NULL && d_en->up_file[0]!='\0')
-		{
-			FILE* fp=fopen(d_en->up_file,"r+");
-
-			if(fp==NULL)
-				return -1;
-		}
-	}
-
-	// Content Length ;
-
-	if(flag==MS_PRINT)
-	{
-		printf("\n|-->Content-Length: %s",convert_data(d_en->content_length,0));
-		printf(" || ");
-
-		if(gl_s_response!=NULL || gl_s_response->content_length!=NULL)
-			printf("%s",convert_data(atol(gl_s_response->content_length),0));
-		else
-			printf("-");
-
-	}
-	else
-	{
-		if(gl_s_response!=NULL && gl_s_response->content_length!=NULL && atol(gl_s_response->content_length)!=d_en->content_length)
-		{
-			return -1;
-		}
-	}
-
-	// Downloaded Length + Number of Left Over Ranges + Left Over Ranges;
-
-	if(flag==MS_PRINT)
-	{
-		printf("\n|-->Downloaded-Length: %s",convert_data(d_en->downloaded_length,0));
-		printf(" || (no checks)");
-
-		printf("\n|-->Number of left over ranges: %ld",d_en->n_left_ranges);
-		printf(" || (no checks)");
-
-		printf("\n|-->Left over ranges:");
-
-		for(long i=0;i<d_en->n_left_ranges;i++)
-		{
-			printf(" (%ld, %ld)",d_en->left_ranges[i].start,d_en->left_ranges[i].end);
-
-			if(i!=d_en->n_left_ranges-1)
-				printf(" |");
-		}
-
-		printf(" || (no checks)");
+		return_code=en_status;
 	}
 
 	// Number of Ranges + Ranges along with hashes
 
 	if(flag==MS_PRINT)
 	{
-		printf("\n|-->Number of fetched ranges: %ld",d_en->n_ranges);
+		printf("|-->Number of fetched ranges: %ld",d_en->n_ranges);
 		printf(" || (no checks)");
 		printf("\n|-->Fetched ranges:");
 	}
@@ -1090,10 +781,10 @@ int validate_d_ms_entry(struct d_ms_entry* d_en,struct http_request* gl_s_reques
 
 	FILE* fp=NULL;
 
-	if(d_en->up_file!=NULL && d_en->up_file[0]!='\0')
-		fp=fopen(d_en->up_file,"r");
+	if(d_en->en->up_file!=NULL && d_en->en->up_file[0]!='\0')
+		fp=fopen(d_en->en->up_file,"r");
 	else
-		fp=fopen(d_en->file,"r");
+		fp=fopen(d_en->en->file,"r");
 
 	if(fp==NULL)
 	{
@@ -1199,6 +890,7 @@ int validate_d_ms_entry(struct d_ms_entry* d_en,struct http_request* gl_s_reques
 
 	return return_code;
 }
+
 #endif
 
 void* read_ms_entry(char* ms_file,long entry_number,int flag)
@@ -1487,11 +1179,11 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 }
 
-void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag)
+void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_request,struct http_response* gl_s_response)
 {
 	if(entry_number<=0)
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Entry number %ld is not valid. Exiting...\n\n",entry_number);
+		fprintf(stderr,"MID: Entry number %ld is not valid. Exiting...\n\n",entry_number);
 
 		return;
 	}
@@ -1502,24 +1194,26 @@ void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_re
 
 	if(entry==NULL)
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Error when fetching the given MID state entry. Returning...\n\n");
+		fprintf(stderr,"MID: Error when fetching the given MID state entry. Exiting...\n\n");
+
 		return;
 	}
 
-	if(flag==MS_PRINT)
-		printf("Entry Count: %ld\n",entry_number);
+	printf("Entry Count: %ld\n",entry_number);
 
 	if(((struct ms_entry*)entry)->type==0)
-		validate_ms_entry((struct ms_entry*)entry,gl_s_request,gl_s_response,flag);
+		validate_ms_entry((struct ms_entry*)entry,gl_s_request,gl_s_response,MS_PRINT);
 #ifdef LIBSSL_SANE
 	else if(((struct ms_entry*)entry)->type==1)
-		validate_d_ms_entry((struct d_ms_entry*)entry,gl_s_request,gl_s_response,flag);
+		validate_d_ms_entry((struct d_ms_entry*)entry,gl_s_request,gl_s_response,MS_PRINT);
 #endif
 	else
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: MS entry type unknown. Returning...\n\n");
+		fprintf(stderr,"MID: MS entry type unknown. Exiting...\n\n");
 		return;
 	}
+
+	printf("\n");
 
 }
 

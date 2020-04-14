@@ -239,8 +239,7 @@ int main(int argc, char **argv)
 
 		if(args->validate_ms)
 		{
-			check_ms_entry(args->cm_file,args->entry_number,gl_s_request,gl_s_response,MS_PRINT);
-			printf("\n");
+			check_ms_entry(args->cm_file,args->entry_number,gl_s_request,gl_s_response);
 			exit(0);
 		}
 
@@ -883,8 +882,47 @@ void close_files()
 	}
 }
 
-void init_resume()
+void init_resume(struct http_request* gl_s_request,struct http_response* gl_s_response)
 {
 	char* ms_file=get_ms_filename();
+
+	void* entry=read_ms_entry(ms_file,args->entry_number <=0 ? 1 : args->entry_number,MS_RETURN);
+
+	if(entry==NULL)
+	{
+		if(args->entry_number > 0)
+		{
+			mid_cond_print(!args->quiet_flag,"MID: Error retrieving the MS entry structure. Exiting...\n");
+			exit(1);
+		}
+
+		// else fall back to fresh download
+	}
+
+	int status;
+
+	if(((struct ms_entry*)entry)->type==0)
+		status=validate_ms_entry(((struct ms_entry*)entry),gl_s_request,gl_s_response,MS_SILENT);
+	else if(((struct ms_entry*)entry)->type==1)
+		status=validate_d_ms_entry((struct d_ms_entry*)entry,gl_s_request,gl_s_response,MS_SILENT);
+
+	if(status==-1)
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Partially downloaded file found...\n\n");
+
+		if(args->force_resume)
+			mid_cond_print(!args->quiet_flag,"MID: Fatal error encountered when validating the MS entry, can not resume the download. Exiting...\n\n");
+		else
+			mid_cond_print(!args->quiet_flag,"MID: Error encountered when validating MS entry, try giving --force-resume flag or check the errors with --validate-ms. Exiting...\n\n");
+
+		exit(1);
+
+	}
+	else if(status==1)
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Force Resuming the download...\n\n");
+	}
+
+	//
 }
 
