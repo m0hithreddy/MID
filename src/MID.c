@@ -46,7 +46,6 @@ FILE* o_fp=NULL;
 FILE* u_fp=NULL;
 
 int handler_registered=0;
-struct signal_handler_info* s_hd_info=NULL;
 
 struct http_request* gl_s_request=NULL;
 struct http_response* gl_s_response=NULL;
@@ -74,7 +73,7 @@ int main(int argc, char **argv)
 
 
 	if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
-		mid_flag_exit(1,"MID: Not a HTTP or HTTPS URL. Exiting...\n\n");
+		mid_flag_exit1(1,"MID: Not a HTTP or HTTPS URL. Exiting...\n\n");
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -92,7 +91,7 @@ int main(int argc, char **argv)
 	char* hostip=resolve_dns(purl->host);
 
 	if(hostip==NULL)
-		mid_flag_exit(1,"MID: Unable to find the IPV4 address of %s. Exiting...\n\n",purl->host);
+		mid_flag_exit1(1,"MID: Unable to find the IPV4 address of %s. Exiting...\n\n",purl->host);
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -105,7 +104,7 @@ int main(int argc, char **argv)
 	struct network_interface** net_if=get_net_if_info(args->include_ifs,args->include_ifs_count,args->exclude_ifs,args->exclude_ifs_count);
 
 	if(net_if[0]==NULL)
-		mid_flag_exit(1,"MID: No network-interface found for downloading. Exiting...\n\n");
+		mid_flag_exit1(1,"MID: No network-interface found for downloading. Exiting...\n\n");
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -120,7 +119,7 @@ int main(int argc, char **argv)
 	struct sockaddr *servaddr=create_sockaddr_in(hostip,atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),DEFAULT_HTTP_SOCKET_FAMILY);
 
 	if(servaddr==NULL)
-		mid_flag_exit(1,"MID: Error Checking partial content support. Exiting...\n\n");
+		mid_flag_exit1(1,"MID: Error Checking partial content support. Exiting...\n\n");
 
 
 	struct http_request* s_request=(struct http_request*)calloc(1,sizeof(struct http_request));
@@ -258,15 +257,15 @@ int main(int argc, char **argv)
 	}
 
 	if(gl_s_response==NULL)
-		mid_flag_exit(1,"MID: Error reading server response. Exiting...\n\n");
+		mid_flag_exit1(1,"MID: Error reading server response. Exiting...\n\n");
 	else
 	{
 		if(gl_s_response->status_code[0]=='4')
-			mid_flag_exit(1,"MID: Client Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+			mid_flag_exit1(1,"MID: Client Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 		else if(gl_s_response->status_code[0]=='5')
-			mid_flag_exit(1,"MID: Server Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+			mid_flag_exit1(1,"MID: Server Side Error, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 		else if(gl_s_response->status_code[0]!='2')
-			mid_flag_exit(1,"MID: Unknown error reported by server, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
+			mid_flag_exit1(1,"MID: Unknown error reported by server, Status-Code: %s , Status: %s. Exiting...\n\n",gl_s_response->status_code,gl_s_response->status);
 	}
 
 	// Some debug information
@@ -289,7 +288,7 @@ int main(int argc, char **argv)
 	net_if_data=flatten_data_bag(net_if_bag);
 
 	if(net_if_data==NULL)
-		mid_flag_exit(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
+		mid_flag_exit1(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
 
 	struct network_interface* ok_net_if=(struct network_interface*)net_if_data->data;
 	long ok_net_if_len=net_if_bag->n_pockets;
@@ -307,7 +306,7 @@ int main(int argc, char **argv)
 
 
 	if(ok_net_if_len==0)
-		mid_flag_exit(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
+		mid_flag_exit1(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
 
 	// Check for Range request support
 
@@ -327,7 +326,7 @@ int main(int argc, char **argv)
 	char** fin_hostips=resolve_dns_mirros(fin_host,&(args->max_mirrors));
 
 	if(fin_hostips==NULL)
-		mid_flag_exit(1,"MID: No mirrors found for %s. Exiting...\n\n",fin_host);
+		mid_flag_exit1(1,"MID: No mirrors found for %s. Exiting...\n\n",fin_host);
 
 	/* Base client socket_info structure */
 
@@ -426,7 +425,7 @@ int main(int argc, char **argv)
 
 	handler_registered=0;
 
-	s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
+	struct signal_handler_info* s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
 
 	s_hd_info->quit=0;
 	s_hd_info->ptid=pthread_self();
@@ -436,8 +435,8 @@ int main(int argc, char **argv)
 	sigaddset(&s_hd_info->mask,SIGQUIT);
 	sigaddset(&s_hd_info->mask,SIGRTMIN);
 
-	if(pthread_sigmask(SIG_BLOCK, &s_hd_info->mask, NULL) != 0)  // Block SIGINT and SIGQUIT and SIGRTMIN (for giving signals for thread syncing)
-		mid_flag_exit(1,"MID: Error initiating the signal handler. Exiting...\n\n");
+	if(pthread_sigmask(SIG_BLOCK, &s_hd_info->mask, NULL) != 0)  // Block SIGINT and SIGQUIT and SIGRTMIN (signal used for thread sync)
+		mid_flag_exit2(1,"MID: Error initiating the signal handler. Exiting...\n\n");
 
 	pthread_mutex_init(&s_hd_info->lock,NULL);
 	pthread_create(&s_hd_info->tid, NULL,signal_handler,(void*)s_hd_info);
@@ -724,6 +723,18 @@ int main(int argc, char **argv)
 
 	}
 
+	while(resume_bag->n_pockets!=0) // If user interrupted before resuming units, then place them back in units_bag for purpose of storing mid_state.
+	{
+		new=*((struct unit_info**)resume_bag->first->data);
+
+		n_unit->data=(void*)&new;
+		n_unit->len=sizeof(struct unit_info*);
+
+		place_data(units_bag,n_unit);
+
+		delete_data_pocket(resume_bag,resume_bag->first,DELETE_AT);
+	}
+
 	// Get the latest download progress
 
 	units=(struct unit_info**)flatten_data_bag(units_bag)->data;
@@ -739,21 +750,8 @@ int main(int argc, char **argv)
 		printf("Time Spent = %s     Total Downloaded = %s     Average Speed = %s\n\n",convert_time(end_time-start_time),convert_data(downloaded_length,0), end_time-start_time !=0 ? convert_speed(downloaded_length/(end_time-start_time)) : "undef");
 	}
 
-
 	if(err!=NULL)
-		mid_flag_exit(2,"MID: Error downloading chunk. Exiting...\n\n");
-
-	while(resume_bag->n_pockets!=0) // If user interrupted before resuming units.. then place them back in units_bag for purpose of storing mid_state.
-	{
-		new=*((struct unit_info**)resume_bag->first->data);
-
-		n_unit->data=(void*)&new;
-		n_unit->len=sizeof(struct unit_info*);
-
-		place_data(units_bag,n_unit);
-
-		delete_data_pocket(resume_bag,resume_bag->first,DELETE_AT);
-	}
+		mid_flag_exit3(2,"MID: Error downloading chunk. Exiting...\n\n");
 
 	pthread_mutex_lock(&s_hd_info->lock); // Check if user interrupted the download.
 	if(s_hd_info->quit)
@@ -771,7 +769,7 @@ int main(int argc, char **argv)
 	// Handle Content-Encoding
 
 	if(gl_s_response->content_encoding==NULL)
-		goto exit_procedures;
+		goto normal_exit;
 
 	if(!args->quiet_flag)
 		printf("Decoding the file: %s\n",base_unit_info->up_file);
@@ -779,7 +777,7 @@ int main(int argc, char **argv)
 	struct encoding_info* en_info=determine_encodings(gl_s_response->content_encoding); // Determine the encodings
 
 	if(en_info==NULL)
-		mid_flag_exit(3,"MID: Content-Encoding unknown, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file);
+		mid_flag_exit3(3,"MID: Content-Encoding unknown, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file);
 
 	if(!args->quiet_flag)
 		printf("\nOpening File: %s\n\n",base_unit_info->file);
@@ -805,12 +803,12 @@ int main(int argc, char **argv)
 		status=read(fileno(u_fp),uf_data,MAX_TRANSACTION_SIZE); // Read the unprocessed file.
 
 		if(status<0)
-			mid_flag_exit(2,"MID: Error reading the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
+			mid_flag_exit3(2,"MID: Error reading the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
 		else if(status==0)
 		{
-			remove(base_unit_info->up_file); // Processed all data so need of for .up file.
+			remove(base_unit_info->up_file); // Processed all data so need of .up file.
 
-			mid_exit(0);
+			goto normal_exit;
 		}
 
 		en_info->in_max=status;
@@ -819,20 +817,24 @@ int main(int argc, char **argv)
 		while(en_info->in_len!=en_info->in_max) // Decode and write the data to the file.
 		{
 			if(en_status==EN_END)
-				mid_flag_exit(4,"MID: Misc data found at the end of the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
+				mid_flag_exit3(4,"MID: Misc data found at the end of the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->up_file,base_unit_info->up_file);
 
 			en_status=handle_encodings(en_info);
 
 			if(en_status!=EN_OK && en_status!=EN_END)
-				mid_flag_exit(2,"MID: Error encountered when decoding the file %s, not removing the unprocessed file %s. Exiting...\n",base_unit_info->up_file,base_unit_info->up_file);
+				mid_flag_exit3(2,"MID: Error encountered when decoding the file %s, not removing the unprocessed file %s. Exiting...\n",base_unit_info->up_file,base_unit_info->up_file);
 
 			if(write(fileno(o_fp),en_info->out,en_info->out_len)!=en_info->out_len)
-				mid_flag_exit(2,"\nMID: Error writing to the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->file,base_unit_info->up_file);
+				mid_flag_exit3(2,"\nMID: Error writing to the file %s, not removing the unprocessed file %s. Exiting...\n\n",base_unit_info->file,base_unit_info->up_file);
 
 		}
+
 	}
 
-	exit_procedures:
+	normal_exit:
+
+	close_files();
+	deregister_handler(s_hd_info);
 
 	if(resume_status)
 		resave_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
@@ -850,7 +852,7 @@ void* signal_handler(void* v_s_hd_info)
 	err=sigwait(&s_hd_info->mask, &signo);
 
 	if(err != 0)
-		mid_flag_exit(1,"MID: Error initiating the signal handler. Exiting...\n\n");
+		mid_flag_exit2(1,"MID: Error initiating the signal handler. Exiting...\n\n");
 
 	pthread_mutex_lock(&s_hd_info->lock);
 
@@ -908,11 +910,22 @@ int init_resume()
 	}
 
 	int status;
+	struct ms_entry* en;
 
 	if(((struct ms_entry*)entry)->type==0)
+	{
 		status=validate_ms_entry(((struct ms_entry*)entry),gl_s_request,gl_s_response,MS_SILENT);
+		en=(struct ms_entry*)entry;
+	}
+#ifdef LIBSSL_SANE
 	else if(((struct ms_entry*)entry)->type==1)
+	{
 		status=validate_d_ms_entry((struct d_ms_entry*)entry,gl_s_request,gl_s_response,MS_SILENT);
+		en=((struct d_ms_entry*)entry)->en;
+	}
+#endif
+	else
+		return 0;
 
 
 	if(status==-1)
@@ -929,19 +942,13 @@ int init_resume()
 	}
 	else if(status==1)
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Force Resuming the download...\n\n");
+		mid_cond_print(!args->quiet_flag,"MID: Force Resuming the download...\n");
 	}
 	else
 	{
 		mid_cond_print(!args->quiet_flag,"MID: Partially downloaded file found and is sane. Resuming download...\n\n");
 	}
 
-	struct ms_entry* en;
-
-	if(((struct ms_entry*)entry)->type==0)
-		en=(struct ms_entry*)entry;
-	else if(((struct ms_entry*)entry)->type==1)
-		en=((struct d_ms_entry*)entry)->en;
 
 	if(en->file!=NULL && en->file[0]!='\0')
 	{
@@ -990,28 +997,36 @@ void finalize_resume()
 
 	struct http_range* ranges;
 	long n_ranges;
+	struct ms_entry* en;
 
 	if(((struct ms_entry*)entry)->type==0)
-	{
-		ranges=((struct ms_entry*)entry)->l_ranges;
-		n_ranges=((struct ms_entry*)entry)->n_l_ranges;
-	}
+		en=((struct ms_entry*)entry);
+#ifdef LIBSSL_SANE
 	else if(((struct ms_entry*)entry)->type==1)
-	{
-		ranges=((struct d_ms_entry*)entry)->en->l_ranges;
-		n_ranges=((struct d_ms_entry*)entry)->en->n_l_ranges;
-	}
+		en=((struct d_ms_entry*)entry)->en;
+#endif
 	else
 		return;
+
+	ranges=en->l_ranges;
+	n_ranges=en->n_l_ranges;
+
+	if(!n_ranges)
+	{
+		ranges=(struct http_range*)malloc(sizeof(struct http_range));
+		ranges->start=en->content_length;
+		ranges->end=en->content_length-1;
+
+		n_ranges=1;
+	}
 
 	if(resume_bag==NULL)
 		resume_bag=create_data_bag();
 
-	if(!n_ranges)
-		return;
-
 	struct unit_info* new;
 	struct network_data n_data;
+
+
 
 	for(long i=0;i<n_ranges;i++)
 	{

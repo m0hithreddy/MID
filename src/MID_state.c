@@ -161,7 +161,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 	char* ms_file=get_ms_filename();
 
-	if(atol(gl_s_response->content_length)==progress->content_length && gl_s_response->content_encoding==NULL) // Already downloaded and decoding is not required. remove the entry.
+	if(atol(gl_s_response->content_length)==progress->content_length && u_fp==NULL) // If already downloaded and decoding is done (or) not required. remove the entry.
 	{
 		delete_ms_entry(ms_file,args->entry_number <=0 ? 1 : args->entry_number, args->quiet_flag ? MS_SILENT : MS_PRINT);
 		return;
@@ -1502,5 +1502,3 @@ void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_re
 	printf("\n");
 
 }
-
-
