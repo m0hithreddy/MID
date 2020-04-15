@@ -57,6 +57,8 @@ char* get_ms_filename();
 
 void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
 
+void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+
 void dump_int(struct data_bag* bag,int num);
 
 void dump_long(struct data_bag* bag,long num);

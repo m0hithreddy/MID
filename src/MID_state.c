@@ -143,6 +143,256 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 	return;
 }
 
+void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+{
+	if(gl_s_request==NULL || gl_s_response == NULL || gl_s_response->status_code[0]!='2') // Enough progress isn't made or not an expected status code to re-save the state.
+		return;
+
+	if(gl_s_response->accept_ranges==NULL || strcmp(gl_s_response->accept_ranges,"bytes") || gl_s_response->content_length==NULL) // Non resumable download
+		return;
+
+	if(base_unit_info == NULL || base_unit_info->file == NULL || (gl_s_response->content_encoding!=NULL && base_unit_info->up_file==NULL)) // Even files are not decided yet!
+		return;
+
+	if(units_bag==NULL) // Nothing to save !
+		return;
+
+
+
+	char* ms_file=get_ms_filename();
+
+	if(atol(gl_s_response->content_length)==progress->content_length && gl_s_response->content_encoding==NULL) // Already downloaded and decoding is not required. remove the entry.
+	{
+		delete_ms_entry(ms_file,args->entry_number <=0 ? 1 : args->entry_number, args->quiet_flag ? MS_SILENT : MS_PRINT);
+		return;
+	}
+
+	// If pased the above then eligible for saving state
+
+	FILE* ms_fp=fopen(ms_file,"r+");
+
+	if(ms_fp==NULL) // May be file name too long... Returning to prevent any state files clashes
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Unable to open MID state file %s, not saving the state information\n\n",ms_file);
+
+		return;
+	}
+
+	if(flock(fileno(ms_fp),LOCK_EX)!=0)
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Unable to acquire lock on MID state file %s, not saving the state information\n\n",ms_file);
+
+		fclose(ms_fp);
+
+		return;
+	}
+
+	struct data_bag* state_bag;
+
+#ifdef LIBSSL_SANE
+	if(args->detailed_save)
+		state_bag=make_d_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+	else
+		state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+#else
+	state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+#endif
+
+	struct network_data* state_data=flatten_data_bag(state_bag);
+
+	if(state_data==NULL || state_data->data==NULL)
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Error when making MID state, not saving the state information. Returning...\n\n");
+
+		return;
+	}
+
+	long entry_number = args->entry_number <=0 ? 1 : args->entry_number;
+
+	long read_len=0;
+	long prev_len=0;
+	long en_size;
+	long status;
+
+	struct stat stat_buf;
+
+	fstat(fileno(ms_fp),&stat_buf);
+
+	while(entry_number)
+	{
+		prev_len=read_len;
+
+		if((status=pread(fileno(ms_fp),&en_size,sizeof(long),read_len))==0) // EOF file.
+			return;
+		else if(status!=sizeof(long)) // Corrupted file.
+			return;
+
+		read_len=read_len+sizeof(long);
+
+		if(read_len + en_size > stat_buf.st_size ) // Corrupted file.
+			return;
+
+		read_len=read_len+en_size;
+
+		entry_number--;
+	}
+
+	if(pwrite(fileno(ms_fp),&state_data->len,sizeof(long),prev_len)!=sizeof(long))
+	{
+		mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+
+		goto close_files;
+	}
+
+	prev_len=prev_len+sizeof(long);
+
+	if(state_data->len > en_size) // sizeof(long) is neglected on both sides of the comparison & The last computed en_size is of the entry we intend to replace.
+	{
+		char p_buf[state_data->len > MAX_TRANSACTION_SIZE ? state_data->len : MAX_TRANSACTION_SIZE];
+		char c_buf[sizeof(p_buf)];
+		long p_status,c_status;
+
+		memcpy(p_buf,state_data->data,state_data->len);
+		p_status=state_data->len;
+
+		int flag=1;
+
+		while(1)
+		{
+			if(flag)
+			{
+
+				if(read_len>=stat_buf.st_size)
+				{
+					c_status=0;
+					goto p_write;
+				}
+
+				c_status=pread(fileno(ms_fp),c_buf,(sizeof(c_buf) < stat_buf.st_size-read_len)? sizeof(c_buf) : stat_buf.st_size-read_len,read_len);
+
+				p_write:
+
+				if(pwrite(fileno(ms_fp),p_buf,p_status,prev_len)!=p_status)
+				{
+					mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+
+					goto close_files;
+				}
+
+				prev_len=prev_len+p_status;
+
+				if(c_status<0)
+				{
+					mid_cond_print(!args->quiet_flag,"MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
+
+					goto close_files;
+				}
+				else if(c_status==0)
+				{
+					break;
+				}
+
+				read_len=read_len+c_status;
+
+				flag=0;
+			}
+			else
+			{
+
+				if(read_len>=stat_buf.st_size)
+				{
+					p_status=0;
+					goto c_write;
+				}
+
+				p_status=pread(fileno(ms_fp),p_buf,(sizeof(p_buf) < stat_buf.st_size-read_len)? sizeof(p_buf) : stat_buf.st_size-read_len,read_len);
+
+				c_write:
+
+				if(pwrite(fileno(ms_fp),c_buf,c_status,prev_len)!=c_status)
+				{
+					mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+
+					goto close_files;
+				}
+
+				prev_len=prev_len+c_status;
+
+				if(p_status<0)
+				{
+					mid_cond_print(!args->quiet_flag,"MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
+
+					goto close_files;
+				}
+				else if(p_status==0)
+				{
+					break;
+				}
+
+				read_len=read_len+p_status;
+
+				flag=1;
+			}
+		}
+	}
+	else if(state_data->len < en_size)
+	{
+		if(pwrite(fileno(ms_fp),state_data->data,state_data->len,prev_len)!=state_data->len)
+		{
+			mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+
+			goto close_files;
+		}
+
+		prev_len=prev_len+state_data->len;
+
+		char f_buf[MAX_TRANSACTION_SIZE];
+
+		while(1)
+		{
+			status=pread(fileno(ms_fp),f_buf,MAX_TRANSACTION_SIZE,read_len);
+
+			if(status<0)
+			{
+				mid_cond_print(!args->quiet_flag,"MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
+
+				goto close_files;
+			}
+			else if(status==0) // If less than 0, it may corrupt all other remaining MS entries (no mechanism for rolling back!)
+				break;
+
+			read_len=read_len+status;
+
+			if(pwrite(fileno(ms_fp),f_buf,status,prev_len)!=status)
+			{
+				mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+
+				goto close_files;
+			}
+
+			prev_len=prev_len+status;
+		}
+
+		ftruncate(fileno(ms_fp),prev_len);
+	}
+	else
+	{
+		if(pwrite(fileno(ms_fp),state_data->data,state_data->len,prev_len)!=state_data->len)
+		{
+			mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+
+			goto close_files;
+		}
+	}
+
+	close_files:
+
+	flock(fileno(ms_fp),LOCK_UN);
+	fclose(ms_fp);
+
+	return;
+}
+
 void dump_int(struct data_bag* bag,int num)
 {
 	struct network_data n_data;
@@ -441,7 +691,7 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 			if(!args->force_resume)
 				return -1;
 
-			return_code=0;
+			return_code=1;
 		}
 	}
 
@@ -469,17 +719,16 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 
 	if(flag==MS_PRINT)
 	{
-		printf("\n|-->File: %s",en->file);
-		printf(" || ");
+		printf("\n|-->File: %s", (en->file==NULL || en->file[0]=='\0') ? "-" : en->file);
 
-		if(en->file!=NULL || en->file[0]!='\0')
+		if(en->file!=NULL && en->file[0]!='\0')
 		{
 			FILE* fp=fopen(en->file,"r+");
 
 			if(fp!=NULL)
 			{
 				fclose(fp);
-				printf("RW");
+				printf(" (RW) || (required)");
 			}
 			else
 			{
@@ -487,35 +736,33 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 				if(fp!=NULL)
 				{
 					fclose(fp);
-					printf("R");
+					printf(" (R) || (required)");
 				}
 				else
 				{
-					printf("-");
+					printf(" () || (required)");
 				}
 			}
 		}
 		else
-			printf("-");
+			printf(" () || (required)");
 	}
 	else
 	{
-		if(en->file==NULL || en->file[0]=='\0')
+		if(en->file==NULL || en->file[0]=='\0') // Every time an output file is required ! (fatal error)
 			return -1;
 
 		FILE* fp=fopen(en->file,"r+");
 
-		if(fp==NULL)
+		if(fp==NULL) // Fatal error, output file is required.
 			return -1;
 	}
-
 
 	// Check for Unprocessed file status ;
 
 	if(flag==MS_PRINT)
 	{
-		printf("\n|-->Unprocessed-File: %s",en->up_file[0]=='\0' ? "-" : en->up_file);
-		printf(" || ");
+		printf("\n|-->Unprocessed-File: %s",(en->up_file==NULL || en->up_file[0]=='\0') ? "-" : en->up_file);
 
 		if(en->up_file!=NULL && en->up_file[0]!='\0')
 		{
@@ -524,7 +771,7 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 			if(fp!=NULL)
 			{
 				fclose(fp);
-				printf("RW");
+				printf("%s",gl_s_response->content_encoding==NULL ? " (RW) || (not required)" : " (RW) || (required)");
 			}
 			else
 			{
@@ -532,26 +779,45 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 				if(fp!=NULL)
 				{
 					fclose(fp);
-					printf("R");
+					printf("%s",gl_s_response->content_encoding==NULL ? " (R) || (not required)" : " (R) || (required)");
 				}
 				else
 				{
-					printf("-");
+					printf("%s",gl_s_response->content_encoding==NULL ? " () || (not required)" : " () || (required)");
 				}
 			}
 		}
 		else
-			printf("-");
+			printf("%s",gl_s_response->content_encoding==NULL ? " () || (not required)" : " () || (required)");
 	}
 	else
 	{
-		if(en->up_file!=NULL && en->up_file[0]!='\0')
+		if(en->up_file!=NULL && en->up_file[0]!='\0') // up_file is saved
 		{
+			if(gl_s_response->content_encoding==NULL) // but this time it is not required.
+			{
+				if(!args->force_resume)
+					return -1;
+
+				return_code=1;
+			}
+
 			FILE* fp=fopen(en->up_file,"r+");
 
-			if(fp==NULL)
-				return -1;
+			if(fp==NULL) // if content_encoding == NULL , dont report error, as it is not expecting file any way.
+			{
+				if(gl_s_response->content_encoding!=NULL) // fatal error;
+					return -1;
+
+				if(!args->force_resume)
+					return -1;
+
+				return_code=1;
+			}
+
 		}
+		else if(gl_s_response->content_encoding !=NULL) // up_file not saved, but this time up_file is expected (fatal error).
+			return -1;
 	}
 
 	// Content Length ;
@@ -561,7 +827,7 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 		printf("\n|-->Content-Length: %s",convert_data(en->content_length,0));
 		printf(" || ");
 
-		if(gl_s_response!=NULL || gl_s_response->content_length!=NULL)
+		if(gl_s_response!=NULL && gl_s_response->content_length!=NULL)
 			printf("%s",convert_data(atol(gl_s_response->content_length),0));
 		else
 			printf("-");
@@ -818,6 +1084,8 @@ int validate_d_ms_entry(struct d_ms_entry* d_en,struct http_request* gl_s_reques
 	struct stat stat_buf;
 	fstat(fileno(fp),&stat_buf);
 
+	int miss_match=0;
+
 	for(long i=0;i<d_en->n_ranges;i++)
 	{
 
@@ -884,9 +1152,14 @@ int validate_d_ms_entry(struct d_ms_entry* d_en,struct http_request* gl_s_reques
 		{
 			printf(" || %s]",f_buf);
 		}
-		else
+
+		if(strcmp(d_en->hashes[i],f_buf))
 		{
-			if(strcmp(d_en->hashes[i],f_buf) && !args->force_resume)
+			if(flag==MS_PRINT)
+			{
+				miss_match=1;
+			}
+			else
 			{
 				if(!args->force_resume)
 					return -1;
@@ -902,7 +1175,8 @@ int validate_d_ms_entry(struct d_ms_entry* d_en,struct http_request* gl_s_reques
 		}
 	}
 
-	printf("\n");
+	if(flag==MS_PRINT)
+		printf(" (%s)\n", miss_match ? "Miss-Matched" : "Matched");
 
 	return return_code;
 }
@@ -1198,11 +1472,7 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 void check_ms_entry(char* ms_file,long entry_number,struct http_request* gl_s_request,struct http_response* gl_s_response)
 {
 	if(entry_number<=0)
-	{
-		fprintf(stderr,"MID: Entry number %ld is not valid. Exiting...\n\n",entry_number);
-
-		return;
-	}
+		entry_number=1;
 
 	void* entry;
 

@@ -351,7 +351,7 @@ int main(int argc, char **argv)
 
 	resume_bag=create_data_bag(); // Checking for possibility of resuming the download.
 	int resume_status=0;
-	if(pc_flag==1)
+	if(pc_flag==1 && !args->no_resume)
 		resume_status=init_resume();
 
 
@@ -743,11 +743,26 @@ int main(int argc, char **argv)
 	if(err!=NULL)
 		mid_flag_exit(2,"MID: Error downloading chunk. Exiting...\n\n");
 
+	while(resume_bag->n_pockets!=0) // If user interrupted before resuming units.. then place them back in units_bag for purpose of storing mid_state.
+	{
+		new=*((struct unit_info**)resume_bag->first->data);
+
+		n_unit->data=(void*)&new;
+		n_unit->len=sizeof(struct unit_info*);
+
+		place_data(units_bag,n_unit);
+
+		delete_data_pocket(resume_bag,resume_bag->first,DELETE_AT);
+	}
+
 	pthread_mutex_lock(&s_hd_info->lock); // Check if user interrupted the download.
 	if(s_hd_info->quit)
 	{
 		pthread_mutex_unlock(&s_hd_info->lock);
-		save_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+		if(resume_status)
+			resave_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+		else
+			save_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 
 		mid_exit(1);
 	}
@@ -756,7 +771,7 @@ int main(int argc, char **argv)
 	// Handle Content-Encoding
 
 	if(gl_s_response->content_encoding==NULL)
-		mid_exit(0);
+		goto exit_procedures;
 
 	if(!args->quiet_flag)
 		printf("Decoding the file: %s\n",base_unit_info->up_file);
@@ -779,8 +794,10 @@ int main(int argc, char **argv)
 	{
 		if(s_hd_info->quit)
 		{
-			pthread_mutex_unlock(&s_hd_info->lock);
-			save_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+			if(resume_status)
+				resave_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+			else
+				save_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 
 			mid_exit(2);
 		}
@@ -814,6 +831,11 @@ int main(int argc, char **argv)
 
 		}
 	}
+
+	exit_procedures:
+
+	if(resume_status)
+		resave_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 
 	mid_exit(0);
 }
@@ -974,7 +996,7 @@ void finalize_resume()
 		ranges=((struct ms_entry*)entry)->l_ranges;
 		n_ranges=((struct ms_entry*)entry)->n_l_ranges;
 	}
-	else if(((struct ms_entry*)entry)->type==0)
+	else if(((struct ms_entry*)entry)->type==1)
 	{
 		ranges=((struct d_ms_entry*)entry)->en->l_ranges;
 		n_ranges=((struct d_ms_entry*)entry)->en->n_l_ranges;
