@@ -1065,7 +1065,7 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted. \n");
 	fprintf(stderr,"   --max-mirrors x                        -m x                  x > 0 => At max x mirrors are used. x <= 0 => All mirrors are used. \n");
 	fprintf(stderr,"   --unit-sleep-time x                    -us x                 Download unit sleeps for x seconds before retrying. \n");
-	fprintf(stderr,"   --progress-update-time x               -pu x                 Progress information update interval. \n");
+	fprintf(stderr,"   --progress-update-time x               -pu x                 Progress information updates after evert x seconds. \n");
 	fprintf(stderr,"   --detailed-progress                    -pd                   Show detailed download progress. \n");
 	fprintf(stderr,"   --force-resume                         -fr                   Skip the checks and start the download. \n");
 	fprintf(stderr,"   --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume. \n");

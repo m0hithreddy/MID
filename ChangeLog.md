@@ -25,3 +25,18 @@
   * Support for handling content-encodings.
   
   * Few more autoconf file checks and bug fixes.
+
+# [v1.2](https://github.com/m0hithreddy/MID/tree/v1.2) (2020-04-16)
+
+* ###### Mohith Reddy < m.mohithreddy99@gmail.com >
+  
+  * Saving the MID state using MS (MID State) entries.
+  
+  * Manupulation of MS entries (add, delete, validate).
+
+  * Support for Download Resume (v1.0).
+  
+  * Made JUST_RECEIVE obsolete in HTTP API.
+  
+  * Performance updates and bug fixes.
+  

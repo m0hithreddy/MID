@@ -15,46 +15,36 @@ OPTIONS
  
  Other options:
 
-   --output-file file                   -o file             Specify the output file, if not specified MID will automatically detect from the URL.
-
-   --interfaces nic1,nic2...            -i nic1,nic2...     Network-interfaces which are used in the file download.
-
-   --exclude-interfaces nic1,nic2...    -ni nic1,nic2...    Network-interfaces which are excluded from the file download.
-
-   --help                               -h                  Print the help message and exit.
-
-   --url URL                            -u URL              File at the URL to be downloaded.
-
-   --max-parallel-downloads x           -n x                Maximum x number of parallel connections are allowed.
-
-   --max-unit-retries x                 -Ur x               Maximum x number of retries are made by a unit to download a chunk. If failed, the download is terminated.
-
-   --max-redirects x                    -R x                Maximum x number of HTTP redirects are followed.
-
-   --max-tcp-syn-retransmits x          -Sr x               At max x TCP SYN are retransmitted when initiating a TCP connection.
-
-   --max-mirrors x                      -m x                If x is positive at max x mirrors are used in the download. If zero or less than zero all mirrors are used.
-  
-   --unit-sleep-time x                  -Us x               Download unit sleeps for x seconds before retrying.
-
-   --progress-update-time x             -Pu x               Information related to download progress updates after every x seconds.
-
-   --detailed-progress                  -Pd                 Show detailed download progress.
-
-   --version                            -V                  Print the version and exit.
-
-   --header h=v                         -H h=v              Add custom headers to HTTP request message (option can be used multiple times to add multiple headers).
-
-   --quiet                              -q                  Silent mode, don't output anything.
-
-   --verbose                            -v                  Print the verbose information.
-
-   --vverbose                           -vv                 Print the very verbose information.
-
-   --surpass-root-check                 -s                  If had the sufficient permissions, use -s to surpass the root-check.
-
-   --conf file                          -c file             Specify the configuration file path. Preference order: cmd_line > conf_file > default_values
-       
+   --output-file file                     -o file               Specify the output file, if not specified MID will automatically detect from the URL.
+   --interfaces nic1,nic2...              -i nic1,nic2...       Network-interfaces which are used in the file download.
+   --exclude-interfaces nic1,nic2...      -ni nic1,nic2...      Network-interfaces which are excluded from the file download.
+   --help                                 -h                    Print the help message and exit.
+   --url URL                              -u URL                URL to be used in the download.
+   --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. 
+   --max-parallel-downloads x             -n x                  At max x parallel connections are opened.
+   --max-unit-retries x                   -Ur x                 At max x retries are made by a unit to download a chunk. If failed the download is terminated.
+   --max-redirects x                      -R x                  At max x HTTP redirects are followed.
+   --max-tcp-syn-retransmits x            -Sr x                 At max x TCP SYNs are retransmitted, when intiating a TCP connection.
+   --max-mirrors x                        -m x                  x > 0 => At max x mirrors are used in the download. x <= 0 => All mirrors are used in the downaload.
+   --unit-sleep-time x                    -Us x                 Download unit sleeps for x seconds before retrying.
+   --progress-update-time x               -Pu x                 Progress information updates after evert x seconds.
+   --detailed-progress                    -Pd                   Show detailed download progress.
+   --force-resume                         -fr                   Skip the checks and start the download.
+   --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume.
+   --detailed-save                        -ds                   Save the hashes of downloaded ranges to .ms file. Default action is not to save. (SSL support required).
+   --entry-number x                       -e x                  If multiple partial downloads exists, select the x-th download.
+   --ms-file file                         -ms file              Use this .ms file instead of determining from the URL.
+   --print-ms file                        -pm file              Print the MID state information and exit.
+   --delete-ms file                       -dm file              Delete ms entry, entry number should be specified with option -e.
+   --validate-ms file                     -vm file              Validate ms entry, entry number should be specified with option -e.
+   --version                              -V                    Print the version and exit.
+   --header h=v                           -H h=v                Add custom headers to HTTP request message (option can be used multiple times to add multiple headers).
+   --quiet                                -q                    Silent mode, don't output anything.
+   --verbose                              -v                    Print the verbose information.
+   --vverbose                             -vv                   Print the very verbose information.
+   --surpass-root-check                   -s                    If had the sufficient permissions, use -s to surpass the root-check. (See the NOTE).
+   --conf file                            -c file               Specify the configuration file path. Preference order: cmd_line > conf_file > default_values
+     
 NOTE
  For binding to a network-interface, MID uses SO_BINDTODEVICE socket-option. This generally requires elevated (super user) permissions and CAP_NET_RAW capability.
  So super user check is performed when application is invoked. If the program is not invoked as super user, it terminates printing the mentioned note. 
@@ -70,7 +60,7 @@ EXAMPLES
  	
  	# {MID | mid} --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso
 
- The {--detailed-progress | -Pd} argment can be used to make MID display the detailed stats
+ The {--detailed-progress | -Pd} argument can be used to make MID display the detailed stats
  	
  	# {MID | mid} --url http://cdimage.kali.org/kali-2019.2/kali-linux-2019.2-amd64.iso -Pd
 
@@ -90,7 +80,7 @@ EXAMPLES
 	(Only eth0 is used in the file download)
 	
 FILES
- /etc/MID/MID.conf - System-wide configuration file.
+ /usr/local/etc/MID.conf - System-wide configuration file.
  
  Use MID.conf file to make the settings persistent. The oder of preferefernce is command_line > conf_file > default_values
 

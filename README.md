@@ -12,7 +12,7 @@
  
 ## Dependencies
 
-The list of dependencies required for the compiling, running and building from the sources of MID are given along with the possible installation steps (OS dependent)
+The list of dependencies required for compiling, running and building from the sources of MID are given along with the possible installation steps (OS dependent)
 
 ##### MID dependencies
 
@@ -70,7 +70,7 @@ Verify the installation with ```$ {MID | mid} -V```. Now you can download the fi
 			
 	$ sudo {MID | mid} --url URL [--detailed-progress | -Pd] [--exclude-interfaces lo | -ni lo]
 
-Check ```$ {MID | mid} --help``` for more options and ```/usr/local/etc/MID.conf``` can be used to make the settings persistent
+Check ```$ {MID | mid} --help``` and man page for more options. ```/usr/local/etc/MID.conf``` can be used to make the settings persistent
 
 ## Reporting
 
