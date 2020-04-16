@@ -1,13 +1,15 @@
 -> Logging mechanism
 
--> Resume download
-
 -> Implementing own URL parser
+
+-> When --interface option is used, use the interfaces in the order user specified.
+
+-> Fallback to normal download mode if program is not invoked by root user
 
 -> IPV6 support
 
 -> I/O time out
 
--> Continue Download if some interfaces fail (later)
+-> Continue Download if some interfaces fail
 
--> Creating GUI (later)
+-> Creating GUI
