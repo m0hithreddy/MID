@@ -1,7 +1,7 @@
 
 # Initate configure.ac 
 
-AC_INIT(MID,[1.1],,,[https://github.com/m0hithreddy/MID])
+AC_INIT(MID,[1.2],,,[https://github.com/m0hithreddy/MID])
 
 # Safety check in case user overwritten --srcdir
 
@@ -91,6 +91,7 @@ linux/if_link.h \
 errno.h \
 time.h \
 pthread.h \
+signal.h \
 ctype.h],
 [],
 [AC_MSG_ERROR([${ac_header} is required but not found. Headers provided by libc, installed by default in all distributions.])]
@@ -129,6 +130,7 @@ fclose \
 flock \
 fstat \
 lseek \
+ftruncate \
 remove \
 time \
 memcpy \
@@ -145,8 +147,14 @@ socket \
 setsockopt \
 bind \
 connect \
+close \
+shutdown \
 gethostbyname \
 inet_ntop \
+sigemptyset \
+sigaddset \
+sigwait \
+sigtimedwait \
 isalpha \
 tolower],
 [],
@@ -172,7 +180,11 @@ LONG_MIN,
 LOCK_EX,
 LOCK_UN,
 LOCK_NB,
-SEEK_SET],
+SEEK_SET,
+SIGINT,
+SIGQUIT,
+SIGRTMIN,
+SIG_BLOCK],
 [],
 [AC_MSG_ERROR([Symbol required but not found. Should be included in libc, check the libc variant installed in your system.])],
 [[#include<stddef.h>
@@ -180,7 +192,8 @@ SEEK_SET],
 #include<sys/file.h>
 #include<errno.h>
 #include<netinet/in.h>
-#include<fcntl.h>]]
+#include<fcntl.h>
+#include<signal.h>]]
 )
 
 # Pthread library checks
@@ -193,7 +206,9 @@ pthread_join \
 pthread_mutex_init \
 pthread_mutex_lock \
 pthread_mutex_unlock \
-pthread_mutex_destroy],
+pthread_mutex_destroy \
+pthread_kill \
+pthread_sigmask],
 [],
 [AC_MSG_ERROR([${ac_func} required but not found. Function provided by libpthread, installed by default in all distributions])]
 )

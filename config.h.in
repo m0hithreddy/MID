@@ -21,6 +21,9 @@
 /* Define to 1 if you have the `calloc' function. */
 #undef HAVE_CALLOC
 
+/* Define to 1 if you have the `close' function. */
+#undef HAVE_CLOSE
+
 /* Define to 1 if you have the `connect' function. */
 #undef HAVE_CONNECT
 
@@ -74,6 +77,22 @@
 /* Define to 1 if you have the declaration of `SEEK_SET', and to 0 if you
    don't. */
 #undef HAVE_DECL_SEEK_SET
+
+/* Define to 1 if you have the declaration of `SIGINT', and to 0 if you don't.
+   */
+#undef HAVE_DECL_SIGINT
+
+/* Define to 1 if you have the declaration of `SIGQUIT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SIGQUIT
+
+/* Define to 1 if you have the declaration of `SIGRTMIN', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SIGRTMIN
+
+/* Define to 1 if you have the declaration of `SIG_BLOCK', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SIG_BLOCK
 
 /* Define to 1 if you have the declaration of `SSL_library_init', and to 0 if
    you don't. */
@@ -133,6 +152,9 @@
 
 /* Define to 1 if you have the `fstat' function. */
 #undef HAVE_FSTAT
+
+/* Define to 1 if you have the `ftruncate' function. */
+#undef HAVE_FTRUNCATE
 
 /* Define to 1 if you have the `geteuid' function. */
 #undef HAVE_GETEUID
@@ -257,6 +279,9 @@
 /* Define to 1 if you have the `pthread_join' function. */
 #undef HAVE_PTHREAD_JOIN
 
+/* Define to 1 if you have the `pthread_kill' function. */
+#undef HAVE_PTHREAD_KILL
+
 /* Define to 1 if you have the `pthread_mutex_destroy' function. */
 #undef HAVE_PTHREAD_MUTEX_DESTROY
 
@@ -269,6 +294,9 @@
 /* Define to 1 if you have the `pthread_mutex_unlock' function. */
 #undef HAVE_PTHREAD_MUTEX_UNLOCK
 
+/* Define to 1 if you have the `pthread_sigmask' function. */
+#undef HAVE_PTHREAD_SIGMASK
+
 /* Define to 1 if you have the `pwrite' function. */
 #undef HAVE_PWRITE
 
@@ -280,6 +308,24 @@
 
 /* Define to 1 if you have the `setsockopt' function. */
 #undef HAVE_SETSOCKOPT
+
+/* Define to 1 if you have the `shutdown' function. */
+#undef HAVE_SHUTDOWN
+
+/* Define to 1 if you have the `sigaddset' function. */
+#undef HAVE_SIGADDSET
+
+/* Define to 1 if you have the `sigemptyset' function. */
+#undef HAVE_SIGEMPTYSET
+
+/* Define to 1 if you have the <signal.h> header file. */
+#undef HAVE_SIGNAL_H
+
+/* Define to 1 if you have the `sigtimedwait' function. */
+#undef HAVE_SIGTIMEDWAIT
+
+/* Define to 1 if you have the `sigwait' function. */
+#undef HAVE_SIGWAIT
 
 /* Define to 1 if you have the `sleep' function. */
 #undef HAVE_SLEEP
