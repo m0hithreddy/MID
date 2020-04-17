@@ -35,6 +35,7 @@ struct unit_info
 	pthread_t unit_id;
 	pthread_mutex_t lock;
 	sigset_t sync_mask;
+	pthread_t p_tid;
 	char* file;
 	char* up_file;
 	char* if_name;

@@ -387,6 +387,7 @@ int main(int argc, char **argv)
 	sigemptyset(&base_unit_info->sync_mask);
 	sigaddset(&base_unit_info->sync_mask,SIGRTMIN);
 
+	base_unit_info->p_tid=pthread_self();
 	base_unit_info->if_name=ok_net_if[0].name;
 	base_unit_info->scheme=fin_scheme;
 	base_unit_info->host=fin_host;
@@ -428,7 +429,7 @@ int main(int argc, char **argv)
 	struct signal_handler_info* s_hd_info=(struct signal_handler_info*)calloc(1,sizeof(struct signal_handler_info));
 
 	s_hd_info->quit=0;
-	s_hd_info->ptid=pthread_self();
+	s_hd_info->p_tid=pthread_self();
 
 	sigemptyset(&s_hd_info->mask);
 	sigaddset(&s_hd_info->mask,SIGINT);
@@ -584,7 +585,16 @@ int main(int argc, char **argv)
 			units_len=units_bag->n_pockets;
 
 			if(sigtimedwait(&sync_mask,NULL,&sleep_time)!=-1)
-				break;
+			{
+				if(s_hd_info->quit) //User interrupt
+					break;
+
+				/* else interrupted by paused unit, may be there is decrease in interface utilization.
+				 *
+				 * NOTE: Since we are using SIGRTMIN and general behavior is to queue all the pending signals,
+				 * it is guaranteed main() hears to every of its threads.
+				 */
+			}
 
 			current=get_interface_report(units,units_len,ok_net_if,ok_net_if_len,prev);
 
@@ -860,7 +870,7 @@ void* signal_handler(void* v_s_hd_info)
 
 	pthread_mutex_unlock(&s_hd_info->lock);
 
-	pthread_kill(s_hd_info->ptid,SIGRTMIN);
+	pthread_kill(s_hd_info->p_tid,SIGRTMIN);
 
 	return NULL;
 }

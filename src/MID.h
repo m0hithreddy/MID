@@ -34,7 +34,7 @@ extern FILE* u_fp;
 struct signal_handler_info
 {
 	pthread_t tid;
-	pthread_t ptid;
+	pthread_t p_tid;
 	int quit;
 	sigset_t mask;
 	pthread_mutex_t lock;

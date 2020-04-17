@@ -93,7 +93,7 @@ void* unit(void* info)
 
 				pthread_mutex_unlock(&unit_info->lock);
 
-				continue;
+				goto signal_parent;
 			}
 		}
 
@@ -201,7 +201,8 @@ void* unit(void* info)
 
 			pthread_mutex_unlock(&unit_info->lock);
 
-			continue;
+			goto signal_parent;
+
 		}
 
 		// Determine the file and write the over eaten data and remaining download data to the file
@@ -328,6 +329,9 @@ void* unit(void* info)
 
 		pthread_mutex_unlock(&unit_info->lock);
 
+		signal_parent:
+
+		pthread_kill(unit_info->p_tid,SIGRTMIN);
 	}
 
 	self_repair:
@@ -351,6 +355,7 @@ void* unit(void* info)
 
 	pthread_mutex_unlock(&unit_info->lock);
 
+	pthread_kill(unit_info->p_tid,SIGRTMIN);
 	return NULL;
 
 	fatal_error:
@@ -362,6 +367,7 @@ void* unit(void* info)
 
 	pthread_mutex_unlock(&unit_info->lock);
 
+	pthread_kill(unit_info->p_tid,SIGRTMIN);
 	return NULL;
 }
 
