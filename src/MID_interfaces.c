@@ -201,6 +201,31 @@ struct network_interface** get_network_interfaces()
 
 	net_if[counter]=NULL;
 
-	return net_if;
+	if(args->include_ifs_count)
+		sort(net_if,sizeof(struct network_interface*),0,counter-1,compare_network_interfaces);
 
+	return net_if;
+}
+
+void* compare_network_interfaces(void* a,void* b)
+{
+	int* res=(int*)malloc(sizeof(int));
+
+	for(long i=0;i<args->include_ifs_count;i++) // Should return with in the loop;
+	{
+		if(!strcmp(args->include_ifs[i],(*(struct network_interface**)a)->name))
+		{
+			*res=1;
+			return (void*)res;
+		}
+
+		if(!strcmp(args->include_ifs[i],(*(struct network_interface**)b)->name))
+		{
+			*res=0;
+			return (void*)res;
+		}
+	}
+
+	*res=0;
+	return res;
 }

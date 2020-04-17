@@ -20,4 +20,6 @@ struct network_interface
 
 struct network_interface** get_network_interfaces(); /* struct network_interfaces[end]==NULL */
 
+void* compare_network_interfaces(void* a,void* b);
+
 #endif /* MID_INTERFACES_H_ */
