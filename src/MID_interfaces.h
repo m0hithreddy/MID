@@ -18,6 +18,6 @@ struct network_interface
 	sa_family_t family;    /* address family (e.g., AF_INET, AF_INET6) */
 };
 
-struct network_interface** get_net_if_info(char** include_ifs,long include_ifs_count,char** exclude_ifs,long exclude_ifs_count); /* struct network_interfaces[end]==NULL */
+struct network_interface** get_network_interfaces(); /* struct network_interfaces[end]==NULL */
 
 #endif /* MID_INTERFACES_H_ */

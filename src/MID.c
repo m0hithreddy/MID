@@ -101,7 +101,7 @@ int main(int argc, char **argv)
 
 	// Get Network Interfaces Info and Check whether Server is accessible or not
 
-	struct network_interface** net_if=get_net_if_info(args->include_ifs,args->include_ifs_count,args->exclude_ifs,args->exclude_ifs_count);
+	struct network_interface** net_if=get_network_interfaces();
 
 	if(net_if[0]==NULL)
 		mid_flag_exit1(1,"MID: No network-interface found for downloading. Exiting...\n\n");

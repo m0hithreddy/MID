@@ -8,6 +8,7 @@
 #include"MID_interfaces.h"
 #include"MID_structures.h"
 #include"MID_functions.h"
+#include"MID.h"
 #include<string.h>
 
 #define _GNU_SOURCE     /* To get defns of NI_MAXSERV and NI_MAXHOST */
@@ -20,7 +21,7 @@
 #include <unistd.h>
 #include <linux/if_link.h>
 
-struct network_interface** get_net_if_info(char** include_ifs,long include_ifs_count,char** exclude_ifs,long exclude_ifs_count)
+struct network_interface** get_network_interfaces()
 {
 	struct ifaddrs *ifaddr, *ifa;
 	int family, s, n;
@@ -42,31 +43,31 @@ struct network_interface** get_net_if_info(char** include_ifs,long include_ifs_c
 		if (ifa->ifa_addr == NULL)
 			continue;
 
-		if(include_ifs_count>0 && include_ifs!=NULL)
+		if(args->include_ifs_count>0 && args->include_ifs!=NULL)
 		{
-			int i=0;
+			long i=0;
 
-			for( ;i<include_ifs_count && include_ifs[i]!=NULL ;i++)
+			for( ;i<args->include_ifs_count && args->include_ifs[i]!=NULL ;i++)
 			{
-				if(!strcmp(include_ifs[i],ifa->ifa_name))
+				if(!strcmp(args->include_ifs[i],ifa->ifa_name))
 					break;
 			}
 
-			if(i>=include_ifs_count)
+			if(i>=args->include_ifs_count)
 				continue;
 		}
 
-		if(exclude_ifs_count>0 && exclude_ifs!=NULL)
+		if(args->exclude_ifs_count>0 && args->exclude_ifs!=NULL)
 		{
-			int i=0;
+			long i=0;
 
-			for( ;i<exclude_ifs_count && exclude_ifs[i]!=NULL ;i++)
+			for( ;i<args->exclude_ifs_count && args->exclude_ifs[i]!=NULL ;i++)
 			{
-				if(!strcmp(exclude_ifs[i],ifa->ifa_name))
+				if(!strcmp(args->exclude_ifs[i],ifa->ifa_name))
 					break;
 			}
 
-			if(i<exclude_ifs_count)
+			if(i<args->exclude_ifs_count)
 				continue;
 		}
 
