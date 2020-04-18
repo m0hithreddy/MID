@@ -394,6 +394,7 @@ int main(int argc, char **argv)
 	base_unit_info->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
 	base_unit_info->report_len=ok_net_if_len;
 	base_unit_info->max_unit_retries=args->max_unit_retries;
+	base_unit_info->fatal_error=(int*)calloc(1,sizeof(int));
 	base_unit_info->resume=1;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
 	base_unit_info->cli_info=base_socket_info;
@@ -594,6 +595,9 @@ int main(int argc, char **argv)
 				 * NOTE: Since we are using SIGRTMIN and general behavior is to queue all the pending signals,
 				 * it is guaranteed main() hears to every of its threads.
 				 */
+
+				if(*base_unit_info->fatal_error)
+					goto idle_unit;
 			}
 
 			current=get_interface_report(units,units_len,ok_net_if,ok_net_if_len,prev);
@@ -624,6 +628,8 @@ int main(int argc, char **argv)
 
 				goto fill_unit;
 			}
+
+			idle_unit:
 
 			idle=idle_unit(units,units_len);
 

@@ -1057,7 +1057,7 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --interfaces nic1,nic2...              -i nic1,nic2...       Network-interfaces which are used in the file download. \n");
 	fprintf(stderr,"   --exclude-interfaces nic1,nic2...      -ni nic1,nic2...      Network-interfaces which are excluded from the file download. \n");
 	fprintf(stderr,"   --help                                 -h                    Print this help message. \n");
-	fprintf(stderr,"*  --url URL                              -u URL                URL to be used in the download. \n");
+	fprintf(stderr,"   --url URL                              -u URL                URL to be used in the download. \n");
 	fprintf(stderr,"   --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. \n");
 	fprintf(stderr,"   --max-parallel-downloads x             -n x                  At max x parallel connections are opened. \n");
 	fprintf(stderr,"   --max-unit-retries x                   -ur x                 At max x retries are made by a unit to download a chunk. \n");
@@ -1084,8 +1084,6 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --vverbose                             -vv                   Print the very verbose information. \n");
 	fprintf(stderr,"   --surpass-root-check                   -s                    If had the sufficient permissions, use -s to surpass the root-check. \n");
 	fprintf(stderr,"   --conf file                            -c file               Specify the conf file. Preference order: cmd_line > conf_file > default_values. \n");
-	fprintf(stderr,"\n");
-	fprintf(stderr,"   * marked arguments are mandatory \n");
 	fprintf(stderr,"\n");
 	fprintf(stderr,"Project homepage: [ %s ]",PACKAGE_URL);
 	fprintf(stderr,"\n\n");

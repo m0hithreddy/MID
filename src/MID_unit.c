@@ -352,6 +352,7 @@ void* unit(void* info)
 	}
 
 	unit_info->err_flag=1;
+	*unit_info->fatal_error=1;
 
 	pthread_mutex_unlock(&unit_info->lock);
 
@@ -364,6 +365,7 @@ void* unit(void* info)
 
 	unit_info->err_flag=1;
 	unit_info->resume=0;
+	*unit_info->fatal_error=1;
 
 	pthread_mutex_unlock(&unit_info->lock);
 
@@ -497,18 +499,12 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 		return NULL;
 
 	struct unit_info* err;
+	struct unit_info* idle=NULL;
 
 	for(long i=0;i<units_len;i++)
 	{
 
 		pthread_mutex_lock(&units[i]->lock);
-
-		if(units [i]->resume==1 || units[i]->self_repair==1)
-		{
-			pthread_mutex_unlock(&units[i]->lock);
-
-			continue;
-		}
 
 		if(units[i]->err_flag==1)
 		{
@@ -522,18 +518,25 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 				return units[i];
 		}
 
-		if(units[i]->resume==0)
+		if(idle==NULL)
 		{
-			pthread_mutex_unlock(&units[i]->lock);
+			if(units [i]->resume==1 || units[i]->self_repair==1)
+			{
+				pthread_mutex_unlock(&units[i]->lock);
 
-			return units[i];
+				continue;
+			}
+
+			if(units[i]->resume==0)
+			{
+				idle=units[i];
+			}
 		}
 
 		pthread_mutex_unlock(&units[i]->lock);
 	}
 
-	return NULL;
-
+	return idle;
 }
 
 void scheduler(struct scheduler_info* sch_info)
