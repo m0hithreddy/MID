@@ -2,9 +2,19 @@
 
 -> Implementing own URL parser
 
--> When --interface option is used, use the interfaces in the order user specified.
-
 -> Fallback to normal download mode if program is not invoked by root user
+
+-> At low download speeds, user interrupts have no effect because of thread being blocked in system calls, need to fix it.
+
+-> In some cases, max parallel downloads crossing the given limit, need to fix it.
+
+-> MID hangs, when resumed a download which has an in between left over range and no left over range at the end (*,content_length-1).
+
+-> When err_flag is set (not the fatal_error), some times it is not handled due to scheduler decesions, need to fix it.
+
+-> Requests arised from different interface may be redirected, if redirected follow them before starting download in MID_unit.
+ 
+-> Support for option -n taking per interface connections limit. 
 
 -> IPV6 support
 
