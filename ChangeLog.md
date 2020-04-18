@@ -39,4 +39,18 @@
   * Made JUST_RECEIVE obsolete in HTTP API.
   
   * Performance updates and bug fixes.
+
+# [v1.3](https://github.com/m0hithreddy/MID/tree/v1.2) (2020-04-18) (Critical Update)
+
+* ###### Mohith Reddy < m.mohithreddy99@gmail.com >
   
+  * Bug Fix: Errors reported by MID_unit were been overlooked by main() because of scheduler decesions, now fixed.
+  
+  * Bug Fix: Scheduler behaving wrongly at the low download speeds, fixed it now.
+  
+  * Performance Update: Due to the scheduling delays higher bandwidth interfaces were being idle after they are done with their chunk, now fixed it signaling main().
+
+  * When --interfaces option is specified, use the interfaces in the order requested by the user.
+  
+  * get_net_if_info(char\*\*,long\*,char\*\*,long\*) --> get_network_interfaces()
+    
