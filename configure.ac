@@ -1,7 +1,7 @@
 
 # Initate configure.ac 
 
-AC_INIT(MID,[1.2],,,[https://github.com/m0hithreddy/MID])
+AC_INIT(MID,[1.3],,,[https://github.com/m0hithreddy/MID])
 
 # Safety check in case user overwritten --srcdir
 
