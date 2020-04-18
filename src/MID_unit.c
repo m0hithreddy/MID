@@ -597,7 +597,7 @@ void scheduler(struct scheduler_info* sch_info)
 
 		for(long i=0;i<sch_info->ifs_len;i++)
 		{
-			if( sch_info->current[i].speed +SCHEDULER_THRESHOLD_SPEED < sch_info->max_speed[i] && sch_info->current[i].connections <= sch_info->max_connections[i])
+			if( sch_info->current[i].speed + (sch_info->max_speed[i]>2*SCHEDULER_THRESHOLD_SPEED ? SCHEDULER_THRESHOLD_SPEED:sch_info->max_speed[i]/2 ) < sch_info->max_speed[i] && sch_info->current[i].connections <= sch_info->max_connections[i])
 			{
 				sch_info->sch_id=i;
 
