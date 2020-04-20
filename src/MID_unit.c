@@ -186,7 +186,7 @@ void* unit(void* info)
 
 		if(s_response==NULL)
 		{
-			goto fatal_error;
+			goto self_repair;
 		}
 
 		// Check for HTTP response status code
