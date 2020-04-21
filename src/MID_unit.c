@@ -22,7 +22,6 @@
 #include<time.h>
 #include<pthread.h>
 #include<signal.h>
-#include<assert.h>
 
 void* unit(void* info)
 {
@@ -81,8 +80,6 @@ void* unit(void* info)
 
 		if(unit_info->pc_flag)
 		{
-			assert(unit_info->range->end-unit_info->range->start+1>=0);
-
 			if(unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
 			{
 				char range[HTTP_REQUEST_HEADERS_MAX_LEN];
@@ -270,8 +267,6 @@ void* unit(void* info)
 				pthread_mutex_lock(&unit_info->lock); // write the data to file, and update unit_info fields.
 				rem_download=unit_info->range->end-unit_info->range->start+1-unit_info->current_size;
 
-				assert(rem_download>=0);
-
 				pthread_mutex_lock(&write_lock);
 				wr_status=pwrite(fileno(fp),en_info->out,rem_download < en_info->out_len ? rem_download : en_info->out_len,unit_info->range->start+unit_info->current_size);
 				pthread_mutex_unlock(&write_lock);
@@ -307,8 +302,6 @@ void* unit(void* info)
 		close(sockfd);
 
 		pthread_mutex_lock(&unit_info->lock);
-		assert(unit_info->range->end-unit_info->range->start+1-unit_info->current_size>=0); // should not write more than the requested range.
-
 		unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1; // Update left over range entries.
 		unit_info->current_size=0;
 
@@ -518,8 +511,6 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 		pthread_mutex_lock(&units[i]->lock);
 		if(units[i]->resume==0)
 		{
-			assert(units[i]->err_flag==0 && units[i]->self_repair==0);
-
 			pthread_mutex_unlock(&units[i]->lock);
 			return units[i];
 		}

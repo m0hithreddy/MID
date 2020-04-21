@@ -30,7 +30,6 @@
 #include<signal.h>
 #include<sys/stat.h>
 #include<sys/types.h>
-#include<assert.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -626,8 +625,6 @@ int main(int argc, char **argv)
 
 			progress=get_units_progress(units, units_len);
 
-			assert(progress->content_length<=content_length);
-
 			if(progress->content_length==content_length) // Download complete
 				break;
 
@@ -689,8 +686,6 @@ int main(int argc, char **argv)
 
 			pthread_mutex_lock(&largest->lock);
 			long rem_chunk=largest->range->end-largest->range->start+1-largest->current_size;
-
-			assert(rem_chunk>=0);
 
 			if(rem_chunk<=1)
 			{
