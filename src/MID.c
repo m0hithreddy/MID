@@ -1039,22 +1039,11 @@ void finalize_resume()
 	ranges=en->l_ranges;
 	n_ranges=en->n_l_ranges;
 
-	if(!n_ranges)
-	{
-		ranges=(struct http_range*)malloc(sizeof(struct http_range));
-		ranges->start=en->content_length;
-		ranges->end=en->content_length-1;
-
-		n_ranges=1;
-	}
-
 	if(resume_bag==NULL)
 		resume_bag=create_data_bag();
 
 	struct unit_info* new;
 	struct network_data n_data;
-
-
 
 	for(long i=0;i<n_ranges;i++)
 	{
@@ -1085,7 +1074,34 @@ void finalize_resume()
 		n_data.len=sizeof(struct unit_info*);
 
 		place_data(resume_bag,&n_data);
-
 	}
 
+	if(n_ranges==0 || ranges[n_ranges-1].end!=en->content_length-1) // One already fetched range is not included when there is not left over range with range.end==content_length-1.
+	{
+		new=unitdup(base_unit_info);
+
+		// Range to be fetched. (indeed, no range need to be fetched)
+
+		new->range->start=en->content_length;
+		new->range->end=en->content_length-1;
+
+		// Already fetched range (for sake of progress indicator)
+
+		append_data_pocket(new->unit_ranges,sizeof(long));
+		new->unit_ranges->end->len=sizeof(long);
+
+		if(n_ranges==0)
+			*(long*)new->unit_ranges->end->data=0;
+		else
+			*(long*)new->unit_ranges->end->data=ranges[n_ranges-1].end+1;
+
+		append_data_pocket(new->unit_ranges,sizeof(long));
+		new->unit_ranges->end->len=sizeof(long);
+		*(long*)new->unit_ranges->end->data=en->content_length-1;
+
+		n_data.data=(void*)&new;
+		n_data.len=sizeof(struct unit_info*);
+
+		place_data(resume_bag,&n_data);
+	}
 }
