@@ -46,11 +46,18 @@ void* unit(void* info)
 		if(unit_info->quit==1 || (unit_info->resume==0 && unit_info->pc_flag==0))
 			return NULL;
 
+		if(unit_info->err_flag==1)
+		{
+			sigwait(&unit_info->sync_mask,&signo);
+			unit_quit();
+		}
+
 		if(unit_info->self_repair==1)
 		{
 			sleep_time.tv_sec=unit_info->healing_time;
 
 			sigtimedwait(&unit_info->sync_mask,NULL,&sleep_time);
+			unit_quit();
 
 			pthread_mutex_lock(&unit_info->lock);
 
@@ -65,11 +72,8 @@ void* unit(void* info)
 			retries_count=0;
 
 			sigwait(&unit_info->sync_mask,&signo);
-
+			unit_quit();
 		}
-
-		if(unit_info->quit==1)
-			return NULL;
 
 		pthread_mutex_lock(&unit_info->lock);
 
@@ -105,8 +109,7 @@ void* unit(void* info)
 
 		struct network_data* request=create_http_request(unit_info->s_request);
 
-		if(unit_info->quit==1)
-			return NULL;
+		unit_quit();
 
 		int sockfd=open_connection(unit_info->cli_info,unit_info->servaddr);
 
@@ -116,9 +119,7 @@ void* unit(void* info)
 			goto self_repair;
 		}
 
-		if(unit_info->quit==1)
-			return NULL;
-
+		unit_quit();
 
 		SSL* ssl;
 		int http_flag;
@@ -139,8 +140,7 @@ void* unit(void* info)
 			}
 		}
 
-		if(unit_info->quit==1)
-			return NULL;
+		unit_quit();
 
 		// Read the response and eat the response headers
 
@@ -152,8 +152,7 @@ void* unit(void* info)
 
 		while(1)
 		{
-			if(unit_info->quit==1)
-				return NULL;
+			unit_quit();
 
 			if(http_flag)
 				status=read(sockfd,eat_buf,MAX_TRANSACTION_SIZE);
@@ -245,15 +244,9 @@ void* unit(void* info)
 
 		while(1)
 		{
+			unit_quit();
 
 			pthread_mutex_lock(&unit_info->lock);
-
-			if(unit_info->quit==1)
-			{
-				pthread_mutex_unlock(&unit_info->lock);
-
-				return NULL;
-			}
 
 			en_info->in=data_buf;
 			en_info->in_len=0;

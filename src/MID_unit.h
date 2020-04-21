@@ -30,6 +30,14 @@
 #include<time.h>
 #include<pthread.h>
 
+#define unit_quit()\
+	do\
+	{\
+		if(unit_info->quit)\
+			return NULL;\
+	}while(0)
+
+
 struct unit_info
 {
 	pthread_t unit_id;
