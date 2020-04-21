@@ -22,6 +22,7 @@
 #include<time.h>
 #include<pthread.h>
 #include<signal.h>
+#include<assert.h>
 
 void* unit(void* info)
 {
@@ -373,33 +374,37 @@ void* unit(void* info)
 	return NULL;
 }
 
-struct unit_info* handle_unit_errors(struct unit_info* unit)
+struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 {
-	pthread_mutex_lock(&unit->lock);
-
-	if(unit->err_flag==0)
+	for(long i=0;i<units_len;i++)
 	{
-		pthread_mutex_unlock(&unit->lock);
-		return NULL;
+		pthread_mutex_lock(&units[i]->lock);
+		if(units[i]->err_flag==0)
+		{
+			pthread_mutex_unlock(&units[i]->lock);
+			continue;
+		}
+
+		if(units[i]->status_code==503) // Service Temporarily Unavailable
+		{
+			assert(units[i]->resume==1 && units[i]->self_repair==0 && units[i]->err_flag==1);
+
+			units[i]->err_flag=0;
+			units[i]->self_repair=1;
+			units[i]->healing_time=ERR_CODE_503_HEALING_TIME;
+			pthread_mutex_unlock(&units[i]->lock);
+
+			pthread_kill(units[i]->unit_id,SIGRTMIN);
+			continue;
+		}
+		else
+		{
+			pthread_mutex_unlock(&units[i]->lock);
+			return units[i];
+		}
 	}
 
-	if(unit->status_code==503) // Service Temporarily Unavailable
-	{
-		unit->err_flag=0;
-		unit->self_repair=1;
-		unit->healing_time=ERR_CODE_503_HEALING_TIME;
-
-		pthread_mutex_unlock(&unit->lock);
-
-		return NULL;
-	}
-
-	else
-	{
-		pthread_mutex_unlock(&unit->lock);
-		return unit;
-	}
-
+	return NULL;
 }
 
 struct interface_report* get_interface_report(struct unit_info** units,long units_len,struct network_interface* net_if,long if_len,struct interface_report* prev)
@@ -498,45 +503,20 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 	if(units==NULL)
 		return NULL;
 
-	struct unit_info* err;
-	struct unit_info* idle=NULL;
-
 	for(long i=0;i<units_len;i++)
 	{
-
 		pthread_mutex_lock(&units[i]->lock);
-
-		if(units[i]->err_flag==1)
+		if(units[i]->resume==0)
 		{
+			assert(units[i]->err_flag==0 && units[i]->self_repair==0);
+
 			pthread_mutex_unlock(&units[i]->lock);
-
-			err=handle_unit_errors(units[i]);
-
-			if(err==NULL)
-				continue;
-			else
-				return units[i];
+			return units[i];
 		}
-
-		if(idle==NULL)
-		{
-			if(units [i]->resume==1 || units[i]->self_repair==1)
-			{
-				pthread_mutex_unlock(&units[i]->lock);
-
-				continue;
-			}
-
-			if(units[i]->resume==0)
-			{
-				idle=units[i];
-			}
-		}
-
 		pthread_mutex_unlock(&units[i]->lock);
 	}
 
-	return idle;
+	return NULL;
 }
 
 void scheduler(struct scheduler_info* sch_info)

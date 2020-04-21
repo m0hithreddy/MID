@@ -597,7 +597,14 @@ int main(int argc, char **argv)
 				 */
 
 				if(*base_unit_info->fatal_error)
-					goto idle_unit;
+				{
+					err=handle_unit_errors(units,units_len);
+
+					if(err!=NULL)
+						break;
+
+					continue;
+				}
 			}
 
 			current=get_interface_report(units,units_len,ok_net_if,ok_net_if_len,prev);

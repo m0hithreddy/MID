@@ -111,7 +111,7 @@ struct scheduler_info
 
 void* unit(void* info);
 
-struct unit_info* handle_unit_errors(struct unit_info* unit);
+struct unit_info* handle_unit_errors(struct unit_info** units,long units_len);
 
 struct interface_report* get_interface_report(struct unit_info** units,long units_len,struct network_interface* net_if,long if_len,struct interface_report* prev);
 
