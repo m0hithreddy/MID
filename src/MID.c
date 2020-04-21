@@ -30,6 +30,7 @@
 #include<signal.h>
 #include<sys/stat.h>
 #include<sys/types.h>
+#include<assert.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -615,6 +616,8 @@ int main(int argc, char **argv)
 
 			progress=get_units_progress(units, units_len);
 
+			assert(progress->content_length<=content_length);
+
 			if(progress->content_length==content_length) // Download complete
 				break;
 
@@ -639,8 +642,6 @@ int main(int argc, char **argv)
 
 				goto fill_unit;
 			}
-
-			idle_unit:
 
 			idle=idle_unit(units,units_len);
 
@@ -677,8 +678,15 @@ int main(int argc, char **argv)
 			// Break the largest unit into two
 
 			pthread_mutex_lock(&largest->lock);
-
 			long rem_chunk=largest->range->end-largest->range->start+1-largest->current_size;
+
+			assert(rem_chunk>=0);
+
+			if(rem_chunk<=1)
+			{
+				pthread_mutex_unlock(&largest->lock);
+				continue;
+			}
 
 			update->range->end=largest->range->end;
 
@@ -688,7 +696,6 @@ int main(int argc, char **argv)
 				largest->range->end=largest->range->start+largest->current_size+(rem_chunk/2)-1;
 
 			update->range->start=largest->range->end+1;
-
 			pthread_mutex_unlock(&largest->lock);
 
 			fill_unit:
