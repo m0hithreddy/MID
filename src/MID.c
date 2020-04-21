@@ -40,10 +40,11 @@
 #include<openssl/md5.h>
 #endif
 
-struct mid_args* args;
-
+struct mid_args* args=NULL;
 FILE* o_fp=NULL;
 FILE* u_fp=NULL;
+pthread_mutex_t err_lock;
+long fatal_error=0;
 
 int handler_registered=0;
 
@@ -58,6 +59,8 @@ void* entry=NULL;
 
 int main(int argc, char **argv)
 {
+
+	pthread_mutex_init(&err_lock,NULL);
 
 	args=parse_mid_args(argv,argc);
 
@@ -394,7 +397,6 @@ int main(int argc, char **argv)
 	base_unit_info->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
 	base_unit_info->report_len=ok_net_if_len;
 	base_unit_info->max_unit_retries=args->max_unit_retries;
-	base_unit_info->fatal_error=(int*)calloc(1,sizeof(int));
 	base_unit_info->resume=1;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
 	base_unit_info->cli_info=base_socket_info;
@@ -596,8 +598,10 @@ int main(int argc, char **argv)
 				 * it is guaranteed main() hears to every of its threads.
 				 */
 
-				if(*base_unit_info->fatal_error)
+				pthread_mutex_lock(&err_lock);
+				if(fatal_error)
 				{
+					pthread_mutex_unlock(&err_lock);
 					err=handle_unit_errors(units,units_len);
 
 					if(err!=NULL)
@@ -605,6 +609,7 @@ int main(int argc, char **argv)
 
 					continue;
 				}
+				pthread_mutex_unlock(&err_lock);
 			}
 
 			current=get_interface_report(units,units_len,ok_net_if,ok_net_if_len,prev);

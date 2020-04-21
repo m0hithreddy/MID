@@ -19,6 +19,7 @@
 #include"MID_http.h"
 #include<stdio.h>
 #include<sys/file.h>
+#include<pthread.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -30,6 +31,8 @@
 extern struct mid_args* args;
 extern FILE* o_fp;
 extern FILE* u_fp;
+extern pthread_mutex_t err_lock;
+extern long fatal_error;
 
 struct signal_handler_info
 {

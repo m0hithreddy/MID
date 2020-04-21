@@ -191,18 +191,23 @@ void* unit(void* info)
 
 		// Check for HTTP response status code
 
+		pthread_mutex_lock(&unit_info->lock);
+		unit_info->status_code=atoi(s_response->status_code);
+
 		if(s_response->status_code[0]!='2')
 		{
-			pthread_mutex_lock(&unit_info->lock);
-
-			unit_info->status_code=atoi(s_response->status_code);
 			unit_info->err_flag=1;
-
 			pthread_mutex_unlock(&unit_info->lock);
+
+			pthread_mutex_lock(&err_lock);
+			fatal_error=fatal_error+1;
+			pthread_mutex_unlock(&err_lock);
 
 			goto signal_parent;
 
 		}
+		pthread_mutex_unlock(&unit_info->lock);
+
 
 		// Determine the file and write the over eaten data and remaining download data to the file
 
@@ -306,20 +311,16 @@ void* unit(void* info)
 		shutdown(sockfd,SHUT_RDWR);
 
 		pthread_mutex_lock(&unit_info->lock);
-
 		if(status<0 || unit_info->current_size < unit_info->range->end-unit_info->range->start+1)
 		{
-
 			unit_info->range->start=*(long*)unit_info->unit_ranges->end->data+1;
 			unit_info->current_size=0;
-
 			pthread_mutex_unlock(&unit_info->lock);
 
 			goto self_repair;
 		}
 
 		unit_info->resume=0;
-
 		pthread_mutex_unlock(&unit_info->lock);
 
 		signal_parent:
@@ -330,22 +331,22 @@ void* unit(void* info)
 	self_repair:
 
 	pthread_mutex_lock(&unit_info->lock);
-
 	if(retries_count<unit_info->max_unit_retries)
 	{
 		retries_count++;
 		unit_info->self_repair=1;
 		unit_info->healing_time=unit_info->unit_retry_sleep_time;
-
 		pthread_mutex_unlock(&unit_info->lock);
 
 		goto init;
 	}
 
 	unit_info->err_flag=1;
-	*unit_info->fatal_error=1;
-
 	pthread_mutex_unlock(&unit_info->lock);
+
+	pthread_mutex_lock(&err_lock);
+	fatal_error=fatal_error+1;
+	pthread_mutex_unlock(&err_lock);
 
 	pthread_kill(unit_info->p_tid,SIGRTMIN);
 	return NULL;
@@ -353,11 +354,12 @@ void* unit(void* info)
 	fatal_error:
 
 	pthread_mutex_lock(&unit_info->lock);
-
 	unit_info->err_flag=1;
-	*unit_info->fatal_error=1;
-
 	pthread_mutex_unlock(&unit_info->lock);
+
+	pthread_mutex_lock(&err_lock);
+	fatal_error=fatal_error+1;
+	pthread_mutex_unlock(&err_lock);
 
 	pthread_kill(unit_info->p_tid,SIGRTMIN);
 	return NULL;
@@ -365,7 +367,10 @@ void* unit(void* info)
 
 struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 {
-	for(long i=0;i<units_len;i++)
+	if(units==NULL)
+		return NULL;
+
+	for(long i=0;i<units_len && units[i]!=NULL;i++)
 	{
 		pthread_mutex_lock(&units[i]->lock);
 		if(units[i]->err_flag==0)
@@ -384,11 +389,25 @@ struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 			pthread_mutex_unlock(&units[i]->lock);
 
 			pthread_kill(units[i]->unit_id,SIGRTMIN);
-			continue;
+
+			pthread_mutex_lock(&err_lock);
+			assert(fatal_error>0);
+
+			fatal_error=fatal_error-1;
+			pthread_mutex_unlock(&err_lock);
+
+			return NULL;
 		}
 		else
 		{
 			pthread_mutex_unlock(&units[i]->lock);
+
+			pthread_mutex_lock(&err_lock);
+			assert(fatal_error>0);
+
+			fatal_error=fatal_error-1;
+			pthread_mutex_unlock(&err_lock);
+
 			return units[i];
 		}
 	}

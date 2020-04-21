@@ -55,7 +55,6 @@ struct unit_info
 	long* report_size; // Total data fetched by unit from each interface, to compute if_report;
 	long report_len;
 	long max_unit_retries;
-	int* fatal_error;
 	int resume;
 	int quit;
 	int pc_flag;
