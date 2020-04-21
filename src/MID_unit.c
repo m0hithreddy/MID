@@ -29,8 +29,6 @@ void* unit(void* info)
 
 	struct unit_info* unit_info=(struct unit_info*)info;
 
-	unit_info->total_size=0;
-
 	long retries_count=0;
 	int signo;
 
@@ -279,7 +277,6 @@ void* unit(void* info)
 				*(long*)unit_info->unit_ranges->end->data=*(long*)unit_info->unit_ranges->end->data+en_info->out_len;
 			}
 
-			unit_info->total_size=unit_info->total_size+status;
 			unit_info->report_size[unit_info->if_id]=unit_info->report_size[unit_info->if_id]+status;
 
 			if(unit_info->pc_flag)

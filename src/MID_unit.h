@@ -51,7 +51,6 @@ struct unit_info
 	char* host;
 	long if_id;
 	long current_size; // Amount downloaded in a given range
-	long total_size;   // Total data fetched by unit
 	long* report_size; // Total data fetched by unit from each interface, to compute if_report;
 	long report_len;
 	long max_unit_retries;
