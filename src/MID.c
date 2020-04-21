@@ -45,6 +45,7 @@ struct mid_args* args=NULL;
 FILE* o_fp=NULL;
 FILE* u_fp=NULL;
 pthread_mutex_t err_lock;
+pthread_mutex_t write_lock;
 long fatal_error=0;
 
 int handler_registered=0;
@@ -62,6 +63,7 @@ int main(int argc, char **argv)
 {
 
 	pthread_mutex_init(&err_lock,NULL);
+	pthread_mutex_init(&write_lock,NULL);
 
 	args=parse_mid_args(argv,argc);
 
@@ -314,10 +316,14 @@ int main(int argc, char **argv)
 
 	// Check for Range request support
 
-	int pc_flag=1;
+	int pc_flag=0;
+	long content_length=0;
 
-	if(gl_s_response->accept_ranges==NULL || strcmp(gl_s_response->accept_ranges,"bytes") || gl_s_response->content_length==NULL)
-		pc_flag=0;
+	if(gl_s_response->accept_ranges!=NULL && strcmp(gl_s_response->accept_ranges,"bytes")==0  && gl_s_response->content_length!=NULL)
+	{
+		pc_flag=1;
+		content_length=atol(gl_s_response->content_length);
+	}
 
 	//Final values for Host Port and URL scheme after redirects
 
@@ -421,11 +427,22 @@ int main(int argc, char **argv)
 	if(!args->quiet_flag && gl_s_response->content_encoding == NULL)
 	{
 		printf("\nOpening File: %s\n",base_unit_info->file);
+
+		if(!resume_status && pc_flag)
+		{
+			ftruncate(fileno(o_fp),content_length);
+		}
 	}
 	else if(!args->quiet_flag)
 	{
 		printf("\nOpening Unprocessed File: %s\n",base_unit_info->up_file);
+		if(!resume_status && pc_flag)
+		{
+			ftruncate(fileno(u_fp),content_length);
+		}
 	}
+
+
 
 	/* Registering thread to handle signals */
 
@@ -463,7 +480,6 @@ int main(int argc, char **argv)
 	struct unit_info* err=NULL;
 	time_t start_time;
 	long downloaded_length=0;
-	long content_length=0;
 	struct timespec sleep_time;
 	sigset_t sync_mask; // For handling user interrupts
 	sigemptyset(&sync_mask);
@@ -531,12 +547,6 @@ int main(int argc, char **argv)
 
 	else // If range requests are supported
 	{
-
-		content_length=atol(gl_s_response->content_length);
-
-		if(!args->quiet_flag)
-			s_progress_info->content_length=content_length;
-
 		//Initiating the first range request
 
 		if(!resume_status)

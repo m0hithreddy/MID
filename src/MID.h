@@ -32,6 +32,7 @@ extern struct mid_args* args;
 extern FILE* o_fp;
 extern FILE* u_fp;
 extern pthread_mutex_t err_lock;
+extern pthread_mutex_t write_lock;
 extern long fatal_error;
 
 struct signal_handler_info

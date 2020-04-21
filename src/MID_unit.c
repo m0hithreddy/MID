@@ -75,7 +75,6 @@ void* unit(void* info)
 
 		pthread_mutex_lock(&unit_info->lock);
 
-		unit_info->current_size=0;
 		time(&unit_info->start_time);
 		unit_info->err_flag=0;
 		unit_info->status_code=0;
@@ -84,6 +83,8 @@ void* unit(void* info)
 
 		if(unit_info->pc_flag)
 		{
+			assert(unit_info->range->end-unit_info->range->start+1>=0);
+
 			if(unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
 			{
 				char range[HTTP_REQUEST_HEADERS_MAX_LEN];
@@ -93,7 +94,6 @@ void* unit(void* info)
 			else
 			{
 				unit_info->resume=0;
-
 				pthread_mutex_unlock(&unit_info->lock);
 
 				goto signal_parent;
@@ -253,7 +253,8 @@ void* unit(void* info)
 			unit_info->report_size[unit_info->if_id]=unit_info->report_size[unit_info->if_id]+status;
 			pthread_mutex_unlock(&unit_info->lock);
 
-			unit_quit();
+			if(unit_info->quit)
+				break;
 
 			en_info->in=data_buf;
 			en_info->in_len=0;
@@ -275,7 +276,11 @@ void* unit(void* info)
 
 				assert(rem_download>=0);
 
+				pthread_mutex_lock(&write_lock);
 				wr_status=pwrite(fileno(fp),en_info->out,rem_download < en_info->out_len ? rem_download : en_info->out_len,unit_info->range->start+unit_info->current_size);
+				pthread_mutex_unlock(&write_lock);
+
+				assert(wr_status>=0);
 
 				unit_info->current_size=unit_info->current_size+wr_status;
 				*((long*)unit_info->unit_ranges->end->data)=*((long*)unit_info->unit_ranges->end->data)+wr_status;
@@ -300,8 +305,8 @@ void* unit(void* info)
 			else
 				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
 
-			if(status<=0)
-				break;
+			//if(status<=0)
+			//	break;
 
 		}
 
@@ -310,12 +315,21 @@ void* unit(void* info)
 		shutdown(sockfd,SHUT_RDWR);
 
 		pthread_mutex_lock(&unit_info->lock);
-		if(status<0 || unit_info->current_size < unit_info->range->end-unit_info->range->start+1)
-		{
-			unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1;
-			unit_info->current_size=0;
-			pthread_mutex_unlock(&unit_info->lock);
+		assert(unit_info->range->end-unit_info->range->start+1-unit_info->current_size>=0);
 
+		unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1;
+		unit_info->current_size=0;
+
+		if(unit_info->quit)
+		{
+			unit_info->resume=0;
+			pthread_mutex_unlock(&unit_info->lock);
+			return NULL;
+		}
+
+		if(unit_info->current_size<unit_info->range->end-unit_info->range->start+1)
+		{
+			pthread_mutex_unlock(&unit_info->lock);
 			goto self_repair;
 		}
 
