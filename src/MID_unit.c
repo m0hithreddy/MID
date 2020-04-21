@@ -197,7 +197,6 @@ void* unit(void* info)
 
 			unit_info->status_code=atoi(s_response->status_code);
 			unit_info->err_flag=1;
-			unit_info->resume=0;
 
 			pthread_mutex_unlock(&unit_info->lock);
 
@@ -332,8 +331,6 @@ void* unit(void* info)
 
 	pthread_mutex_lock(&unit_info->lock);
 
-	unit_info->resume=0;
-
 	if(retries_count<unit_info->max_unit_retries)
 	{
 		retries_count++;
@@ -358,7 +355,6 @@ void* unit(void* info)
 	pthread_mutex_lock(&unit_info->lock);
 
 	unit_info->err_flag=1;
-	unit_info->resume=0;
 	*unit_info->fatal_error=1;
 
 	pthread_mutex_unlock(&unit_info->lock);
