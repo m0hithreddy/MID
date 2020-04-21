@@ -37,20 +37,20 @@ void* unit(void* info)
 
 	while(1)
 	{
+		/* Sync and retry mechanisms */
 
 		init:
-		// Syncing and retrying mechanisms
 
-		if(unit_info->quit==1 || (unit_info->resume==0 && unit_info->pc_flag==0))
+		if(unit_info->quit==1 || (unit_info->resume==0 && unit_info->pc_flag==0)) // Initial checks
 			return NULL;
 
-		if(unit_info->err_flag==1)
+		if(unit_info->err_flag==1) // If an probably recoverable error encountered
 		{
 			sigwait(&unit_info->sync_mask,&signo);
 			unit_quit();
 		}
 
-		if(unit_info->self_repair==1)
+		if(unit_info->self_repair==1) // An automatic retry mechanism
 		{
 			sleep_time.tv_sec=unit_info->healing_time;
 
@@ -58,14 +58,12 @@ void* unit(void* info)
 			unit_quit();
 
 			pthread_mutex_lock(&unit_info->lock);
-
 			unit_info->self_repair=0;
 			unit_info->resume=1;
-
 			pthread_mutex_unlock(&unit_info->lock);
 		}
 
-		if(unit_info->resume==0)
+		if(unit_info->resume==0) // Unit is idle, wait for work or termination
 		{
 			retries_count=0;
 
@@ -73,13 +71,13 @@ void* unit(void* info)
 			unit_quit();
 		}
 
-		pthread_mutex_lock(&unit_info->lock);
+		/* Initializations */
 
+		pthread_mutex_lock(&unit_info->lock);
 		time(&unit_info->start_time);
-		unit_info->err_flag=0;
 		unit_info->status_code=0;
 
-		// Creating http/http-range request and sending request
+		// Set the s_request fields
 
 		if(unit_info->pc_flag)
 		{
@@ -101,28 +99,25 @@ void* unit(void* info)
 		}
 
 		unit_info->s_request->method="GET";
-
 		pthread_mutex_unlock(&unit_info->lock);
 
+		/* Create and send the HTTP [range] request */
 
-		struct network_data* request=create_http_request(unit_info->s_request);
+		struct network_data* request=create_http_request(unit_info->s_request); // create request
 
 		unit_quit();
 
-		int sockfd=open_connection(unit_info->cli_info,unit_info->servaddr);
+		int sockfd=open_connection(unit_info->cli_info,unit_info->servaddr); // open connection
 
 		if(sockfd<0)
-		{
-
 			goto self_repair;
-		}
 
 		unit_quit();
 
 		SSL* ssl;
 		int http_flag;
 
-		if(!strcmp(unit_info->scheme,"http"))
+		if(!strcmp(unit_info->scheme,"http")) // send request
 		{
 			http_flag=1;
 			send_http_request(sockfd,request,NULL,JUST_SEND);
@@ -134,13 +129,14 @@ void* unit(void* info)
 
 			if(ssl==NULL)
 			{
+				close(sockfd);
 				goto self_repair;
 			}
 		}
 
 		unit_quit();
 
-		// Read the response and eat the response headers
+		/* Read the response and eat the HTTP response headers */
 
 		struct data_bag* eat_bag=create_data_bag();
 		char* eat_buf=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
@@ -167,32 +163,31 @@ void* unit(void* info)
 
 			struct network_data* tmp_n_data=flatten_data_bag(eat_bag);
 
-			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len)!=NULL)
+			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len)!=NULL) // read until crlfcrlf is encountered.
 				break;
 		}
 
 		if(status<0)
 		{
+			close(sockfd);
 			goto self_repair;
 		}
 
-		// Parse partial response
 
 		n_eat_buf=flatten_data_bag(eat_bag);
 
-		struct http_response* s_response=parse_http_response(n_eat_buf);
+		struct http_response* s_response=parse_http_response(n_eat_buf); //parse the partial response.
 
 		if(s_response==NULL)
 		{
+			close(sockfd);
 			goto self_repair;
 		}
-
-		// Check for HTTP response status code
 
 		pthread_mutex_lock(&unit_info->lock);
 		unit_info->status_code=atoi(s_response->status_code);
 
-		if(s_response->status_code[0]!='2')
+		if(s_response->status_code[0]!='2') // check if response header is valid.
 		{
 			unit_info->err_flag=1;
 			pthread_mutex_unlock(&unit_info->lock);
@@ -201,13 +196,13 @@ void* unit(void* info)
 			fatal_error=fatal_error+1;
 			pthread_mutex_unlock(&err_lock);
 
+			close(sockfd);
 			goto signal_parent;
 
 		}
 		pthread_mutex_unlock(&unit_info->lock);
 
-
-		// Determine the file and write the over eaten data and remaining download data to the file
+		/* Get the file and, write the over eaten data and remaining download data to the file */
 
 		FILE* fp;
 
@@ -216,37 +211,32 @@ void* unit(void* info)
 		else
 			fp=o_fp;
 
-		char* data_buf=eat_buf;
+		char* data_buf=eat_buf; // over eaten data.
+		memcpy(data_buf,s_response->body->data,s_response->body->len);
 		status=s_response->body->len;
 
-		memcpy(data_buf,s_response->body->data,s_response->body->len);
-
-		pthread_mutex_lock(&unit_info->lock);
-
-		append_data_pocket(unit_info->unit_ranges,sizeof(long)); // Creating unit range entry
+		pthread_mutex_lock(&unit_info->lock); // Initialize fetched unit range entries (range.start,range.start-1)
+		append_data_pocket(unit_info->unit_ranges,sizeof(long));
 		unit_info->unit_ranges->end->len=sizeof(long);
 		*((long*)unit_info->unit_ranges->end->data)=unit_info->range->start;
 
 		append_data_pocket(unit_info->unit_ranges,sizeof(long));
 		unit_info->unit_ranges->end->len=sizeof(long);
 		*((long*)unit_info->unit_ranges->end->data)=unit_info->range->start-1;
-
 		pthread_mutex_unlock(&unit_info->lock);
 
-		struct encoding_info* en_info=determine_encodings(s_response->transfer_encoding);
-
+		struct encoding_info* en_info=determine_encodings(s_response->transfer_encoding); // determine the transfer encoding used.
 		if(en_info==NULL)
 		{
-			exit(3);
+			close(sockfd);
+			goto fatal_error;
 		}
 
 		int en_status=EN_OK;
 		long rem_download=0;
 		long wr_status=0;
 
-		// Download data...
-
-		while(1)
+		while(1) // download data...
 		{
 
 			pthread_mutex_lock(&unit_info->lock);
@@ -263,15 +253,21 @@ void* unit(void* info)
 			while(en_info->in_len!=en_info->in_max) //handle encodings
 			{
 
-				if(en_status==EN_END)
+				if(en_status==EN_END) // if encode_handler ended but still more data is given.
+				{
+					close(sockfd);
 					goto fatal_error;
+				}
 
 				en_status=handle_encodings(en_info);
 
-				if(en_status!=EN_OK && en_status!=EN_END)
+				if(en_status!=EN_OK && en_status!=EN_END) // error reported by encode_handler.
+				{
+					close(sockfd);
 					goto fatal_error;
+				}
 
-				pthread_mutex_lock(&unit_info->lock);
+				pthread_mutex_lock(&unit_info->lock); // write the data to file, and update unit_info fields.
 				rem_download=unit_info->range->end-unit_info->range->start+1-unit_info->current_size;
 
 				assert(rem_download>=0);
@@ -280,16 +276,12 @@ void* unit(void* info)
 				wr_status=pwrite(fileno(fp),en_info->out,rem_download < en_info->out_len ? rem_download : en_info->out_len,unit_info->range->start+unit_info->current_size);
 				pthread_mutex_unlock(&write_lock);
 
-				assert(wr_status>=0);
-
 				unit_info->current_size=unit_info->current_size+wr_status;
 				*((long*)unit_info->unit_ranges->end->data)=*((long*)unit_info->unit_ranges->end->data)+wr_status;
 
 				if(unit_info->pc_flag)
 				{
-					assert(unit_info->current_size<=unit_info->range->end-unit_info->range->start+1);
-
-					if(unit_info->current_size==unit_info->range->end-unit_info->range->start+1)
+					if(unit_info->current_size==unit_info->range->end-unit_info->range->start+1) // check if requested range is fetched.
 					{
 						pthread_mutex_unlock(&unit_info->lock);
 						goto end_download;
@@ -298,42 +290,41 @@ void* unit(void* info)
 				pthread_mutex_unlock(&unit_info->lock);
 			}
 
-			// Read Socket data
-
-			if(http_flag)
+			if(http_flag) // Read data from socket.
 				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
 			else
 				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
 
-			//if(status<=0)
-			//	break;
+			if(status<=0)
+				break;
 
 		}
 
+		/* End of the download make unit ready for handling next download or exit */
+
 		end_download:
 
-		shutdown(sockfd,SHUT_RDWR);
+		close(sockfd);
 
 		pthread_mutex_lock(&unit_info->lock);
-		assert(unit_info->range->end-unit_info->range->start+1-unit_info->current_size>=0);
+		assert(unit_info->range->end-unit_info->range->start+1-unit_info->current_size>=0); // should not write more than the requested range.
 
-		unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1;
+		unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1; // Update left over range entries.
 		unit_info->current_size=0;
 
-		if(unit_info->quit)
+		if(unit_info->quit) // if requested to quit.
 		{
-			unit_info->resume=0;
 			pthread_mutex_unlock(&unit_info->lock);
 			return NULL;
 		}
 
-		if(unit_info->current_size<unit_info->range->end-unit_info->range->start+1)
+		if(unit_info->current_size<unit_info->range->end-unit_info->range->start+1) // check for incomplete download.
 		{
 			pthread_mutex_unlock(&unit_info->lock);
 			goto self_repair;
 		}
 
-		unit_info->resume=0;
+		unit_info->resume=0; // make the unit idle and signal parent.
 		pthread_mutex_unlock(&unit_info->lock);
 
 		signal_parent:
@@ -394,8 +385,6 @@ struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 
 		if(units[i]->status_code==503) // Service Temporarily Unavailable
 		{
-			assert(units[i]->resume==1 && units[i]->self_repair==0 && units[i]->err_flag==1);
-
 			units[i]->err_flag=0;
 			units[i]->self_repair=1;
 			units[i]->healing_time=ERR_CODE_503_HEALING_TIME;
@@ -404,8 +393,6 @@ struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 			pthread_kill(units[i]->unit_id,SIGRTMIN);
 
 			pthread_mutex_lock(&err_lock);
-			assert(fatal_error>0);
-
 			fatal_error=fatal_error-1;
 			pthread_mutex_unlock(&err_lock);
 
@@ -416,8 +403,6 @@ struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 			pthread_mutex_unlock(&units[i]->lock);
 
 			pthread_mutex_lock(&err_lock);
-			assert(fatal_error>0);
-
 			fatal_error=fatal_error-1;
 			pthread_mutex_unlock(&err_lock);
 
