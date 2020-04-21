@@ -40,7 +40,7 @@
   
   * Performance updates and bug fixes.
 
-# [v1.3](https://github.com/m0hithreddy/MID/tree/v1.2) (2020-04-18) (Critical Update)
+# [v1.3](https://github.com/m0hithreddy/MID/tree/v1.3) (2020-04-18) (Critical Update)
 
 * ###### Mohith Reddy < m.mohithreddy99@gmail.com >
   
@@ -53,4 +53,18 @@
   * When --interfaces option is specified, use the interfaces in the order requested by the user.
   
   * get_net_if_info(char\*\*,long\*,char\*\*,long\*) --> get_network_interfaces()
-    
+ 
+# [v1.4](https://github.com/m0hithreddy/MID/tree/v1.4) (2020-04-21) (Critical Update)
+
+* ###### Mohith Reddy < m.mohithreddy99@gmail.com >
+  
+  * Bug Fix: In some cases, max parallel connections crossing --max-downloads, fixed it now.
+  
+  * Bug Fix: MID hangs when resumed a download which has not left over range with range.end=content_length-1, fixed it now.
+  
+  * Bug Fix: When err_flag is set (not the fatal_error), some times it is not handled due to scheduler decesions, fixed it now.
+  
+  * MID_unit writes are lock protected.
+
+  * struct unit_info.total_size is removed, unit_quit() is introduced, refactored MID_unit.c.
+  
