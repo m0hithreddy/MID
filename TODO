@@ -12,7 +12,7 @@
 
 -> IPV6 support
 
--> I/O time out
+-> At low download speeds MID hangs, at socket read , need to introduce I/O time out
 
 -> Continue Download if some interfaces fail
 
