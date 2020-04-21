@@ -398,6 +398,7 @@ int main(int argc, char **argv)
 	base_unit_info->report_len=ok_net_if_len;
 	base_unit_info->max_unit_retries=args->max_unit_retries;
 	base_unit_info->resume=1;
+	base_unit_info->pc_flag=pc_flag;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
 	base_unit_info->cli_info=base_socket_info;
 
@@ -534,8 +535,6 @@ int main(int argc, char **argv)
 
 		if(!args->quiet_flag)
 			s_progress_info->content_length=content_length;
-
-		base_unit_info->pc_flag=1;
 
 		//Initiating the first range request
 
