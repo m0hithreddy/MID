@@ -268,7 +268,7 @@ void* unit(void* info)
 				rem_download=unit_info->range->end-unit_info->range->start+1-unit_info->current_size;
 
 				pthread_mutex_lock(&write_lock);
-				wr_status=pwrite(fileno(fp),en_info->out,rem_download < en_info->out_len ? rem_download : en_info->out_len,unit_info->range->start+unit_info->current_size);
+				wr_status=pwrite(fileno(fp),en_info->out,rem_download < en_info->out_len && unit_info->pc_flag ? rem_download : en_info->out_len,unit_info->range->start+unit_info->current_size);
 				pthread_mutex_unlock(&write_lock);
 
 				unit_info->current_size=unit_info->current_size+wr_status;
