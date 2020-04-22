@@ -22,6 +22,10 @@
 #include<time.h>
 #include<pthread.h>
 #include<signal.h>
+#include<sys/signalfd.h>
+#include<sys/select.h>
+#include<fcntl.h>
+#include<errno.h>
 
 void* unit(void* info)
 {
@@ -33,6 +37,13 @@ void* unit(void* info)
 
 	struct timespec sleep_time;
 	sleep_time.tv_nsec=0;
+
+	int sigfd=signalfd(-1,&unit_info->sync_mask,0);
+
+	if(sigfd<0)
+		goto fatal_error;
+
+	char sigbuf[sizeof(struct signalfd_siginfo)];
 
 	while(1)
 	{
@@ -141,14 +152,64 @@ void* unit(void* info)
 
 		long status;
 
+		int sock_flags=fcntl(sockfd,F_GETFL);
+		fcntl(sockfd,F_SETFL,sock_flags | O_NONBLOCK);  // make the socket non-blocking.
+
+		fd_set m_set,t_set;
+		FD_ZERO(&m_set);
+		FD_SET(sigfd,&m_set);
+		FD_SET(sockfd,&m_set);
+
+		int maxfds=sigfd > sockfd ? sigfd+1 : sockfd+1;
+
 		while(1)
 		{
-			unit_quit();
+			t_set=m_set;
+			select(maxfds,&t_set,NULL,NULL,NULL);
 
-			if(http_flag)
+			if(FD_ISSET(sigfd,&t_set))  //user interrupt, break;
+			{
+				read(sigfd,sigbuf,sizeof(struct signalfd_siginfo));
+				break;
+			}
+
+			if(http_flag)  // if non encrypted socket.
+			{
 				status=read(sockfd,eat_buf,MAX_TRANSACTION_SIZE);
-			else
+
+				if(status<0)
+				{
+					if(errno==EWOULDBLOCK)
+						continue;
+				}
+			}
+#ifdef LIBSSL_SANE
+			else  // encrypted socket.
+			{
 				status=SSL_read(ssl,eat_buf,MAX_TRANSACTION_SIZE);
+
+				if(status<0)
+				{
+					int ssl_err=SSL_get_error(ssl,status);
+
+					if(ssl_err==SSL_ERROR_WANT_READ || SSL_ERROR_WANT_WRITE)  // retry the call.
+						continue;
+					else if(ssl_err==SSL_ERROR_SYSCALL) // EOF occured.
+					{
+						int rel_err=ERR_get_error();  // check if any real error occured.
+
+						if(rel_err==0)
+							status=0;
+						else
+							status=-1;
+					}
+					else if(ssl_err==SSL_ERROR_ZERO_RETURN)  // TLS connection closed, may be transport is still up.
+						status=0;
+					else
+						status=-1;
+				}
+			}
+#endif
 
 			if(status<=0)
 				break;
@@ -163,6 +224,8 @@ void* unit(void* info)
 			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len)!=NULL) // read until crlfcrlf is encountered.
 				break;
 		}
+
+		unit_quit();
 
 		if(status<0)
 		{
@@ -285,10 +348,54 @@ void* unit(void* info)
 				pthread_mutex_unlock(&unit_info->lock);
 			}
 
-			if(http_flag) // Read data from socket.
+			read_socket:
+
+			t_set=m_set;
+			select(maxfds,&t_set,NULL,NULL,NULL); // read when ready.
+
+			if(FD_ISSET(sigfd,&t_set))
+			{
+				read(sigfd,sigbuf,sizeof(struct signalfd_siginfo));
+				break;
+			}
+
+			if(http_flag)
+			{
 				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
+
+				if(status<0)
+				{
+					if(errno==EWOULDBLOCK)
+						goto read_socket;
+				}
+			}
+#ifdef LIBSSL_SANE
 			else
+			{
 				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
+
+				if(status<0)
+				{
+					int ssl_err=SSL_get_error(ssl,status);
+
+					if(ssl_err==SSL_ERROR_WANT_READ || SSL_ERROR_WANT_WRITE)
+						goto read_socket;
+					else if(ssl_err==SSL_ERROR_SYSCALL)
+					{
+						int rel_err=ERR_get_error();
+
+						if(rel_err==0)
+							status=0;
+						else
+							status=-1;
+					}
+					else if(ssl_err==SSL_ERROR_ZERO_RETURN)
+						status=0;
+					else
+						status=-1;
+				}
+			}
+#endif
 
 			if(status<=0)
 				break;

@@ -77,11 +77,14 @@ stddef.h \
 string.h \
 unistd.h \
 netdb.h \
+fcntl.h \
 netinet/in.h \
 sys/socket.h \
 sys/file.h \
 sys/stat.h \
 sys/types.h \
+sys/select.h \
+sys/signalfd.h \
 arpa/inet.h \
 limits.h \
 bits/sockaddr.h \
@@ -139,6 +142,9 @@ memcmp \
 sleep \
 read \
 write \
+fcntl \
+select \
+signalfd \
 getifaddrs \
 getnameinfo \
 htons \
@@ -184,7 +190,13 @@ SEEK_SET,
 SIGINT,
 SIGQUIT,
 SIGRTMIN,
-SIG_BLOCK],
+SIG_BLOCK,
+F_GETFL,
+F_SETFL,
+FD_ZERO,
+FD_SET,
+FD_ISSET,
+EWOULDBLOCK],
 [],
 [AC_MSG_ERROR([Symbol required but not found. Should be included in libc, check the libc variant installed in your system.])],
 [[#include<stddef.h>
@@ -245,7 +257,9 @@ SSL_write \
 SSL_read \
 MD5_Init \
 MD5_Update \
-MD5_Final],
+MD5_Final \
+SSL_get_error \
+ERR_get_error],
 [],
 [ssl_func_not_found="yes"]
 )
@@ -255,7 +269,11 @@ AC_CHECK_DECLS(
 OpenSSL_add_all_algorithms,
 SSL_load_error_strings,
 SSL_set_tlsext_host_name,
-MD5_DIGEST_LENGTH],
+MD5_DIGEST_LENGTH,
+SSL_ERROR_WANT_READ,
+SSL_ERROR_WANT_WRITE,
+SSL_ERROR_SYSCALL,
+SSL_ERROR_ZERO_RETURN],
 [],
 [ssl_symbol_not_found="yes"],
 [[#include <openssl/ssl.h>

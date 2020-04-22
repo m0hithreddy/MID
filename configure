@@ -4602,11 +4602,14 @@ stddef.h \
 string.h \
 unistd.h \
 netdb.h \
+fcntl.h \
 netinet/in.h \
 sys/socket.h \
 sys/file.h \
 sys/stat.h \
 sys/types.h \
+sys/select.h \
+sys/signalfd.h \
 arpa/inet.h \
 limits.h \
 bits/sockaddr.h \
@@ -4675,6 +4678,9 @@ memcmp \
 sleep \
 read \
 write \
+fcntl \
+select \
+signalfd \
 getifaddrs \
 getnameinfo \
 htons \
@@ -5023,6 +5029,144 @@ if test $ac_have_decl = 1; then :
 else
   as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
 fi
+ac_fn_c_check_decl "$LINENO" "F_GETFL" "ac_cv_have_decl_F_GETFL" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+
+"
+if test "x$ac_cv_have_decl_F_GETFL" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_F_GETFL $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "F_SETFL" "ac_cv_have_decl_F_SETFL" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+
+"
+if test "x$ac_cv_have_decl_F_SETFL" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_F_SETFL $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "FD_ZERO" "ac_cv_have_decl_FD_ZERO" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+
+"
+if test "x$ac_cv_have_decl_FD_ZERO" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_FD_ZERO $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "FD_SET" "ac_cv_have_decl_FD_SET" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+
+"
+if test "x$ac_cv_have_decl_FD_SET" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_FD_SET $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "FD_ISSET" "ac_cv_have_decl_FD_ISSET" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+
+"
+if test "x$ac_cv_have_decl_FD_ISSET" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_FD_ISSET $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "EWOULDBLOCK" "ac_cv_have_decl_EWOULDBLOCK" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+
+"
+if test "x$ac_cv_have_decl_EWOULDBLOCK" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_EWOULDBLOCK $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
 
 
 # Pthread library checks
@@ -5235,7 +5379,9 @@ SSL_write \
 SSL_read \
 MD5_Init \
 MD5_Update \
-MD5_Final
+MD5_Final \
+SSL_get_error \
+ERR_get_error
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -5345,6 +5491,86 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_MD5_DIGEST_LENGTH $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  ssl_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "SSL_ERROR_WANT_READ" "ac_cv_have_decl_SSL_ERROR_WANT_READ" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+#include<openssl/md5.h>
+
+"
+if test "x$ac_cv_have_decl_SSL_ERROR_WANT_READ" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SSL_ERROR_WANT_READ $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  ssl_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "SSL_ERROR_WANT_WRITE" "ac_cv_have_decl_SSL_ERROR_WANT_WRITE" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+#include<openssl/md5.h>
+
+"
+if test "x$ac_cv_have_decl_SSL_ERROR_WANT_WRITE" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SSL_ERROR_WANT_WRITE $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  ssl_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "SSL_ERROR_SYSCALL" "ac_cv_have_decl_SSL_ERROR_SYSCALL" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+#include<openssl/md5.h>
+
+"
+if test "x$ac_cv_have_decl_SSL_ERROR_SYSCALL" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SSL_ERROR_SYSCALL $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  ssl_symbol_not_found="yes"
+fi
+ac_fn_c_check_decl "$LINENO" "SSL_ERROR_ZERO_RETURN" "ac_cv_have_decl_SSL_ERROR_ZERO_RETURN" "#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/tls1.h>
+#include<openssl/md5.h>
+
+"
+if test "x$ac_cv_have_decl_SSL_ERROR_ZERO_RETURN" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SSL_ERROR_ZERO_RETURN $ac_have_decl
 _ACEOF
 if test $ac_have_decl = 1; then :
 
