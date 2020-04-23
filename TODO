@@ -4,15 +4,13 @@
 
 -> Fallback to normal download mode if program is not invoked by root user
 
--> At low download speeds, user interrupts have no effect because of thread being blocked in system calls, need to fix it.
-
 -> Requests arised from different interface may be redirected, if redirected follow them before starting download in MID_unit.
  
 -> Support for option -n taking per interface connections limit. 
 
 -> IPV6 support
 
--> At low download speeds MID hangs, at socket read , need to introduce I/O time out
+-> I/O time out
 
 -> Continue Download if some interfaces fail
 
