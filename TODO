@@ -2,8 +2,6 @@
 
 -> Implementing own URL parser
 
--> Fallback to normal download mode if program is not invoked by root user
-
 -> Requests arised from different interface may be redirected, if redirected follow them before starting download in MID_unit.
  
 -> Support for option -n taking per interface connections limit. 
