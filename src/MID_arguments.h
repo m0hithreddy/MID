@@ -39,6 +39,7 @@ struct mid_args
 	long unit_retry_sleep_time;
 	long progress_update_time;
 	long entry_number;
+	int root_mode;
 	int detailed_progress;
 	int print_ms;
 	int delete_ms;

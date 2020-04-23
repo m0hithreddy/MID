@@ -63,10 +63,19 @@
 		exit(exit_code);\
 	}while(0)
 
-#define mid_cond_print(cond,fmt, exit_args...)\
+#define mid_msg(fmt, exit_args...)\
 	do\
 	{\
-		if(cond)\
+		if(!args->quiet_flag)\
+		{\
+			fprintf(stdout, fmt, ## exit_args);\
+		}\
+	}while(0)
+
+#define mid_err(fmt, exit_args...)\
+	do\
+	{\
+		if(!args->quiet_flag)\
 		{\
 			fprintf(stderr, fmt, ## exit_args);\
 		}\

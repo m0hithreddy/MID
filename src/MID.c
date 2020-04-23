@@ -68,8 +68,11 @@ int main(int argc, char **argv)
 
 	if( !args->surpass_root_check && getuid()!=0 && geteuid()!=0)
 	{
-		mid_help("MID: SO_BINDTODEVICE socket-option is used to bind to an interface, which requires root permissions and CAP_NET_RAW capability. If you believe the current UID is having sufficient permissions then try using {--surpass-root-check flag | -s}.");
+		mid_err("MID: MID is not invoked by root user, falling back to normal download mode. Use -s to surpass the root checks and make MID to bind the interfaces.\n\n");
+		args->root_mode=0;
 	}
+	else
+		args->root_mode=1;
 
 	//Parse the URL
 
@@ -106,7 +109,24 @@ int main(int argc, char **argv)
 
 	// Get Network Interfaces Info and Check whether Server is accessible or not
 
-	struct network_interface** net_if=get_network_interfaces();
+	struct network_interface** net_if;
+
+	if(args->root_mode)
+	{
+		net_if=get_network_interfaces();
+	}
+	else
+	{
+		net_if=(struct network_interface**)malloc(sizeof(struct network_interface*)*2);
+
+		net_if[0]=(struct network_interface*)malloc(sizeof(struct network_interface));
+		net_if[0]->address=NULL;
+		net_if[0]->family=AF_INET;
+		net_if[0]->name="default";
+		net_if[0]->netmask=NULL;
+
+		net_if[1]=NULL;
+	}
 
 	if(net_if[0]==NULL)
 		mid_flag_exit1(1,"MID: No network-interface found for downloading. Exiting...\n\n");
@@ -911,7 +931,7 @@ int init_resume()
 	{
 		if(args->entry_number > 0)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error retrieving the MS entry structure. Exiting...\n\n");
+			mid_err("MID: Error retrieving the MS entry structure. Exiting...\n\n");
 			exit(1);
 		}
 
@@ -939,23 +959,23 @@ int init_resume()
 
 	if(status==-1)
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Partially downloaded file found...\n\n");
+		mid_msg("MID: Partially downloaded file found...\n\n");
 
 		if(args->force_resume)
-			mid_cond_print(!args->quiet_flag,"MID: Fatal error encountered when validating the MS entry, can not resume the download. Exiting...\n\n");
+			mid_err("MID: Fatal error encountered when validating the MS entry, can not resume the download. Exiting...\n\n");
 		else
-			mid_cond_print(!args->quiet_flag,"MID: Error encountered when validating MS entry, try giving --force-resume flag or check the errors with --validate-ms. Exiting...\n\n");
+			mid_err("MID: Error encountered when validating MS entry, try giving --force-resume flag or check the errors with --validate-ms. Exiting...\n\n");
 
 		exit(1);
 
 	}
 	else if(status==1)
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Force Resuming the download...\n");
+		mid_msg("MID: Force Resuming the download...\n");
 	}
 	else
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Partially downloaded file found and is sane. Resuming download...\n\n");
+		mid_msg("MID: Partially downloaded file found and is sane. Resuming download...\n\n");
 	}
 
 
@@ -963,14 +983,14 @@ int init_resume()
 	{
 		if((o_fp=fopen(en->file,"r+"))==NULL)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error opening output file %s. Exiting...\n\n",en->file);
+			mid_err("MID: Error opening output file %s. Exiting...\n\n",en->file);
 
 			exit(1);
 		}
 
 		if(flock(fileno(o_fp),LOCK_EX)!=0)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error acquiring lock on output file %s. Exiting...\n\n",en->file);
+			mid_err("MID: Error acquiring lock on output file %s. Exiting...\n\n",en->file);
 
 			exit(1);
 		}
@@ -980,14 +1000,14 @@ int init_resume()
 	{
 		if((u_fp=fopen(en->up_file,"r+"))==NULL)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error opening unprocessed file %s. Exiting...\n\n",en->up_file);
+			mid_err("MID: Error opening unprocessed file %s. Exiting...\n\n",en->up_file);
 
 			exit(1);
 		}
 
 		if(flock(fileno(u_fp),LOCK_EX)!=0)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error acquiring lock on unprocessed file %s. Exiting...\n\n",en->up_file);
+			mid_err("MID: Error acquiring lock on unprocessed file %s. Exiting...\n\n",en->up_file);
 
 			exit(1);
 		}

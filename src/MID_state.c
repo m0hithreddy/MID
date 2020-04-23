@@ -100,14 +100,14 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 
 	if(ms_fp==NULL) // May be file name too long... Returning to prevent any state files clashes
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Unable to open MID state file %s, not saving the state information\n\n",ms_file);
+		mid_err("MID: Unable to open MID state file %s, not saving the state information\n\n",ms_file);
 
 		return;
 	}
 
 	if(flock(fileno(ms_fp),LOCK_EX)!=0)
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Unable to acquire lock on MID state file %s, not saving the state information\n\n",ms_file);
+		mid_err("MID: Unable to acquire lock on MID state file %s, not saving the state information\n\n",ms_file);
 
 		fclose(ms_fp);
 
@@ -129,7 +129,7 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 
 	if(state_data==NULL || state_data->data==NULL)
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Error when making MID state, not saving the state information. Returning...\n\n");
+		mid_err("MID: Error when making MID state, not saving the state information. Returning...\n\n");
 
 		return;
 	}
@@ -173,14 +173,14 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 	if(ms_fp==NULL) // May be file name too long... Returning to prevent any state files clashes
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Unable to open MID state file %s, not saving the state information\n\n",ms_file);
+		mid_err("MID: Unable to open MID state file %s, not saving the state information\n\n",ms_file);
 
 		return;
 	}
 
 	if(flock(fileno(ms_fp),LOCK_EX)!=0)
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Unable to acquire lock on MID state file %s, not saving the state information\n\n",ms_file);
+		mid_err("MID: Unable to acquire lock on MID state file %s, not saving the state information\n\n",ms_file);
 
 		fclose(ms_fp);
 
@@ -202,7 +202,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 	if(state_data==NULL || state_data->data==NULL)
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Error when making MID state, not saving the state information. Returning...\n\n");
+		mid_err("MID: Error when making MID state, not saving the state information. Returning...\n\n");
 
 		return;
 	}
@@ -239,7 +239,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 	if(pwrite(fileno(ms_fp),&state_data->len,sizeof(long),prev_len)!=sizeof(long))
 	{
-		mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+		mid_err("MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
 
 		goto close_files;
 	}
@@ -274,7 +274,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 				if(pwrite(fileno(ms_fp),p_buf,p_status,prev_len)!=p_status)
 				{
-					mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+					mid_err("MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
 
 					goto close_files;
 				}
@@ -283,7 +283,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 				if(c_status<0)
 				{
-					mid_cond_print(!args->quiet_flag,"MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
+					mid_err("MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
 
 					goto close_files;
 				}
@@ -311,7 +311,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 				if(pwrite(fileno(ms_fp),c_buf,c_status,prev_len)!=c_status)
 				{
-					mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+					mid_err("MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
 
 					goto close_files;
 				}
@@ -320,7 +320,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 				if(p_status<0)
 				{
-					mid_cond_print(!args->quiet_flag,"MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
+					mid_err("MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
 
 					goto close_files;
 				}
@@ -339,7 +339,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 	{
 		if(pwrite(fileno(ms_fp),state_data->data,state_data->len,prev_len)!=state_data->len)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+			mid_err("MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
 
 			goto close_files;
 		}
@@ -354,7 +354,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 			if(status<0)
 			{
-				mid_cond_print(!args->quiet_flag,"MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
+				mid_err("MID: Error reading MS entry file %s. Returning...\n\n",ms_file);
 
 				goto close_files;
 			}
@@ -365,7 +365,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 			if(pwrite(fileno(ms_fp),f_buf,status,prev_len)!=status)
 			{
-				mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+				mid_err("MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
 
 				goto close_files;
 			}
@@ -379,7 +379,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 	{
 		if(pwrite(fileno(ms_fp),state_data->data,state_data->len,prev_len)!=state_data->len)
 		{
-			mid_cond_print(!args->quiet_flag,"MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
+			mid_err("MID: Error writing to MS entry file %s. Returning...\n\n",ms_file);
 
 			goto close_files;
 		}
@@ -1189,14 +1189,14 @@ void* read_ms_entry(char* ms_file,long entry_number,int flag)
 
 	if(ms_fp==NULL)
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Unable to open the MID state file %s. Exiting...\n\n",ms_file);
+		if(flag==MS_PRINT) mid_err("MID: Unable to open the MID state file %s. Exiting...\n\n",ms_file);
 
 		return NULL;
 	}
 
 	if(flock(fileno(ms_fp),LOCK_EX)!=0)
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Unable to acquire lock on the MID state file %s. Exiting...\n\n",ms_file);
+		if(flag==MS_PRINT) mid_err("MID: Unable to acquire lock on the MID state file %s. Exiting...\n\n",ms_file);
 
 		return NULL;
 	}
@@ -1223,7 +1223,7 @@ void* read_ms_entry(char* ms_file,long entry_number,int flag)
 
 				if((status=read(fileno(ms_fp),en_info,sizeof(long)))==0)
 				{
-					mid_cond_print(flag==MS_PRINT,"MID: End of the file, entry number %ld not found. Exiting...\n\n",entry_number);
+					if(flag==MS_PRINT) mid_err("MID: End of the file, entry number %ld not found. Exiting...\n\n",entry_number);
 
 					goto normal_exit;
 				}
@@ -1251,7 +1251,7 @@ void* read_ms_entry(char* ms_file,long entry_number,int flag)
 		if((status=read(fileno(ms_fp),en_info,sizeof(long)+sizeof(int)))==0)
 		{
 			if(entry_number)
-				mid_cond_print(flag==MS_PRINT,"MID: End of the file, entry number %ld not found. Exiting...\n\n",entry_number);
+				if(flag==MS_PRINT) mid_err("MID: End of the file, entry number %ld not found. Exiting...\n\n",entry_number);
 
 			goto normal_exit;
 		}
@@ -1323,7 +1323,7 @@ void* read_ms_entry(char* ms_file,long entry_number,int flag)
 	flock(fileno(ms_fp),LOCK_UN);
 	fclose(ms_fp);
 
-	mid_cond_print(flag==MS_PRINT,"MID: %s is broken, errors encountered when processing the MID state file. Exiting...\n\n",ms_file);
+	if(flag==MS_PRINT) mid_err("MID: %s is broken, errors encountered when processing the MID state file. Exiting...\n\n",ms_file);
 
 	return NULL;
 
@@ -1345,7 +1345,7 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 {
 	if(entry_number<=0)
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Entry number %ld is not valid. Exiting...\n\n");
+		if(flag==MS_PRINT) mid_err("MID: Entry number %ld is not valid. Exiting...\n\n");
 
 		return;
 	}
@@ -1354,7 +1354,7 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 	if(ms_fp==NULL) // No file exits
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Unable to open MID state file %s. Exiting...\n\n",ms_file);
+		if(flag==MS_PRINT) mid_err("MID: Unable to open MID state file %s. Exiting...\n\n",ms_file);
 
 		return;
 	}
@@ -1365,14 +1365,14 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 	if(ms_fp==NULL) // Cant open file in append mode
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Unable to open MID state file %s. Exiting...\n\n",ms_file);
+		if(flag==MS_PRINT) mid_err("MID: Unable to open MID state file %s. Exiting...\n\n",ms_file);
 
 		return;
 	}
 
 	if(flock(fileno(ms_fp),LOCK_EX)!=0) // Unable to acquire lock
 	{
-		mid_cond_print(flag==MS_PRINT,"MID: Unable to acquire lock on MID state file %s. Exiting...\n\n",ms_file);
+		if(flag==MS_PRINT) mid_err("MID: Unable to acquire lock on MID state file %s. Exiting...\n\n",ms_file);
 
 		return;
 	}
@@ -1392,13 +1392,13 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 		if((status=pread(fileno(ms_fp),en_info,sizeof(long),read_len))==0) // EOF reached, no such entry
 		{
-			mid_cond_print(flag==MS_PRINT,"MID: EOF file reached, entry number %ld not found. Exiting...\n\n",entry_number);
+			if(flag==MS_PRINT) mid_err("MID: EOF file reached, entry number %ld not found. Exiting...\n\n",entry_number);
 
 			goto normal_return;
 		}
 		else if(status!=sizeof(long)) // File corrupted, but do nothing.
 		{
-			mid_cond_print(flag==MS_PRINT,"MID: %s is not a MID state file. Exiting...\n\n",ms_file);
+			if(flag==MS_PRINT) mid_err("MID: %s is not a MID state file. Exiting...\n\n",ms_file);
 
 			goto normal_return;
 		}
@@ -1407,7 +1407,7 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 		if(read_len+*((long*)(en_info)) > stat_buf.st_size) // File corrupted, but do nothing.
 		{
-			mid_cond_print(flag==MS_PRINT,"MID: %s is not a MID state file. Exiting...\n\n",ms_file);
+			if(flag==MS_PRINT) mid_err("MID: %s is not a MID state file. Exiting...\n\n",ms_file);
 
 			goto normal_return;
 		}
@@ -1426,7 +1426,7 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 		if(status<0)
 		{
-			mid_cond_print(flag==MS_PRINT,"MID: Unable to read MID state file %s. Exiting...\n\n",ms_file);
+			if(flag==MS_PRINT) mid_err("MID: Unable to read MID state file %s. Exiting...\n\n",ms_file);
 
 			goto normal_return;
 		}
@@ -1438,7 +1438,7 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 		if(pwrite(fileno(ms_fp),buf,status,prev_len)!=status) // Cant write to the file.
 		{
-			mid_cond_print(flag==MS_PRINT,"MID: Unable to write to MID state file %s. Exiting...\n\n",ms_file);
+			if(flag==MS_PRINT) mid_err("MID: Unable to write to MID state file %s. Exiting...\n\n",ms_file);
 
 			goto normal_return;
 		}
@@ -1453,7 +1453,7 @@ void delete_ms_entry(char* ms_file,long entry_number,int flag)
 
 		remove(ms_file);
 
-		mid_cond_print(flag==MS_PRINT,"MID: %s has no more entries left. Deleting...\n\n",ms_file);
+		if(flag==MS_PRINT) mid_err("MID: %s has no more entries left. Deleting...\n\n",ms_file);
 
 		return;
 	}
