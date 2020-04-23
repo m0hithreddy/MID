@@ -445,7 +445,6 @@ int main(int argc, char **argv)
 
 	sigemptyset(&s_hd_info->mask);
 	sigaddset(&s_hd_info->mask,SIGINT);
-	sigaddset(&s_hd_info->mask,SIGQUIT);
 	sigaddset(&s_hd_info->mask,SIGRTMIN);
 
 	if(pthread_sigmask(SIG_BLOCK, &s_hd_info->mask, NULL) != 0)  // Block SIGINT and SIGQUIT and SIGRTMIN (signal used for thread sync)
