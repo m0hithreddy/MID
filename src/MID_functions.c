@@ -83,7 +83,7 @@ char* strcaselocate(char* haystack,char* needle,long start,long end)
 	return strcasestr(haystack,needle);
 }
 
-struct network_data* sseek(struct network_data* n_data,char* delimiter)
+struct network_data* sseek(struct network_data* n_data,char* delimiter,long len,int delimiting)
 {
 	// seek through the string unless the delimiter string character is not hit
 
@@ -94,12 +94,22 @@ struct network_data* sseek(struct network_data* n_data,char* delimiter)
 
 	char in[2]; in[1]='\0';
 
-	int i=0;
-	for( ;i<n_data->len;i++)
+	long i=0;
+
+	for( ;i!=len && i<n_data->len;i++)
 	{
 		in[0]=((char*)n_data->data)[i];
-		if(strlocate(delimiter,in,0,strlen(delimiter))==NULL)
-			break;
+
+		if(delimiting)
+		{
+			if(strlocate(delimiter,in,0,strlen(delimiter))!=NULL)
+				break;
+		}
+		else
+		{
+			if(strlocate(delimiter,in,0,strlen(delimiter))==NULL)
+				break;
+		}
 	}
 
 	update->data=n_data->data+i;
@@ -107,7 +117,7 @@ struct network_data* sseek(struct network_data* n_data,char* delimiter)
 	return update;
 }
 
-struct network_data* scopy(struct network_data* n_data,char* delimiter,char** dest,long len)
+struct network_data* scopy(struct network_data* n_data,char* delimiter,char** dest,long len,int delimitng)
 {
 	// Copy and seek though the string till the delimiter string character
 
@@ -128,8 +138,16 @@ struct network_data* scopy(struct network_data* n_data,char* delimiter,char** de
 	{
 		((char*)buf->data)[0]=((char*)n_data->data)[i];
 
-		if(strlocate(delimiter,buf->data,0,strlen(delimiter))!=NULL)
-			break;
+		if(delimitng)
+		{
+			if(strlocate(delimiter,buf->data,0,strlen(delimiter))!=NULL)
+				break;
+		}
+		else
+		{
+			if(strlocate(delimiter,buf->data,0,strlen(delimiter))==NULL)
+				break;
+		}
 
 		if(dest!=NULL)
 			place_data(bag,buf);

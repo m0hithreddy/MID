@@ -98,14 +98,14 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		while(1)
 		{
 
-			n_data=sseek(n_data,",");
+			n_data=sseek(n_data,",",-1,MID_PERMIT);
 
 			if(n_data==NULL || n_data->data==NULL || n_data->len==0)
 			{
 				break;
 			}
 
-			n_data=scopy(n_data,",",(char**)(&if_data->data),-1);
+			n_data=scopy(n_data,",",(char**)(&if_data->data),-1,MID_DELIMIT);
 			if_data->len=strlen(if_data->data)+1;
 
 			place_data(if_bag,if_data);
@@ -231,7 +231,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		hdr_data->data=value;
 		hdr_data->len=strlen(value)+1;
 
-		hdr_data=scopy(hdr_data,"= ",(char**)(&n_data->data),-1);
+		hdr_data=scopy(hdr_data,"= ",(char**)(&n_data->data),-1,MID_DELIMIT);
 
 		if(hdr_data==NULL || hdr_data->data==NULL || hdr_data->len==0 || hdr_data->len==1)
 		{
@@ -242,7 +242,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		}
 
 
-		hdr_data=sseek(hdr_data,"= ");
+		hdr_data=sseek(hdr_data,"= ",-1,MID_PERMIT);
 
 		if(hdr_data==NULL || hdr_data->data==NULL || hdr_data->len==0)
 		{
@@ -443,7 +443,7 @@ void read_conf(char* conf,struct mid_args* args)
 
 	while(1)
 	{
-		conf_data=sseek(conf_data," \n");
+		conf_data=sseek(conf_data," \n",-1,MID_PERMIT);
 
 		if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 		{
@@ -455,7 +455,7 @@ void read_conf(char* conf,struct mid_args* args)
 
 		if(((char*)conf_data->data)[0]=='#') // Skip the comments
 		{
-			conf_data=scopy(conf_data,"\n",NULL,-1);
+			conf_data=scopy(conf_data,"\n",NULL,-1,MID_DELIMIT);
 		}
 		else
 		{
@@ -466,7 +466,7 @@ void read_conf(char* conf,struct mid_args* args)
 					conf_data->data=conf_data->data+1;
 					conf_data->len=conf_data->len-1;
 
-					conf_data=scopy(conf_data,"\'",&key_buffer,-1);
+					conf_data=scopy(conf_data,"\'",&key_buffer,-1,MID_DELIMIT);
 
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
@@ -481,7 +481,7 @@ void read_conf(char* conf,struct mid_args* args)
 					conf_data->data=conf_data->data+1;
 					conf_data->len=conf_data->len-1;
 
-					conf_data=scopy(conf_data,"\"",&key_buffer,-1);
+					conf_data=scopy(conf_data,"\"",&key_buffer,-1,MID_DELIMIT);
 
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
@@ -493,7 +493,7 @@ void read_conf(char* conf,struct mid_args* args)
 				}
 				else
 				{
-					conf_data=scopy(conf_data," \n#",&key_buffer,-1);
+					conf_data=scopy(conf_data," \n#",&key_buffer,-1,MID_DELIMIT);
 				}
 
 				key_flag=1;
@@ -505,7 +505,7 @@ void read_conf(char* conf,struct mid_args* args)
 					conf_data->data=conf_data->data+1;
 					conf_data->len=conf_data->len-1;
 
-					conf_data=scopy(conf_data,"\'",&value_buffer,-1);
+					conf_data=scopy(conf_data,"\'",&value_buffer,-1,MID_DELIMIT);
 
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
@@ -520,7 +520,7 @@ void read_conf(char* conf,struct mid_args* args)
 					conf_data->data=conf_data->data+1;
 					conf_data->len=conf_data->len-1;
 
-					conf_data=scopy(conf_data,"\"",&value_buffer,-1);
+					conf_data=scopy(conf_data,"\"",&value_buffer,-1,MID_DELIMIT);
 
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
@@ -532,7 +532,7 @@ void read_conf(char* conf,struct mid_args* args)
 				}
 				else
 				{
-					conf_data=scopy(conf_data," #\n",&value_buffer,-1);
+					conf_data=scopy(conf_data," #\n",&value_buffer,-1,MID_DELIMIT);
 				}
 
 				if(conf_data==NULL)

@@ -87,18 +87,18 @@ struct network_data* create_http_request(struct http_request* s_request)
 
 	while(1)
 	{
-		n_buf=sseek(n_buf," ");
+		n_buf=sseek(n_buf," ",-1,MID_PERMIT);
 
 		if(n_buf==NULL ||n_buf->data==NULL||n_buf->len==0)
 			break;
 
-		n_buf=scopy(n_buf," ",&token_buffer,-1);
+		n_buf=scopy(n_buf," ",&token_buffer,-1,MID_DELIMIT);
 
-		n_buf=sseek(n_buf," ");
+		n_buf=sseek(n_buf," ",-1,MID_PERMIT);
 		if(n_buf==NULL ||n_buf->data==NULL||n_buf->len==0)
 			break;
 
-		n_buf=scopy(n_buf," ",&index_buffer,-1);
+		n_buf=scopy(n_buf," ",&index_buffer,-1,MID_DELIMIT);
 
 		char** value=(char**)(v_s_request+(sizeof(char*)*(atoi(index_buffer)-1)));
 
@@ -163,7 +163,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 	// Response Version
 
-	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS);
+	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
 	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 		return NULL;
@@ -176,31 +176,31 @@ struct http_response* parse_http_response(struct network_data *response)
 	hdrs->data=current+strlen("HTTP/");
 	hdrs->len=hdrs->len-(long)(current-(char*)hdrs->data)-strlen("HTTP/");
 
-	hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&s_response->version,-1);
+	hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&s_response->version,-1,MID_DELIMIT);
 
 	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 		return s_response;
 
 	// Response Status Code
 
-	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS);
+	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
 	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 		return s_response;
 
-	hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&s_response->status_code,-1);
+	hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&s_response->status_code,-1,MID_DELIMIT);
 
 	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 		return s_response;
 
 	// Response Status
 
-	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS);
+	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
 	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 		return s_response;
 
-	hdrs=scopy(hdrs,MID_HTTP_VALUE_DELIMITERS,&s_response->status,-1);
+	hdrs=scopy(hdrs,MID_HTTP_VALUE_DELIMITERS,&s_response->status,-1,MID_DELIMIT);
 
 	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 		return s_response;
@@ -221,24 +221,24 @@ struct http_response* parse_http_response(struct network_data *response)
 	{
 		//Token Extraction
 
-		hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS);
+		hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
 		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 			break;
 
-		hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&token_buffer,-1);
+		hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&token_buffer,-1,MID_DELIMIT);
 
 		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 			break;
 
 		//Value Extraction
 
-		hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS);
+		hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
 		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 			break;
 
-		hdrs=scopy(hdrs,MID_HTTP_VALUE_DELIMITERS,&value_buffer,-1);
+		hdrs=scopy(hdrs,MID_HTTP_VALUE_DELIMITERS,&value_buffer,-1,MID_DELIMIT);
 
 		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
 			break;
@@ -257,12 +257,12 @@ struct http_response* parse_http_response(struct network_data *response)
 			n_buf->data=current+strlen(token_buffer)+2;
 			n_buf->len=strlen(current);
 
-			n_buf=sseek(n_buf," ");
+			n_buf=sseek(n_buf," ",-1,MID_PERMIT);
 
 			if(n_buf==NULL || n_buf->data==NULL || n_buf->len==0)
 				continue;
 
-			scopy(n_buf," ",&index_buffer,-1);
+			scopy(n_buf," ",&index_buffer,-1,MID_DELIMIT);
 
 			char** header_token=(char**)(v_s_response+(sizeof(char*)*(atoi(index_buffer)-1)));
 
