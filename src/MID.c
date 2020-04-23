@@ -512,26 +512,35 @@ int main(int argc, char **argv)
 
 		sleep_time.tv_sec=SCHEDULER_DEFAULT_SLEEP_TIME;
 		sleep_time.tv_nsec=0;
+		int signo;
 
 		while(1) // Downloading...
 		{
+			sigwait(&sync_mask,&signo);
+
 			pthread_mutex_lock(&s_hd_info->lock);
-
-			pthread_mutex_unlock(&s_hd_info->lock);
-
-			if(sigtimedwait(&sync_mask,NULL,&sleep_time)!=-1)
-				break;
-
-			idle=idle_unit(units,units_len);
-
-			if(idle!=NULL)
+			if(s_hd_info->quit)
 			{
-				if(idle->err_flag==1)
-					err=idle;
+				pthread_mutex_unlock(&s_hd_info->lock);
 				break;
 			}
-		}
+			pthread_mutex_unlock(&s_hd_info->lock);
 
+			pthread_mutex_lock(&err_lock);
+			if(fatal_error)
+			{
+				pthread_mutex_unlock(&err_lock);
+				err=handle_unit_errors(units,units_len);
+
+				if(err!=NULL) //fatal error exit.
+					break;
+
+				continue;
+			}
+			pthread_mutex_unlock(&err_lock);
+
+			break; // Download completed and signaled by child.
+		}
 	}
 
 	else // If range requests are supported
@@ -656,12 +665,6 @@ int main(int argc, char **argv)
 			}
 			else
 			{
-				if(idle->err_flag==1) // Check for errors, if found terminate download
-				{
-					err=idle;
-					break;
-				}
-
 				update=idle;
 			}
 

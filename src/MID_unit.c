@@ -54,10 +54,14 @@ void* unit(void* info)
 		if(unit_info->quit==1 || (unit_info->resume==3 && unit_info->pc_flag==0)) // Initial checks
 			return NULL;
 
-		if(unit_info->err_flag==1) // If an probably recoverable error encountered
+		if(unit_info->err_flag!=0) // If an probably recoverable error encountered
 		{
 			sigwait(&unit_info->sync_mask,&signo);
 			unit_quit();
+
+			pthread_mutex_lock(&unit_info->lock);
+			unit_info->err_flag=unit_info->err_flag-1;
+			pthread_mutex_unlock(&unit_info->lock);
 		}
 
 		if(unit_info->self_repair==1) // An automatic retry mechanism
@@ -253,7 +257,7 @@ void* unit(void* info)
 
 		if(s_response->status_code[0]!='2') // check if response header is valid.
 		{
-			unit_info->err_flag=1;
+			unit_info->err_flag=2;  // err_flag 2 represents main() supervision in dealing with error,
 			pthread_mutex_unlock(&unit_info->lock);
 
 			pthread_mutex_lock(&err_lock);
@@ -449,7 +453,7 @@ void* unit(void* info)
 		goto init;
 	}
 
-	unit_info->err_flag=1;
+	unit_info->err_flag=2;
 	pthread_mutex_unlock(&unit_info->lock);
 
 	pthread_mutex_lock(&err_lock);
@@ -462,7 +466,7 @@ void* unit(void* info)
 	fatal_error:
 
 	pthread_mutex_lock(&unit_info->lock);
-	unit_info->err_flag=1;
+	unit_info->err_flag=2;
 	pthread_mutex_unlock(&unit_info->lock);
 
 	pthread_mutex_lock(&err_lock);
@@ -489,7 +493,7 @@ struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 
 		if(units[i]->status_code==503) // Service Temporarily Unavailable
 		{
-			units[i]->err_flag=0;
+			units[i]->err_flag=units[i]->err_flag-1;
 			units[i]->self_repair=1;
 			units[i]->healing_time=ERR_CODE_503_HEALING_TIME;
 			pthread_mutex_unlock(&units[i]->lock);
@@ -593,7 +597,7 @@ struct unit_info* largest_unit(struct unit_info** units,long units_len)
 	for(int i=0;i<units_len;i++)
 	{
 		pthread_mutex_lock(&units[i]->lock);
-		if(units[i]->self_repair==1 || units[i]->err_flag==1 || units[i]->resume!=1)
+		if(units[i]->self_repair==1 || units[i]->err_flag!=0 || units[i]->resume!=1)
 		{
 			pthread_mutex_unlock(&units[i]->lock);
 			continue;
