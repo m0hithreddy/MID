@@ -51,7 +51,7 @@ void* unit(void* info)
 
 		init:
 
-		if(unit_info->quit==1 || (unit_info->resume==0 && unit_info->pc_flag==0)) // Initial checks
+		if(unit_info->quit==1 || (unit_info->resume==3 && unit_info->pc_flag==0)) // Initial checks
 			return NULL;
 
 		if(unit_info->err_flag==1) // If an probably recoverable error encountered
@@ -73,12 +73,16 @@ void* unit(void* info)
 			pthread_mutex_unlock(&unit_info->lock);
 		}
 
-		if(unit_info->resume==0) // Unit is idle, wait for work or termination
+		if(unit_info->resume!=1) // Unit is idle, wait for work or termination
 		{
 			retries_count=0;
 
 			sigwait(&unit_info->sync_mask,&signo);
 			unit_quit();
+
+			pthread_mutex_lock(&unit_info->lock);
+			unit_info->resume=unit_info->resume-1; // resume the unit.
+			pthread_mutex_unlock(&unit_info->lock);
 		}
 
 		/* Initializations */
@@ -99,7 +103,7 @@ void* unit(void* info)
 			}
 			else
 			{
-				unit_info->resume=0;
+				unit_info->resume=3;  // 3 represents idle unit (to handle race  conditions between main and unit)
 				pthread_mutex_unlock(&unit_info->lock);
 
 				goto signal_parent;
@@ -221,7 +225,7 @@ void* unit(void* info)
 
 			struct network_data* tmp_n_data=flatten_data_bag(eat_bag);
 
-			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len)!=NULL) // read until crlfcrlf is encountered.
+			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len-1)!=NULL) // read until crlfcrlf is encountered.
 				break;
 		}
 
@@ -424,7 +428,7 @@ void* unit(void* info)
 			goto self_repair;
 		}
 
-		unit_info->resume=0; // make the unit idle and signal parent.
+		unit_info->resume=3; // make the unit idle and signal parent.
 		pthread_mutex_unlock(&unit_info->lock);
 
 		signal_parent:
@@ -589,7 +593,7 @@ struct unit_info* largest_unit(struct unit_info** units,long units_len)
 	for(int i=0;i<units_len;i++)
 	{
 		pthread_mutex_lock(&units[i]->lock);
-		if(units[i]->self_repair==1 || units[i]->err_flag==1 || units[i]->resume==0)
+		if(units[i]->self_repair==1 || units[i]->err_flag==1 || units[i]->resume!=1)
 		{
 			pthread_mutex_unlock(&units[i]->lock);
 			continue;
@@ -616,7 +620,7 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 	for(long i=0;i<units_len;i++)
 	{
 		pthread_mutex_lock(&units[i]->lock);
-		if(units[i]->resume==0)
+		if(units[i]->resume==3)
 		{
 			pthread_mutex_unlock(&units[i]->lock);
 			return units[i];

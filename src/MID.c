@@ -729,7 +729,7 @@ int main(int argc, char **argv)
 			}
 			else
 			{
-				update->resume=1;
+				update->resume=update->resume-1; // decrement by one, unit itself decrements by one making idle->resume=1.
 				pthread_kill(update->unit_id,SIGRTMIN); // Signal the unit to resume the work.
 			}
 		}
