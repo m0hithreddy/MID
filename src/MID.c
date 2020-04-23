@@ -180,22 +180,9 @@ int main(int argc, char **argv)
 		if(net_if[i]->family!=AF_INET)
 			continue;
 
-		struct socket_info cli_info;
+		struct socket_info* cli_info=create_socket_info(net_if[i]->name,net_if[i]->address);
 
-		cli_info.address=net_if[i]->address;
-		cli_info.port=0;
-		cli_info.family=DEFAULT_HTTP_SOCKET_FAMILY;
-		cli_info.type=DEFAULT_HTTP_SOCKET_TYPE;
-		cli_info.protocol=DEFAULT_HTTP_SOCKET_PROTOCOL;
-
-		cli_info.sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*2);
-		cli_info.sock_opts[0]=create_socket_opt(SOL_SOCKET,SO_BINDTODEVICE,net_if[i]->name,strlen(net_if[i]->name));
-		cli_info.sock_opts[1]=create_socket_opt(IPPROTO_TCP,TCP_SYNCNT,&args->max_tcp_syn_retransmits,sizeof(int));
-
-		cli_info.opts_len=2;
-
-
-		int sockfd=open_connection(&cli_info,servaddr);
+		int sockfd=open_connection(cli_info,servaddr);
 
 		if(sockfd<0)
 		{
@@ -224,7 +211,7 @@ int main(int argc, char **argv)
 			sock_write(fileno(stderr),response);
 		}
 
-		void* s_rqst_s_resp=follow_redirects(s_request, response, args->max_redirects,&cli_info,RETURN_S_REQUEST_S_RESPONSE);
+		void* s_rqst_s_resp=follow_redirects(s_request, response, args->max_redirects,cli_info,RETURN_S_REQUEST_S_RESPONSE);
 
 		if(s_rqst_s_resp==NULL)
 		{
@@ -337,22 +324,6 @@ int main(int argc, char **argv)
 	if(fin_hostips==NULL)
 		mid_flag_exit1(1,"MID: No mirrors found for %s. Exiting...\n\n",fin_host);
 
-	/* Base client socket_info structure */
-
-	struct socket_info* base_socket_info=(struct socket_info*)malloc(sizeof(struct socket_info));
-
-	base_socket_info->address=ok_net_if[0].address;
-	base_socket_info->port=0;
-	base_socket_info->family=DEFAULT_HTTP_SOCKET_FAMILY;
-	base_socket_info->type=DEFAULT_HTTP_SOCKET_TYPE;
-	base_socket_info->protocol=DEFAULT_HTTP_SOCKET_PROTOCOL;
-
-	base_socket_info->sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*2);
-	base_socket_info->sock_opts[0]=create_socket_opt(SOL_SOCKET,SO_BINDTODEVICE,ok_net_if[0].name,strlen(ok_net_if[0].name));
-	base_socket_info->sock_opts[1]=create_socket_opt(IPPROTO_TCP,TCP_SYNCNT,&args->max_tcp_syn_retransmits,sizeof(int));
-
-	base_socket_info->opts_len=2;
-
 	/* Base unit_info structure */
 
 	base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
@@ -406,7 +377,7 @@ int main(int argc, char **argv)
 	base_unit_info->resume=1;
 	base_unit_info->pc_flag=pc_flag;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
-	base_unit_info->cli_info=base_socket_info;
+	base_unit_info->cli_info=create_socket_info(ok_net_if[0].name,ok_net_if[0].address);
 
 	base_unit_info->servaddr=create_sockaddr_in(*fin_hostips,fin_port,DEFAULT_HTTP_SOCKET_FAMILY);
 
@@ -710,8 +681,7 @@ int main(int argc, char **argv)
 			update->if_name=ok_net_if[if_id].name;
 			update->if_id=if_id;
 
-			update->cli_info->address=ok_net_if[if_id].address;
-			update->cli_info->sock_opts[0]=create_socket_opt(SOL_SOCKET,SO_BINDTODEVICE,ok_net_if[if_id].name,strlen(ok_net_if[if_id].name));
+			update->cli_info=create_socket_info(ok_net_if[if_id].name,ok_net_if[if_id].address);
 
 			// Assign a mirror to download
 

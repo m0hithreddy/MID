@@ -36,7 +36,7 @@ struct socket_opt
 
 struct sockaddr* create_sockaddr_in(char* host,short port,int family);
 
-struct socket_opt create_socket_opt(int level,int optname,void* optval,socklen_t optlen);
+struct socket_info* create_socket_info(char* if_name,char* if_addr);
 
 int open_connection(struct socket_info* sock_info,struct sockaddr* addr);
 
