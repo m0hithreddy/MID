@@ -601,7 +601,7 @@ struct unit_info* largest_unit(struct unit_info** units,long units_len)
 
 		long left_over=units[i]->range->end-units[i]->range->start+1-units[i]->current_size;
 
-		if(left_over>current && left_over>=UNIT_BREAK_THRESHOLD_SIZE)
+		if(left_over>current && left_over>=args->unit_break)
 		{
 			current=left_over;
 			largest=units[i];

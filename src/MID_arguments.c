@@ -29,11 +29,11 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	if(key==NULL)
 		return;
 
+	struct network_data* op_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct data_bag* op_bag=create_data_bag();
+
 	if(value==NULL)
 	{
-		struct network_data* op_data=(struct network_data*)malloc(sizeof(struct network_data));
-		struct data_bag* op_bag=create_data_bag();
-
 		if(conf_flag>=1)
 		{
 			op_data->data="MID: Configuration file not understood, \"";
@@ -158,6 +158,64 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	else if(!strcmp(key,"max-unit-retries"))
 	{
 		args->max_unit_retries=atol(value);
+	}
+
+	else if(!strcmp(key,"unit-break"))
+	{
+		struct network_data* v_data=(struct network_data*)malloc(sizeof(struct network_data));
+		v_data->data=value;
+		v_data->len=strlen(value);
+
+		char* num;
+		char* unit="b";
+
+		v_data=sseek(v_data," ",-1,MID_PERMIT);
+		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+			goto illegal_unit_break;
+
+		v_data=scopy(v_data,"0123456789",&num,-1,MID_PERMIT);
+		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+			goto compute_unit_break;
+
+		v_data=sseek(v_data," ",-1,MID_PERMIT);
+		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+			goto compute_unit_break;
+
+		v_data=scopy(v_data," ",&unit,-1,MID_DELIMIT);
+		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+			goto compute_unit_break;
+
+		v_data=sseek(v_data," ",-1,MID_PERMIT);
+		if(v_data!=NULL && v_data->len!=0)
+			goto illegal_unit_break;
+
+		compute_unit_break:
+
+		if(!strcmp(unit,"B") || !strcmp(unit,"b"))
+			args->unit_break=atol(num);
+		else if(!strcmp(unit,"K"))
+			args->unit_break=atol(num)*1024;
+		else if(!strcmp(unit,"k"))
+			args->unit_break=atol(num)*1000;
+		else if(!strcmp(unit,"M"))
+			args->unit_break=atol(num)*1024*1024;
+		else if(!strcmp(unit,"m"))
+			args->unit_break=atol(num)*1000*1000;
+		else if(!strcmp(unit,"G"))
+			args->unit_break=atol(num)*1024*1024*1024;
+		else if(!strcmp(unit,"g"))
+			args->unit_break=atol(num)*1000*1000*1000;
+		else
+			goto illegal_unit_break;
+
+		return;
+
+		illegal_unit_break:
+
+		if(conf_flag==1)
+			mid_help("MID: Configuration file not understood, \"unit-break\" format not correct");
+		else
+			mid_help("MID: \"unit-break\" format not correct");
 	}
 
 	else if(!strcmp(key,"max-redirects"))
@@ -357,9 +415,6 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 	else // If option not valid
 	{
-		struct network_data* op_data=(struct network_data*)malloc(sizeof(struct network_data));
-		struct data_bag* op_bag=create_data_bag();
-
 		if(conf_flag>=1)
 		{
 			op_data->data="MID: Configuration file not understood, option \"";
@@ -392,6 +447,7 @@ void read_conf(char* conf,struct mid_args* args)
 	args->max_tcp_syn_retransmits=MAX_TCP_SYN_RETRANSMITS;
 	args->max_mirrors=DEFAULT_MAX_MIRRORS;
 	args->unit_retry_sleep_time=UNIT_RETRY_SLEEP_TIME;
+	args->unit_break=UNIT_BREAK_THRESHOLD_SIZE;
 	args->progress_update_time=PROGRESS_UPDATE_TIME;
 	args->entry_number=0;
 
@@ -706,6 +762,22 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			}
 
 			fill_mid_args("max-unit-retries",value,args,0);
+
+			counter++;
+		}
+
+		else if(!strcmp(argv[counter],"--unit-break") || !strcmp(argv[counter],"-ub")) // --unit-break || -ub
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("unit-break",value,args,0);
 
 			counter++;
 		}
@@ -1061,6 +1133,8 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. \n");
 	fprintf(stderr,"   --max-parallel-downloads x             -n x                  At max x parallel connections are opened. \n");
 	fprintf(stderr,"   --max-unit-retries x                   -ur x                 At max x retries are made by a unit to download a chunk. \n");
+	fprintf(stderr,"   --unit-break Nu                        -ub Nu                Chunk size limit to split the unit further, default is 100K. \n");
+	fprintf(stderr,"                                                                u => {' ',B,b}=*1, K=*1024, k=*1000, M=K*1024, m=k*1000, G=M*1024, g=m*1000\n");
 	fprintf(stderr,"   --max-redirects x                      -R x                  At max x HTTP redirects are followed. \n");
 	fprintf(stderr,"   --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted. \n");
 	fprintf(stderr,"   --max-mirrors x                        -m x                  x > 0 => At max x mirrors are used. x <= 0 => All mirrors are used. \n");

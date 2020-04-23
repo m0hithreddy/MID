@@ -37,6 +37,7 @@ struct mid_args
 	long max_tcp_syn_retransmits;
 	long max_mirrors;
 	long unit_retry_sleep_time;
+	long unit_break;
 	long progress_update_time;
 	long entry_number;
 	int root_mode;

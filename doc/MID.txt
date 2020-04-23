@@ -23,6 +23,8 @@ OPTIONS
    --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. 
    --max-parallel-downloads x             -n x                  At max x parallel connections are opened.
    --max-unit-retries x                   -Ur x                 At max x retries are made by a unit to download a chunk. If failed the download is terminated.
+   --unit-break Nu                        -ub Nu                Chunk size limit to split the unit further, default is 100K.
+                                                                u => {' ',B,b}=*1, K=*1024, k=*1000, M=K*1024, m=k*1000, G=M*1024, g=m*1000
    --max-redirects x                      -R x                  At max x HTTP redirects are followed.
    --max-tcp-syn-retransmits x            -Sr x                 At max x TCP SYNs are retransmitted, when intiating a TCP connection.
    --max-mirrors x                        -m x                  x > 0 => At max x mirrors are used in the download. x <= 0 => All mirrors are used in the downaload.
