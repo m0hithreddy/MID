@@ -34,9 +34,18 @@
 	do\
 	{\
 		if(unit_info->quit)\
+		{\
+			if(sockfd>=0)\
+			{\
+				close(sockfd);\
+			}\
+			if(sigfd>=0)\
+			{\
+				close(sigfd);\
+			}\
 			return NULL;\
+		}\
 	}while(0)
-
 
 struct unit_info
 {

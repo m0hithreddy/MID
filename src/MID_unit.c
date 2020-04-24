@@ -33,7 +33,7 @@ void* unit(void* info)
 	struct unit_info* unit_info=(struct unit_info*)info;
 
 	long retries_count=0;
-	int signo;
+	int signo,sockfd;
 
 	struct timespec sleep_time;
 	sleep_time.tv_nsec=0;
@@ -52,7 +52,10 @@ void* unit(void* info)
 		init:
 
 		if(unit_info->quit==1 || (unit_info->resume==3 && unit_info->pc_flag==0)) // Initial checks
-			return NULL;
+		{
+			unit_info->quit=1;
+			unit_quit();
+		}
 
 		if(unit_info->err_flag!=0) // If an probably recoverable error encountered
 		{
@@ -123,7 +126,7 @@ void* unit(void* info)
 
 		unit_quit();
 
-		int sockfd=open_connection(unit_info->cli_info,unit_info->servaddr); // open connection
+		sockfd=open_connection(unit_info->cli_info,unit_info->servaddr); // open connection
 
 		if(sockfd<0)
 			goto self_repair;
@@ -144,10 +147,7 @@ void* unit(void* info)
 			ssl=(SSL*)send_https_request(sockfd,request,unit_info->host,JUST_SEND);
 
 			if(ssl==NULL)
-			{
-				close(sockfd);
 				goto self_repair;
-			}
 		}
 
 		unit_quit();
@@ -236,10 +236,7 @@ void* unit(void* info)
 		unit_quit();
 
 		if(status<0)
-		{
-			close(sockfd);
 			goto self_repair;
-		}
 
 
 		n_eat_buf=flatten_data_bag(eat_bag);
@@ -247,10 +244,7 @@ void* unit(void* info)
 		struct http_response* s_response=parse_http_response(n_eat_buf); //parse the partial response.
 
 		if(s_response==NULL)
-		{
-			close(sockfd);
 			goto self_repair;
-		}
 
 		pthread_mutex_lock(&unit_info->lock);
 		unit_info->status_code=atoi(s_response->status_code);
@@ -264,9 +258,7 @@ void* unit(void* info)
 			fatal_error=fatal_error+1;
 			pthread_mutex_unlock(&err_lock);
 
-			close(sockfd);
 			goto signal_parent;
-
 		}
 		pthread_mutex_unlock(&unit_info->lock);
 
@@ -295,10 +287,7 @@ void* unit(void* info)
 
 		struct encoding_info* en_info=determine_encodings(s_response->transfer_encoding); // determine the transfer encoding used.
 		if(en_info==NULL)
-		{
-			close(sockfd);
 			goto fatal_error;
-		}
 
 		int en_status=EN_OK;
 		long rem_download=0;
@@ -322,18 +311,12 @@ void* unit(void* info)
 			{
 
 				if(en_status==EN_END) // if encode_handler ended but still more data is given.
-				{
-					close(sockfd);
 					goto fatal_error;
-				}
 
 				en_status=handle_encodings(en_info);
 
 				if(en_status!=EN_OK && en_status!=EN_END) // error reported by encode_handler.
-				{
-					close(sockfd);
 					goto fatal_error;
-				}
 
 				pthread_mutex_lock(&unit_info->lock); // write the data to file, and update unit_info fields.
 				rem_download=unit_info->range->end-unit_info->range->start+1-unit_info->current_size;
@@ -414,8 +397,6 @@ void* unit(void* info)
 
 		end_download:
 
-		close(sockfd);
-
 		pthread_mutex_lock(&unit_info->lock);
 		unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1; // Update left over range entries.
 		unit_info->current_size=0;
@@ -423,7 +404,7 @@ void* unit(void* info)
 		if(unit_info->quit) // if requested to quit.
 		{
 			pthread_mutex_unlock(&unit_info->lock);
-			return NULL;
+			unit_quit();
 		}
 
 		if(unit_info->current_size<unit_info->range->end-unit_info->range->start+1) // check for incomplete download.
@@ -437,10 +418,22 @@ void* unit(void* info)
 
 		signal_parent:
 
+		if(sockfd>=0)
+		{
+			close(sockfd);
+			sockfd=-1;
+		}
+
 		pthread_kill(unit_info->p_tid,SIGRTMIN);
 	}
 
 	self_repair:
+
+	if(sockfd>=0)
+	{
+		close(sockfd);
+		sockfd=-1;
+	}
 
 	pthread_mutex_lock(&unit_info->lock);
 	if(retries_count<unit_info->max_unit_retries)
@@ -454,6 +447,7 @@ void* unit(void* info)
 	}
 
 	unit_info->err_flag=2;
+	unit_info->quit=1;
 	pthread_mutex_unlock(&unit_info->lock);
 
 	pthread_mutex_lock(&err_lock);
@@ -461,12 +455,14 @@ void* unit(void* info)
 	pthread_mutex_unlock(&err_lock);
 
 	pthread_kill(unit_info->p_tid,SIGRTMIN);
-	return NULL;
+
+	unit_quit();
 
 	fatal_error:
 
 	pthread_mutex_lock(&unit_info->lock);
 	unit_info->err_flag=2;
+	unit_info->quit=1;
 	pthread_mutex_unlock(&unit_info->lock);
 
 	pthread_mutex_lock(&err_lock);
@@ -474,6 +470,9 @@ void* unit(void* info)
 	pthread_mutex_unlock(&err_lock);
 
 	pthread_kill(unit_info->p_tid,SIGRTMIN);
+
+	unit_quit();
+
 	return NULL;
 }
 
