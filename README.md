@@ -8,7 +8,13 @@
  
 * Traditional HTTP[S] download accelerators use HTTP range requests to achieve this. 
 
-* MID also uses HTTP range requests to achieve the download acceleration but it takes it to the next level by involving multiple network-interfaces in the download (hence bandwidth boost)
+* MID also uses HTTP range requests to achieve the download acceleration but it takes it to the next level by involving multiple network-interfaces in the download (hence bandwidth boost).
+
+* MID determines the network interfaces to use in the download, and adopts two step split in downloading the file.
+
+  * Step 1: The file is divided among the network-interfaces in real time. 
+  
+  * Step 2: The file is further divided among HTTP range requests that arise from that particular interface in real time. 
  
 ## Dependencies
 
