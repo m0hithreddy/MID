@@ -102,6 +102,7 @@ struct http_request
 	// Misc Entries
 	char* url;
 	char* hostip;
+	char* scheme;
 };
 
 struct http_response

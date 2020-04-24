@@ -420,9 +420,7 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 		purl=parse_url(s_response->location); // Parse the URL
 
 		if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
-		{
 			return NULL;
-		}
 
 		if(args->vverbose_flag && !args->quiet_flag)
 		{
@@ -449,21 +447,25 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 		struct sockaddr *servaddr=create_sockaddr_in(hostip,atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),AF_INET);
 
 		if(servaddr==NULL)
-		{
 			return NULL;
-		}
 
 		s_request->host=purl->host;
-		char* tmp_path=(char*)malloc(sizeof(char)*HTTP_REQUEST_HEADERS_MAX_LEN);
-		strcpy(tmp_path,purl->path);
-		if(purl->query!=NULL)
+		if(purl->path!=NULL)
 		{
-			strcat(tmp_path,"?");
-			strcat(tmp_path,purl->query);
+			char* tmp_path=(char*)malloc(sizeof(char)*HTTP_REQUEST_HEADERS_MAX_LEN);
+			strcpy(tmp_path,purl->path);
+			if(purl->query!=NULL)
+			{
+				strcat(tmp_path,"?");
+				strcat(tmp_path,purl->query);
+			}
+			s_request->path=tmp_path;
 		}
-		s_request->path=tmp_path;
+		else
+			s_request->path=NULL;
 		s_request->url=s_response->location;
 		s_request->hostip=hostip;
+		s_request->scheme=purl->scheme;
 
 		request=create_http_request(s_request); // Create HTTP Request
 

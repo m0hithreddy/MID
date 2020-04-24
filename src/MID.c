@@ -175,9 +175,10 @@ int main(int argc, char **argv)
 	s_request->accept_encoding="gzip";
 #endif
 	s_request->connection="close";
+	s_request->custom_headers=args->custom_headers;
 	s_request->url=args->url;
 	s_request->hostip=hostip;
-	s_request->custom_headers=args->custom_headers;
+	s_request->scheme=purl->scheme;
 
 	struct network_data* request=create_http_request(s_request);
 
@@ -194,6 +195,8 @@ int main(int argc, char **argv)
 
 	// For each network interface check whether server is accessible
 
+	long content_length=-1;
+
 	for (int i = 0; net_if[i]!=NULL ; i++)
 	{
 
@@ -205,10 +208,7 @@ int main(int argc, char **argv)
 		int sockfd=open_connection(cli_info,servaddr);
 
 		if(sockfd<0)
-		{
 			continue;
-		}
-
 
 		struct network_data *response;
 
@@ -220,9 +220,7 @@ int main(int argc, char **argv)
 		close(sockfd);
 
 		if(response==NULL)
-		{
 			continue;
-		}
 
 		if(args->vverbose_flag && !args->quiet_flag)
 		{
@@ -234,9 +232,7 @@ int main(int argc, char **argv)
 		void* s_rqst_s_resp=follow_redirects(s_request, response, args->max_redirects,cli_info,RETURN_S_REQUEST_S_RESPONSE);
 
 		if(s_rqst_s_resp==NULL)
-		{
 			continue;
-		}
 
 		struct http_request* tmp_s_request=(struct http_request*)s_rqst_s_resp;
 
@@ -248,18 +244,37 @@ int main(int argc, char **argv)
 			gl_s_request=tmp_s_request;
 		}
 
-		if(strcmp(tmp_s_response->status_code,"200"))
+		if(tmp_s_response->status_code==NULL || strcmp(tmp_s_response->status_code,"200"))
 			continue;
-		else
+
+		gl_s_request=tmp_s_request;
+		gl_s_response=tmp_s_response;
+
+		if(args->validate_ms) // If user requested for validation then validate and exit.
 		{
-			gl_s_request=tmp_s_request;
-			gl_s_response=tmp_s_response;
+			check_ms_entry(args->cm_file,args->entry_number,tmp_s_request,tmp_s_response);
+			exit(0);
 		}
 
-		if(args->validate_ms)
+		long tmp_content_length;  // content_length of this response.
+
+		if(tmp_s_response->accept_ranges==NULL || strcmp(tmp_s_response->accept_ranges,"bytes")!=0 || tmp_s_response->content_length==NULL)
+			tmp_content_length=0;
+		else
+			tmp_content_length=atol(tmp_s_response->content_length);
+
+		if(content_length==-1) // if for the first time, then assign.
+			content_length=tmp_content_length;
+		else if(content_length!=tmp_content_length) // If not equal, then probably not a static content, fall back to normal download mode.
 		{
-			check_ms_entry(args->cm_file,args->entry_number,gl_s_request,gl_s_response);
-			exit(0);
+			content_length=0;
+			((struct network_interface*)net_if_bag->first->data)->address=NULL;  // If in this branch, then net_if_bag->n_pockets>=1
+			((struct network_interface*)net_if_bag->first->data)->family=AF_INET;
+			((struct network_interface*)net_if_bag->first->data)->name="default";
+			((struct network_interface*)net_if_bag->first->data)->netmask=NULL;
+
+			net_if_bag->n_pockets=1;
+			break;
 		}
 
 		net_if_data->data=(char*)net_if[i];
@@ -316,20 +331,12 @@ int main(int argc, char **argv)
 		}
 	}
 
-
 	if(ok_net_if_len==0)
 		mid_flag_exit1(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
 
 	// Check for Range request support
 
-	int pc_flag=0;
-	long content_length=0;
-
-	if(gl_s_response->accept_ranges!=NULL && strcmp(gl_s_response->accept_ranges,"bytes")==0  && gl_s_response->content_length!=NULL)
-	{
-		pc_flag=1;
-		content_length=atol(gl_s_response->content_length);
-	}
+	int pc_flag=content_length ? 1 : 0;
 
 	//Final values for Host Port and URL scheme after redirects
 
@@ -352,7 +359,6 @@ int main(int argc, char **argv)
 	int resume_status=0;
 	if(pc_flag==1 && !args->no_resume)
 		resume_status=init_resume();
-
 
 	if(!resume_status) // If resume_status ==1 , files already determined.
 	{
@@ -394,7 +400,8 @@ int main(int argc, char **argv)
 	base_unit_info->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
 	base_unit_info->report_len=ok_net_if_len;
 	base_unit_info->max_unit_retries=args->max_unit_retries;
-	base_unit_info->resume=1;
+	base_unit_info->content_length=content_length;
+	base_unit_info->resume=2;
 	base_unit_info->pc_flag=pc_flag;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
 	base_unit_info->cli_info=create_socket_info(ok_net_if[0].name,ok_net_if[0].address);
@@ -431,8 +438,6 @@ int main(int argc, char **argv)
 			ftruncate(fileno(u_fp),content_length);
 		}
 	}
-
-
 
 	/* Registering thread to handle signals */
 

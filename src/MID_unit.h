@@ -63,7 +63,8 @@ struct unit_info
 	long* report_size; // Total data fetched by unit from each interface, to compute if_report;
 	long report_len;
 	long max_unit_retries;
-	int resume;
+	long content_length;
+	int resume;   // {4,3}=>idle states to be handled by main and unit ; {2}=>verifying phase for (206 or 200 HTTP response code) ; {1}=>actual downloading ;
 	int quit;
 	int pc_flag;
 	int err_flag;
@@ -74,7 +75,6 @@ struct unit_info
 	long healing_time;
 	time_t start_time;
 	struct socket_info* cli_info;
-	struct sockaddr* servaddr;
 	struct http_request* s_request;
 	struct http_range* range;
 	struct data_bag* unit_ranges; // HTTP ranges downloaded by unit

@@ -13,6 +13,7 @@
 #include"MID_ssl_socket.h"
 #include"MID_functions.h"
 #include"MID_interfaces.h"
+#include"MID_err.h"
 #include"url_parser.h"
 #include<stdio.h>
 #include<stdlib.h>
@@ -33,7 +34,7 @@ void* unit(void* info)
 	struct unit_info* unit_info=(struct unit_info*)info;
 
 	long retries_count=0;
-	int signo,sockfd;
+	int signo,sockfd,http_flag;
 
 	struct timespec sleep_time;
 	sleep_time.tv_nsec=0;
@@ -51,7 +52,7 @@ void* unit(void* info)
 
 		init:
 
-		if(unit_info->quit==1 || (unit_info->resume==3 && unit_info->pc_flag==0)) // Initial checks
+		if(unit_info->quit==1 || (unit_info->resume==4 && unit_info->pc_flag==0)) // Initial checks
 		{
 			unit_info->quit=1;
 			unit_quit();
@@ -76,11 +77,11 @@ void* unit(void* info)
 
 			pthread_mutex_lock(&unit_info->lock);
 			unit_info->self_repair=0;
-			unit_info->resume=1;
+			unit_info->resume=2;
 			pthread_mutex_unlock(&unit_info->lock);
 		}
 
-		if(unit_info->resume!=1) // Unit is idle, wait for work or termination
+		if(unit_info->resume>2) // Unit is idle, wait for work or termination
 		{
 			retries_count=0;
 
@@ -94,12 +95,15 @@ void* unit(void* info)
 
 		/* Initializations */
 
-		pthread_mutex_lock(&unit_info->lock);
 		time(&unit_info->start_time);
 		unit_info->status_code=0;
 
-		// Set the s_request fields
+		/* Create and send HTTP[S] [range] request */
 
+		http_request:
+
+		pthread_mutex_lock(&unit_info->lock);  // Set unit_info->s_request fields.
+		unit_info->s_request->method="GET";
 		if(unit_info->pc_flag)
 		{
 			if(unit_info->range->start >=0 && unit_info->range->end >=0 && unit_info->range->start <= unit_info->range->end)
@@ -110,41 +114,45 @@ void* unit(void* info)
 			}
 			else
 			{
-				unit_info->resume=3;  // 3 represents idle unit (to handle race  conditions between main and unit)
+				unit_info->resume=4;
 				pthread_mutex_unlock(&unit_info->lock);
 
 				goto signal_parent;
 			}
 		}
-
-		unit_info->s_request->method="GET";
 		pthread_mutex_unlock(&unit_info->lock);
-
-		/* Create and send the HTTP [range] request */
 
 		struct network_data* request=create_http_request(unit_info->s_request); // create request
 
+		if(!strcmp(unit_info->s_request->scheme,"http"))  // determine whether HTTP[S] request.
+			http_flag=1;
+		else
+			http_flag=0;
+
+		struct sockaddr* servaddr = create_sockaddr_in(unit_info->s_request->hostip,\
+				atol(unit_info->s_request->port == NULL ? (http_flag ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT ) : unit_info->s_request->port),\
+				DEFAULT_HTTP_SOCKET_FAMILY);   // create server struct sockaddr* structure;
+
+		if(servaddr==NULL)
+			goto fatal_error;
+
 		unit_quit();
 
-		sockfd=open_connection(unit_info->cli_info,unit_info->servaddr); // open connection
+		sockfd=open_connection(unit_info->cli_info,servaddr); // open connection
+
+		unit_quit();
 
 		if(sockfd<0)
 			goto self_repair;
 
-		unit_quit();
-
 		SSL* ssl;
-		int http_flag;
 
-		if(!strcmp(unit_info->scheme,"http")) // send request
-		{
-			http_flag=1;
-			send_http_request(sockfd,request,NULL,JUST_SEND);
-		}
+		if(http_flag)
+			send_http_request(sockfd,request,NULL,JUST_SEND); // send HTTP request
 		else
 		{
 			http_flag=0;
-			ssl=(SSL*)send_https_request(sockfd,request,unit_info->host,JUST_SEND);
+			ssl=(SSL*)send_https_request(sockfd,request,unit_info->host,JUST_SEND); // send HTTPS request
 
 			if(ssl==NULL)
 				goto self_repair;
@@ -238,7 +246,6 @@ void* unit(void* info)
 		if(status<0)
 			goto self_repair;
 
-
 		n_eat_buf=flatten_data_bag(eat_bag);
 
 		struct http_response* s_response=parse_http_response(n_eat_buf); //parse the partial response.
@@ -246,11 +253,62 @@ void* unit(void* info)
 		if(s_response==NULL)
 			goto self_repair;
 
-		pthread_mutex_lock(&unit_info->lock);
+		pthread_mutex_lock(&unit_info->lock);    // Act based on HTTP response status code.
 		unit_info->status_code=atoi(s_response->status_code);
 
-		if(s_response->status_code[0]!='2') // check if response header is valid.
+		if( (unit_info->pc_flag && !strcmp(s_response->status_code,"206")) || (!unit_info->pc_flag && s_response->status_code[0]=='2') ) // If (pc && range staisfied) || (non-pc && 2xx)
 		{
+			unit_info->resume=unit_info->resume-1;
+		}
+		else if(s_response->status_code[0]=='3')  // if the response header is 3xx
+		{
+			pthread_mutex_unlock(&unit_info->lock);
+			unit_info->s_request->method="HEAD";
+			unit_info->s_request->range=NULL;
+			void* tmp_s_request_s_response=follow_redirects(unit_info->s_request,n_eat_buf,args->max_redirects,unit_info->cli_info,RETURN_S_REQUEST_S_RESPONSE);
+
+			if(tmp_s_request_s_response==NULL)
+				goto self_repair;
+
+			struct http_request* tmp_s_request=(struct http_request*)tmp_s_request_s_response;
+			struct http_response* tmp_s_response=(struct http_response*)(tmp_s_request_s_response+sizeof(struct http_request));
+
+			if(!unit_info->pc_flag)
+			{
+				if(tmp_s_response->status_code[0]!='2') // If not 2xx
+				{
+					pthread_mutex_lock(&unit_info->lock);
+					goto unknown_status_code;
+				}
+			}
+			else
+			{
+				if(strcmp(tmp_s_response->status_code,"200"))
+				{
+					pthread_mutex_lock(&unit_info->lock);
+					goto unknown_status_code;
+				}
+
+				if(tmp_s_response->accept_ranges==NULL || strcmp(tmp_s_response->accept_ranges,"bytes")!=0 ||\
+						tmp_s_response->content_length==NULL || atol(tmp_s_response->content_length)!=unit_info->content_length){   // Server is insane!
+
+					goto fatal_error;
+				}
+			}
+
+			if(sockfd>0)
+			{
+				close(sockfd);
+				sockfd=-1;
+			}
+
+			unit_info->s_request=tmp_s_request;
+			goto http_request;
+		}
+		else  // main supervision is required .
+		{
+			unknown_status_code:
+
 			unit_info->err_flag=2;  // err_flag 2 represents main() supervision in dealing with error,
 			pthread_mutex_unlock(&unit_info->lock);
 
@@ -271,8 +329,8 @@ void* unit(void* info)
 		else
 			fp=o_fp;
 
-		char* data_buf=eat_buf; // over eaten data.
-		memcpy(data_buf,s_response->body->data,s_response->body->len);
+		char* data_buf=eat_buf;
+		memcpy(data_buf,s_response->body->data,s_response->body->len);   // over eaten data.
 		status=s_response->body->len;
 
 		pthread_mutex_lock(&unit_info->lock); // Initialize fetched unit range entries (range.start,range.start-1)
@@ -398,6 +456,7 @@ void* unit(void* info)
 		end_download:
 
 		pthread_mutex_lock(&unit_info->lock);
+		unit_info->status_code=0;
 		unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1; // Update left over range entries.
 		unit_info->current_size=0;
 
@@ -413,7 +472,7 @@ void* unit(void* info)
 			goto self_repair;
 		}
 
-		unit_info->resume=3; // make the unit idle and signal parent.
+		unit_info->resume=4; // make the unit idle and signal parent.
 		pthread_mutex_unlock(&unit_info->lock);
 
 		signal_parent:
@@ -551,7 +610,7 @@ struct interface_report* get_interface_report(struct unit_info** units,long unit
 
 		pthread_mutex_lock(&units[i]->lock);
 
-		if(units[i]->resume==1)
+		if(units[i]->resume<=2)
 			if_report[units[i]->if_id].connections=if_report[units[i]->if_id].connections+1;
 
 		pthread_mutex_unlock(&units[i]->lock);
@@ -623,7 +682,7 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 	for(long i=0;i<units_len;i++)
 	{
 		pthread_mutex_lock(&units[i]->lock);
-		if(units[i]->resume==3)
+		if(units[i]->resume==4)
 		{
 			pthread_mutex_unlock(&units[i]->lock);
 			return units[i];
@@ -1167,4 +1226,3 @@ struct unit_info* unitdup(struct unit_info* src)
 
 	return new;
 }
-
