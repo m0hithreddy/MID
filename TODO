@@ -1,8 +1,6 @@
 -> Logging mechanism
 
 -> Implementing own URL parser
-
--> Requests arised from different interface may be redirected, if redirected follow them before starting download in MID_unit.
  
 -> Support for option -n taking per interface connections limit. 
 
