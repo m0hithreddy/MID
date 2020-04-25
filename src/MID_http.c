@@ -412,37 +412,15 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 			break;
 		}
 
-		if(args->vverbose_flag && !args->quiet_flag)
-		{
-			fprintf(stderr,"\nHTTP Redirection Number %ld:\n\n",redirect_count+1);
-		}
-
 		purl=parse_url(s_response->location); // Parse the URL
 
 		if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
 			return NULL;
 
-		if(args->vverbose_flag && !args->quiet_flag)
-		{
-			fprintf(stderr,"\n->URL Information:\n\n");
-
-			fprintf(stderr,"-->Scheme: %s\n",purl->scheme);
-			fprintf(stderr,"-->Host: %s\n",purl->host);
-			fprintf(stderr,"-->Port: %s\n",purl->port);
-			fprintf(stderr,"-->PATH: %s\n",purl->path);
-			fprintf(stderr,"-->Query: %s\n",purl->query);
-		}
-
 		char* hostip=resolve_dns(purl->host); // Resolve DNS
 
 		if(hostip==NULL)
 			return NULL;
-
-		if(args->vverbose_flag && !args->quiet_flag)
-		{
-			fprintf(stderr,"\n->DNS Resolve:\n\n");
-			fprintf(stderr,"-->%s IPV4 address: %s\n",purl->host,hostip);
-		}
 
 		struct sockaddr *servaddr=create_sockaddr_in(hostip,atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),AF_INET);
 
@@ -468,13 +446,6 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 		s_request->scheme=purl->scheme;
 
 		request=create_http_request(s_request); // Create HTTP Request
-
-		if(args->vverbose_flag && !args->quiet_flag)
-		{
-			fprintf(stderr,"\n->HTTP Request Message:\n\n");
-			fprintf(stderr,"-->");
-			sock_write(fileno(stderr),request);
-		}
 
 		if(cli_info==NULL)
 		{
@@ -502,13 +473,6 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 
 		if(response==NULL)
 			return NULL;
-
-		if(args->vverbose_flag && !args->quiet_flag)
-		{
-			fprintf(stderr,"\n->HTTP Response Message:\n\n");
-			fprintf(stderr,"-->");
-			sock_write(fileno(stderr),response);
-		}
 
 		redirect_count++;
 	}
