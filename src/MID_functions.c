@@ -57,17 +57,12 @@ void sort(void* arr,long ele_size,long start,long end,two_to_one_func compare)
 	}
 }
 
-char* strlocate(char* haystack, char* needle,long start,long end)
+char* strlocate(char* haystack,char* needle,long start,long end)
 {
 	if(haystack==NULL || needle==NULL || start<0 || end<0 || end<start)
 		return NULL;
 
-	char* mod_haystack=(char*)malloc(sizeof(char)*(end-start+2));
-
-	memcpy(mod_haystack,haystack+start,end-start+1);
-	mod_haystack[end-start+1]='\0';
-
-	return strstr(haystack,needle);
+	return memmem(haystack+start,end-start+1,needle,strlen(needle));
 }
 
 char* strcaselocate(char* haystack,char* needle,long start,long end)
@@ -80,7 +75,12 @@ char* strcaselocate(char* haystack,char* needle,long start,long end)
 	memcpy(mod_haystack,haystack+start,end-start+1);
 	mod_haystack[end-start+1]='\0';
 
-	return strcasestr(haystack,needle);
+	char* str_ptr=strcasestr(mod_haystack,needle);
+
+	if(str_ptr==NULL)
+		return NULL;
+
+	return haystack+start+(long)(str_ptr-mod_haystack);
 }
 
 struct network_data* sseek(struct network_data* n_data,char* delimiter,long len,int delimiting)
