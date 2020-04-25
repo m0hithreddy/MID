@@ -30,12 +30,14 @@ extern "C" {
     /*
      * Declaration of function prototypes
      */
-    struct parsed_url * parse_url(const char *);
+    struct parsed_url * parse_url(char *);
     void parsed_url_free(struct parsed_url *);
 
 #ifdef __cplusplus
 }
 #endif
+
+char* rectify_url(char* url);
 
 #endif /* _URL_PARSER_H */
 

@@ -8,6 +8,8 @@
 #define _GNU_SOURCE
 
 #include "url_parser.h"
+#include"MID_structures.h"
+#include"MID_functions.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,8 +33,16 @@ _is_scheme_char(int c)
  * See RFC 1738, 3986
  */
 struct parsed_url *
-parse_url(const char *url)
+parse_url(char *in_url)
 {
+	if(in_url==NULL)
+		return NULL;
+
+	char* url=rectify_url(in_url);
+
+	if(url==NULL)
+		return NULL;
+
     struct parsed_url *purl;
     const char *tmpstr;
     const char *curstr;
@@ -324,6 +334,46 @@ parsed_url_free(struct parsed_url *purl)
         }
         free(purl);
     }
+}
+
+char* rectify_url(char* url)
+{
+	if(url==NULL)
+		return NULL;
+
+	struct data_bag* r_url_bag=create_data_bag();
+	struct network_data* r_url_data=(struct network_data*)malloc(sizeof(struct network_data));
+
+	long url_len=strlen(url);
+	char* sp_ptr=NULL;
+	long current=0;
+
+	while(1)
+	{
+		sp_ptr=strlocate(url," ",current,url_len);
+
+		if(sp_ptr==NULL)   // copy the last part and break;
+		{
+			r_url_data->data=url+current;
+			r_url_data->len=url_len+1-current;
+			place_data(r_url_bag,r_url_data);
+			break;
+		}
+		else
+		{
+			r_url_data->data=url+current;  // Copy the part before " ".
+			r_url_data->len=(long)(sp_ptr-(url+current));
+			place_data(r_url_bag,r_url_data);
+
+			current=current+r_url_data->len+1;  // set the current past " " (by one).
+
+			r_url_data->data="%20";  // replace " " with %20
+			r_url_data->len=3;
+			place_data(r_url_bag,r_url_data);
+		}
+	}
+
+	return flatten_data_bag(r_url_bag)->data;
 }
 
 /*
