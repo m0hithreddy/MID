@@ -25,6 +25,7 @@
 #include<signal.h>
 #include<sys/signalfd.h>
 #include<sys/select.h>
+#include<sys/time.h>
 #include<fcntl.h>
 #include<errno.h>
 
@@ -176,12 +177,25 @@ void* unit(void* info)
 		FD_SET(sigfd,&m_set);
 		FD_SET(sockfd,&m_set);
 
-		int maxfds=sigfd > sockfd ? sigfd+1 : sockfd+1;
+		struct timeval m_time,t_time;
+		m_time.tv_sec=args->io_timeout;
+		m_time.tv_usec=0;
+
+		int maxfds=sigfd > sockfd ? sigfd+1 : sockfd+1,s_ret;
 
 		while(1)
 		{
 			t_set=m_set;
-			select(maxfds,&t_set,NULL,NULL,NULL);
+			t_time=m_time;
+			s_ret=select(maxfds,&t_set,NULL,NULL,&t_time);
+
+			if(s_ret<=0)
+			{
+				if(s_ret==0)
+					goto self_repair;
+
+				goto fatal_error;
+			}
 
 			if(FD_ISSET(sigfd,&t_set))  //user interrupt, break;
 			{
@@ -347,9 +361,8 @@ void* unit(void* info)
 		if(en_info==NULL)
 			goto fatal_error;
 
-		int en_status=EN_OK;
-		long rem_download=0;
-		long wr_status=0;
+		int en_status=EN_OK,f_error=0;
+		long rem_download=0,wr_status=0;
 
 		while(1) // download data...
 		{
@@ -357,9 +370,6 @@ void* unit(void* info)
 			pthread_mutex_lock(&unit_info->lock);
 			unit_info->report_size[unit_info->if_id]=unit_info->report_size[unit_info->if_id]+status;
 			pthread_mutex_unlock(&unit_info->lock);
-
-			if(unit_info->quit)
-				break;
 
 			en_info->in=data_buf;
 			en_info->in_len=0;
@@ -369,12 +379,18 @@ void* unit(void* info)
 			{
 
 				if(en_status==EN_END) // if encode_handler ended but still more data is given.
-					goto fatal_error;
+				{
+					f_error=1;
+					break;
+				}
 
 				en_status=handle_encodings(en_info);
 
 				if(en_status!=EN_OK && en_status!=EN_END) // error reported by encode_handler.
-					goto fatal_error;
+				{
+					f_error=1;
+					break;
+				}
 
 				pthread_mutex_lock(&unit_info->lock); // write the data to file, and update unit_info fields.
 				rem_download=unit_info->range->end-unit_info->range->start+1-unit_info->current_size;
@@ -400,7 +416,16 @@ void* unit(void* info)
 			read_socket:
 
 			t_set=m_set;
-			select(maxfds,&t_set,NULL,NULL,NULL); // read when ready.
+			t_time=m_time;
+			s_ret=select(maxfds,&t_set,NULL,NULL,&t_time);  // continue when fd ready or timeout
+
+			if(s_ret<=0)
+			{
+				if(s_ret<0)
+					f_error=1;
+
+				break;
+			}
 
 			if(FD_ISSET(sigfd,&t_set))
 			{
@@ -459,6 +484,14 @@ void* unit(void* info)
 		unit_info->status_code=0;
 		unit_info->range->start=*((long*)unit_info->unit_ranges->end->data)+1; // Update left over range entries.
 		unit_info->current_size=0;
+
+		if(f_error)  // If a fatal error occurred with in the loop
+		{
+			pthread_mutex_unlock(&unit_info->lock);
+			f_error=0;
+
+			goto fatal_error;
+		}
 
 		if(unit_info->quit) // if requested to quit.
 		{

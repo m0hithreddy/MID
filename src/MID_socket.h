@@ -10,6 +10,7 @@
 
 #define MAX_TRANSACTION_SIZE 65536
 #define MAX_TCP_SYN_RETRANSMITS 2
+#define MID_DEFAULT_IO_TIMEOUT 60
 
 #include"MID_structures.h"
 #include<netinet/in.h>

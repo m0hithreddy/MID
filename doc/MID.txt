@@ -22,14 +22,15 @@ OPTIONS
    --url URL                              -u URL                URL to be used in the download.
    --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. 
    --max-parallel-downloads x             -n x                  At max x parallel connections are opened.
-   --max-unit-retries x                   -Ur x                 At max x retries are made by a unit to download a chunk. If failed the download is terminated.
+   --max-unit-retries x                   -ur x                 At max x retries are made by a unit to download a chunk. If failed the download is terminated.
    --unit-break Nu                        -ub Nu                Chunk size limit to split the unit further, default is 100K.
                                                                 u => {' ',B,b}=*1, K=*1024, k=*1000, M=K*1024, m=k*1000, G=M*1024, g=m*1000
    --max-redirects x                      -R x                  At max x HTTP redirects are followed.
-   --max-tcp-syn-retransmits x            -Sr x                 At max x TCP SYNs are retransmitted, when intiating a TCP connection.
-   --unit-sleep-time x                    -Us x                 Download unit sleeps for x seconds before retrying.
-   --progress-update-time x               -Pu x                 Progress information updates after evert x seconds.
-   --detailed-progress                    -Pd                   Show detailed download progress.
+   --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted, when intiating a TCP connection.
+   --unit-sleep-time t                    -us t                 Download unit sleeps for t seconds before retrying.
+   --io-timeout t                         -io t                 Set an I/O timeout of t seconds
+   --progress-update-time t               -pu t                 Progress information updates after evert t seconds.
+   --detailed-progress                    -pd                   Show detailed download progress.
    --force-resume                         -fr                   Skip the checks and start the download.
    --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume.
    --detailed-save                        -ds                   Save the hashes of downloaded ranges to .ms file. Default action is not to save. (SSL support required).

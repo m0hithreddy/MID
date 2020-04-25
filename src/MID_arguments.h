@@ -36,6 +36,7 @@ struct mid_args
 	long max_redirects;
 	long max_tcp_syn_retransmits;
 	long unit_retry_sleep_time;
+	long io_timeout;
 	long unit_break;
 	long progress_update_time;
 	long entry_number;

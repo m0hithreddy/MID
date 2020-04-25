@@ -233,6 +233,11 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		args->unit_retry_sleep_time=atol(value);
 	}
 
+	else if(!strcmp(key,"io-timeout"))
+	{
+		args->io_timeout=atol(value);
+	}
+
 	else if(!strcmp(key,"progress-update-time"))
 	{
 		args->progress_update_time=atol(value);
@@ -438,6 +443,7 @@ void read_conf(char* conf,struct mid_args* args)
 	args->max_parallel_downloads=MAX_PARALLEL_DOWNLOADS;
 	args->max_tcp_syn_retransmits=MAX_TCP_SYN_RETRANSMITS;
 	args->unit_retry_sleep_time=UNIT_RETRY_SLEEP_TIME;
+	args->io_timeout=MID_DEFAULT_IO_TIMEOUT;
 	args->unit_break=UNIT_BREAK_THRESHOLD_SIZE;
 	args->progress_update_time=PROGRESS_UPDATE_TIME;
 	args->entry_number=0;
@@ -821,6 +827,22 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
+		else if(!strcmp(argv[counter],"--io-timeout") || !strcmp(argv[counter],"-io")) // --io-timeout || -io
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("io-timeout",value,args,0);
+
+			counter++;
+		}
+
 		else if(!strcmp(argv[counter],"--progress-update-time") || !strcmp(argv[counter],"-pu")) // --progress-update-time || -pu
 		{
 			char* value=NULL;
@@ -1112,8 +1134,9 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"                                                                u => {' ',B,b}=*1, K=*1024, k=*1000, M=K*1024, m=k*1000, G=M*1024, g=m*1000\n");
 	fprintf(stderr,"   --max-redirects x                      -R x                  At max x HTTP redirects are followed. \n");
 	fprintf(stderr,"   --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted. \n");
-	fprintf(stderr,"   --unit-sleep-time x                    -us x                 Download unit sleeps for x seconds before retrying. \n");
-	fprintf(stderr,"   --progress-update-time x               -pu x                 Progress information updates after evert x seconds. \n");
+	fprintf(stderr,"   --unit-sleep-time t                    -us t                 Download unit sleeps for t seconds before retrying. \n");
+	fprintf(stderr,"   --io-timeout t                         -io t                 Set an I/O timeout of t seconds. \n");
+	fprintf(stderr,"   --progress-update-time t               -pu t                 Progress information updates after evert t seconds. \n");
 	fprintf(stderr,"   --detailed-progress                    -pd                   Show detailed download progress. \n");
 	fprintf(stderr,"   --force-resume                         -fr                   Skip the checks and start the download. \n");
 	fprintf(stderr,"   --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume. \n");

@@ -30,6 +30,7 @@
 #include<signal.h>
 #include<sys/stat.h>
 #include<sys/types.h>
+#include<sys/time.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
