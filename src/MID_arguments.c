@@ -228,14 +228,6 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		args->max_tcp_syn_retransmits=atol(value);
 	}
 
-	else if(!strcmp(key,"max-mirrors"))
-	{
-		args->max_mirrors=atol(value);
-
-		if(args->max_mirrors<=0)
-			args->max_mirrors=LONG_MAX;
-	}
-
 	else if(!strcmp(key,"unit-sleep-time"))
 	{
 		args->unit_retry_sleep_time=atol(value);
@@ -445,7 +437,6 @@ void read_conf(char* conf,struct mid_args* args)
 	args->max_redirects=DEFAULT_MAX_HTTP_REDIRECTS;
 	args->max_parallel_downloads=MAX_PARALLEL_DOWNLOADS;
 	args->max_tcp_syn_retransmits=MAX_TCP_SYN_RETRANSMITS;
-	args->max_mirrors=DEFAULT_MAX_MIRRORS;
 	args->unit_retry_sleep_time=UNIT_RETRY_SLEEP_TIME;
 	args->unit_break=UNIT_BREAK_THRESHOLD_SIZE;
 	args->progress_update_time=PROGRESS_UPDATE_TIME;
@@ -814,22 +805,6 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
-		else if(!strcmp(argv[counter],"--max-mirrors") || !strcmp(argv[counter],"-m")) // --max-mirrors || -m
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("max-mirrors",value,args,0);
-
-			counter++;
-		}
-
 		else if(!strcmp(argv[counter],"--unit-sleep-time") || !strcmp(argv[counter],"-us")) // --unit-sleep-time || -us
 		{
 			char* value=NULL;
@@ -1137,7 +1112,6 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"                                                                u => {' ',B,b}=*1, K=*1024, k=*1000, M=K*1024, m=k*1000, G=M*1024, g=m*1000\n");
 	fprintf(stderr,"   --max-redirects x                      -R x                  At max x HTTP redirects are followed. \n");
 	fprintf(stderr,"   --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted. \n");
-	fprintf(stderr,"   --max-mirrors x                        -m x                  x > 0 => At max x mirrors are used. x <= 0 => All mirrors are used. \n");
 	fprintf(stderr,"   --unit-sleep-time x                    -us x                 Download unit sleeps for x seconds before retrying. \n");
 	fprintf(stderr,"   --progress-update-time x               -pu x                 Progress information updates after evert x seconds. \n");
 	fprintf(stderr,"   --detailed-progress                    -pd                   Show detailed download progress. \n");
@@ -1159,7 +1133,7 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --surpass-root-check                   -s                    If had the sufficient permissions, use -s to surpass the root-check. \n");
 	fprintf(stderr,"   --conf file                            -c file               Specify the conf file. Preference order: cmd_line > conf_file > default_values. \n");
 	fprintf(stderr,"\n");
-	fprintf(stderr,"Project homepage: [ %s ]",PACKAGE_URL);
+	fprintf(stderr,"Project homepage: { %s }",PACKAGE_URL);
 	fprintf(stderr,"\n\n");
 	exit(1);
 }

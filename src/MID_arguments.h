@@ -35,7 +35,6 @@ struct mid_args
 	long max_unit_retries;
 	long max_redirects;
 	long max_tcp_syn_retransmits;
-	long max_mirrors;
 	long unit_retry_sleep_time;
 	long unit_break;
 	long progress_update_time;

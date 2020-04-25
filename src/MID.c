@@ -346,11 +346,6 @@ int main(int argc, char **argv)
 	char* fin_scheme=strdup(fin_purl->scheme);
 	long fin_port=atoi((fin_purl->port!=NULL)? fin_purl->port:(!(strcmp(fin_scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT));
 
-	char** fin_hostips=resolve_dns_mirros(fin_host,&(args->max_mirrors));
-
-	if(fin_hostips==NULL)
-		mid_flag_exit1(1,"MID: No mirrors found for %s. Exiting...\n\n",fin_host);
-
 	/* Base unit_info structure */
 
 	base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
@@ -405,11 +400,7 @@ int main(int argc, char **argv)
 	base_unit_info->pc_flag=pc_flag;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
 	base_unit_info->cli_info=create_socket_info(ok_net_if[0].name,ok_net_if[0].address);
-
-	base_unit_info->servaddr=create_sockaddr_in(*fin_hostips,fin_port,DEFAULT_HTTP_SOCKET_FAMILY);
-
 	base_unit_info->s_request=(struct http_request*)memndup(gl_s_request,sizeof(struct http_request));
-
 	base_unit_info->range=(struct http_range*)malloc(sizeof(struct http_range));
 	base_unit_info->range->start=0;
 	base_unit_info->range->end=-1;
@@ -709,11 +700,6 @@ int main(int argc, char **argv)
 			update->if_id=if_id;
 
 			update->cli_info=create_socket_info(ok_net_if[if_id].name,ok_net_if[if_id].address);
-
-			// Assign a mirror to download
-
-			hostip_id=(hostip_id+1)%args->max_mirrors;
-			update->servaddr=create_sockaddr_in(fin_hostips[hostip_id], fin_port, DEFAULT_HTTP_SOCKET_FAMILY);
 
 			// Resume or initiate the unit
 
