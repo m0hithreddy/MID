@@ -486,9 +486,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 
 	conf_data=flatten_mid_bag(conf_bag);
 
-	clear_mid_bag(conf_bag);
-
-
+	free_mid_bag(conf_bag);
 
 	char* key_buffer;
 	char* value_buffer;

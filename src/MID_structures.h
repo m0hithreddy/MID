@@ -38,7 +38,7 @@ struct mid_bag{
 
 struct mid_bag* create_mid_bag();
 
-void clear_mid_bag(struct mid_bag* bag);
+void free_mid_bag(struct mid_bag* bag);
 
 void append_mid_pocket(struct mid_bag* bag,long size);
 

@@ -21,8 +21,11 @@ struct mid_bag* create_mid_bag()
 	return bag;
 }
 
-void clear_mid_bag(struct mid_bag* bag)
+void free_mid_bag(struct mid_bag* bag)
 {
+	if(bag==NULL)
+		return;
+
 	struct mid_pocket *at,*prev;
 
 	at=bag->end;
@@ -34,8 +37,6 @@ void clear_mid_bag(struct mid_bag* bag)
 		free(at);
 		at=prev;
 	}
-
-	bag->n_pockets=0;
 
 	free(bag);
 }
