@@ -33,108 +33,113 @@ struct mid_data* create_http_request(struct http_request* s_request)
 	if(s_request==NULL)
 		return NULL;
 
-	struct mid_data* buf=(struct mid_data*)malloc(sizeof(struct mid_data));
-	buf->data=malloc(HTTP_REQUEST_HEADERS_MAX_LEN*sizeof(char));
+	struct mid_data* rqst_buf=(struct mid_data*)malloc(sizeof(struct mid_data));
+	rqst_buf->data=malloc(HTTP_REQUEST_HEADERS_MAX_LEN*sizeof(char));
 
-	struct mid_bag *bag=create_mid_bag();
+	struct mid_bag *rqst_bag=create_mid_bag();
 
-	// Appending the start line and headers
+	/* Append the request line */
 
-	if(s_request->method!=NULL)
-		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",s_request->method);
+	if(s_request->method!=NULL)  // add the HTTP method
+		rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",s_request->method);
 	else
-		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",DEFAULT_HTTP_METHOD);
+		rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",DEFAULT_HTTP_METHOD);
 
-	place_mid_data(bag,buf);
+	place_mid_data(rqst_bag,rqst_buf);
 
-	if(s_request->path!=NULL)
-		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"/%s ",s_request->path);
+	if(s_request->path!=NULL)  // add the resource path
+		rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"/%s ",s_request->path);
 	else
-		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",DEFAULT_HTTP_PATH);
+		rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",DEFAULT_HTTP_PATH);
 
-	place_mid_data(bag,buf);
+	place_mid_data(rqst_bag,rqst_buf);
 
-	if(s_request->version!=NULL)
-		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"HTTP/%s\r\n",s_request->version);
+	if(s_request->version!=NULL) // add the HTTP version
+		rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"HTTP/%s\r\n",s_request->version);
 	else
-		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"HTTP/%s\r\n",DEFAULT_HTTP_VERSION);
+		rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"HTTP/%s\r\n",DEFAULT_HTTP_VERSION);
 
-	place_mid_data(bag,buf);
+	place_mid_data(rqst_bag,rqst_buf);
 
-	if(s_request->host!=NULL)
+	if(s_request->host!=NULL)  // add the Host header, it requires special handling.
 	{
 		if(s_request->port==NULL)
-			buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"Host: %s\r\n",s_request->host);
+			rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"Host: %s\r\n",s_request->host);
 		else
-			buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"Host: %s:%s\r\n",s_request->host,s_request->port);
+			rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"Host: %s:%s\r\n",s_request->host,s_request->port);
 
-		place_mid_data(bag,buf);
+		place_mid_data(rqst_bag,rqst_buf);
 	}
 
-	//Appending Remaining headers
+	/* Appending remaining headers of the structure if they are set */
 
-	struct mid_data* n_buf=(struct mid_data*)malloc(sizeof(struct mid_data));
+	struct mid_data* rqst_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	char* index_buffer;
 	char* token_buffer;
 
-	char* rqst_hdrs=(char*)memndup(HTTP_REQUEST_HEADERS,sizeof(char)*(strlen(HTTP_REQUEST_HEADERS)+1));
+	char* rqst_hdrs=(char*)memndup(HTTP_REQUEST_HEADERS,sizeof(char)*(strlen(HTTP_REQUEST_HEADERS)+1));  /* HTTP_REQUEST_HEADERS contains entries likewise.
 
-	n_buf->data=rqst_hdrs;
-	n_buf->len=strlen(n_buf->data);
+	"Header-Token i" Header-Token is the corresponding HTTP request header key field for the i^th entry of the http_request structure */
+
+	rqst_data->data=rqst_hdrs;
+	rqst_data->len=strlen(rqst_data->data);
 
 	void* v_s_request=s_request;
 
-	while(1)
+	for( ; ; ) // Iterate through all the Header-Token's and find whether the corresponding index value is set.
 	{
-		n_buf=sseek(n_buf," ",-1,MID_PERMIT);
+		rqst_data=sseek(rqst_data," ",-1,MID_PERMIT);
 
-		if(n_buf==NULL ||n_buf->data==NULL||n_buf->len==0)
+		if(rqst_data==NULL ||rqst_data->data==NULL||rqst_data->len==0) // End of the tokens, break.
 			break;
 
-		n_buf=scopy(n_buf," ",&token_buffer,-1,MID_DELIMIT);
+		rqst_data=scopy(rqst_data," ",&token_buffer,-1,MID_DELIMIT);  // read the Header-Token
 
-		n_buf=sseek(n_buf," ",-1,MID_PERMIT);
-		if(n_buf==NULL ||n_buf->data==NULL||n_buf->len==0)
+		rqst_data=sseek(rqst_data," ",-1,MID_PERMIT);
+		if(rqst_data==NULL ||rqst_data->data==NULL||rqst_data->len==0)  // Should not happen in general, but break anyway.
 			break;
 
-		n_buf=scopy(n_buf," ",&index_buffer,-1,MID_DELIMIT);
+		rqst_data=scopy(rqst_data," ",&index_buffer,-1,MID_DELIMIT);  // read the corresponding index number in the http_request structure.
 
-		char** value=(char**)(v_s_request+(sizeof(char*)*(atoi(index_buffer)-1)));
+		char** value=(char**)(v_s_request+(sizeof(char*)*(atoi(index_buffer)-1)));  // calculate the address of the index. struct address + relative address.
 
 		if(*value==NULL)
 			continue;
 
-		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s: %s\r\n",token_buffer,*value);
+		rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s: %s\r\n",token_buffer,*value);
 
-		place_mid_data(bag,buf);
+		place_mid_data(rqst_bag,rqst_buf);  // append the header
 
 	}
 
-
-	// Appending custom headers
+	/* If any custom headers are set append them */
 
 	if(s_request->custom_headers!=NULL)
 	{
-		for(int i=0;s_request->custom_headers[i]!=NULL;i++)
+		for(long i=0;s_request->custom_headers[i]!=NULL;i++)
 		{
-			buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s: %s\r\n",s_request->custom_headers[i][0],s_request->custom_headers[i][1]);
+			rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s: %s\r\n",s_request->custom_headers[i][0],s_request->custom_headers[i][1]);
 
-			place_mid_data(bag,buf);
+			place_mid_data(rqst_bag,rqst_buf);
 		}
 	}
 
-	buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"\r\n");
+	rqst_buf->len=snprintf(rqst_buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"\r\n");  // Append CRLF terminating sequence.
 
-	place_mid_data(bag,buf);
+	place_mid_data(rqst_bag,rqst_buf);
 
-	// Appending Body
+	/* Appending Body */
 
-	place_mid_data(bag,s_request->body);
+	if(s_request->body!=NULL && s_request->body->data!=NULL && s_request->body->len!=0)
+		place_mid_data(rqst_bag,s_request->body);
 
-	// Returning Request
+	/* Flatten the rqst_bag and return it ! */
 
-	return flatten_mid_bag(bag);
+	rqst_data=flatten_mid_bag(rqst_bag);
+	free_mid_bag(rqst_bag);
+
+	return rqst_data;
 }
 
 struct http_response* parse_http_response(struct mid_data *response)
