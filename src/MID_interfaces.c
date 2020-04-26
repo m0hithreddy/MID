@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <linux/if_link.h>
 
-struct network_interface** get_network_interfaces()
+struct mid_interface** get_mid_interfaces()
 {
 	struct ifaddrs *ifaddr, *ifa;
 	int family, s, n;
@@ -142,9 +142,9 @@ struct network_interface** get_network_interfaces()
 
 	freeifaddrs(ifaddr);
 
-	//Retrieving the data from the bag and creating network_interface structures
+	//Retrieving the data from the bag and creating mid_interface structures
 
-	struct network_interface** net_if=(struct network_interface**)malloc(sizeof(struct network_interface*)*(1+(bag->n_pockets)/4));
+	struct mid_interface** net_if=(struct mid_interface**)malloc(sizeof(struct mid_interface*)*(1+(bag->n_pockets)/4));
 
 	struct mid_pocket* pocket=bag->first;
 
@@ -152,7 +152,7 @@ struct network_interface** get_network_interfaces()
 
 	while(pocket!=NULL)
 	{
-		net_if[counter]=(struct network_interface*)malloc(sizeof(struct network_interface));
+		net_if[counter]=(struct mid_interface*)malloc(sizeof(struct mid_interface));
 
 		//Popping the if_name
 
@@ -202,24 +202,24 @@ struct network_interface** get_network_interfaces()
 	net_if[counter]=NULL;
 
 	if(args->include_ifs_count)
-		sort(net_if,sizeof(struct network_interface*),0,counter-1,compare_network_interfaces);
+		sort(net_if,sizeof(struct mid_interface*),0,counter-1,compare_mid_interfaces);
 
 	return net_if;
 }
 
-void* compare_network_interfaces(void* a,void* b)
+void* compare_mid_interfaces(void* a,void* b)
 {
 	int* res=(int*)malloc(sizeof(int));
 
 	for(long i=0;i<args->include_ifs_count;i++) // Should return with in the loop;
 	{
-		if(!strcmp(args->include_ifs[i],(*(struct network_interface**)a)->name))
+		if(!strcmp(args->include_ifs[i],(*(struct mid_interface**)a)->name))
 		{
 			*res=1;
 			return (void*)res;
 		}
 
-		if(!strcmp(args->include_ifs[i],(*(struct network_interface**)b)->name))
+		if(!strcmp(args->include_ifs[i],(*(struct mid_interface**)b)->name))
 		{
 			*res=0;
 			return (void*)res;

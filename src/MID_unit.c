@@ -612,7 +612,7 @@ struct unit_info* handle_unit_errors(struct unit_info** units,long units_len)
 	return NULL;
 }
 
-struct interface_report* get_interface_report(struct unit_info** units,long units_len,struct network_interface* net_if,long if_len,struct interface_report* prev)
+struct interface_report* get_interface_report(struct unit_info** units,long units_len,struct mid_interface* net_if,long if_len,struct interface_report* prev)
 {
 	if(net_if==NULL || if_len==0)
 		return NULL;

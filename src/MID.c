@@ -110,17 +110,17 @@ int main(int argc, char **argv)
 
 	// Get Network Interfaces Info and Check whether Server is accessible or not
 
-	struct network_interface** net_if;
+	struct mid_interface** net_if;
 
 	if(args->root_mode)
 	{
-		net_if=get_network_interfaces();
+		net_if=get_mid_interfaces();
 	}
 	else
 	{
-		net_if=(struct network_interface**)malloc(sizeof(struct network_interface*)*2);
+		net_if=(struct mid_interface**)malloc(sizeof(struct mid_interface*)*2);
 
-		net_if[0]=(struct network_interface*)malloc(sizeof(struct network_interface));
+		net_if[0]=(struct mid_interface*)malloc(sizeof(struct mid_interface));
 		net_if[0]->address=NULL;
 		net_if[0]->family=AF_INET;
 		net_if[0]->name="default";
@@ -269,17 +269,17 @@ int main(int argc, char **argv)
 		else if(content_length!=tmp_content_length) // If not equal, then probably not a static content, fall back to normal download mode.
 		{
 			content_length=0;
-			((struct network_interface*)net_if_bag->first->data)->address=NULL;  // If in this branch, then net_if_bag->n_pockets>=1
-			((struct network_interface*)net_if_bag->first->data)->family=AF_INET;
-			((struct network_interface*)net_if_bag->first->data)->name="default";
-			((struct network_interface*)net_if_bag->first->data)->netmask=NULL;
+			((struct mid_interface*)net_if_bag->first->data)->address=NULL;  // If in this branch, then net_if_bag->n_pockets>=1
+			((struct mid_interface*)net_if_bag->first->data)->family=AF_INET;
+			((struct mid_interface*)net_if_bag->first->data)->name="default";
+			((struct mid_interface*)net_if_bag->first->data)->netmask=NULL;
 
 			net_if_bag->n_pockets=1;
 			break;
 		}
 
 		net_if_data->data=(char*)net_if[i];
-		net_if_data->len=sizeof(struct network_interface);
+		net_if_data->len=sizeof(struct mid_interface);
 
 		place_data(net_if_bag,net_if_data);
 	}
@@ -318,7 +318,7 @@ int main(int argc, char **argv)
 	if(net_if_data==NULL)
 		mid_flag_exit1(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
 
-	struct network_interface* ok_net_if=(struct network_interface*)net_if_data->data;
+	struct mid_interface* ok_net_if=(struct mid_interface*)net_if_data->data;
 	long ok_net_if_len=net_if_bag->n_pockets;
 
 	if(args->verbose_flag && !args->quiet_flag)

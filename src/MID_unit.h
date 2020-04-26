@@ -103,7 +103,7 @@ struct show_progress_info
 	pthread_mutex_t lock;
 	sigset_t sync_mask;
 	struct mid_bag* units_bag;
-	struct network_interface* ifs;
+	struct mid_interface* ifs;
 	long ifs_len;
 	long content_length;
 	long sleep_time;
@@ -114,7 +114,7 @@ struct show_progress_info
 struct scheduler_info
 {
 	struct interface_report* current;
-	struct network_interface* ifs;
+	struct mid_interface* ifs;
 	long ifs_len;
 	long* max_speed;
 	long* max_connections;
@@ -128,7 +128,7 @@ void* unit(void* info);
 
 struct unit_info* handle_unit_errors(struct unit_info** units,long units_len);
 
-struct interface_report* get_interface_report(struct unit_info** units,long units_len,struct network_interface* net_if,long if_len,struct interface_report* prev);
+struct interface_report* get_interface_report(struct unit_info** units,long units_len,struct mid_interface* net_if,long if_len,struct interface_report* prev);
 
 struct unit_info* largest_unit(struct unit_info** units,long units_len);
 

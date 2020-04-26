@@ -10,7 +10,7 @@
 
 #include<bits/sockaddr.h>
 
-struct network_interface
+struct mid_interface
 {
 	char* name; /* interface name */
 	char* address; /* interface address (can have multiple, depends on family) */
@@ -18,8 +18,8 @@ struct network_interface
 	sa_family_t family;    /* address family (e.g., AF_INET, AF_INET6) */
 };
 
-struct network_interface** get_network_interfaces(); /* struct network_interfaces[end]==NULL */
+struct mid_interface** get_mid_interfaces(); /* struct network_interfaces[end]==NULL */
 
-void* compare_network_interfaces(void* a,void* b);
+void* compare_mid_interfaces(void* a,void* b);
 
 #endif /* MID_INTERFACES_H_ */
