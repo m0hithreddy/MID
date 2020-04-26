@@ -356,20 +356,20 @@ char* rectify_url(char* url)
 		{
 			r_url_data->data=url+current;
 			r_url_data->len=url_len+1-current;
-			place_data(r_url_bag,r_url_data);
+			place_mid_data(r_url_bag,r_url_data);
 			break;
 		}
 		else
 		{
 			r_url_data->data=url+current;  // Copy the part before " ".
 			r_url_data->len=(long)(sp_ptr-(url+current));
-			place_data(r_url_bag,r_url_data);
+			place_mid_data(r_url_bag,r_url_data);
 
 			current=current+r_url_data->len+1;  // set the current past " " (by one).
 
 			r_url_data->data="%20";  // replace " " with %20
 			r_url_data->len=3;
-			place_data(r_url_bag,r_url_data);
+			place_mid_data(r_url_bag,r_url_data);
 		}
 	}
 

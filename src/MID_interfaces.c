@@ -112,28 +112,28 @@ struct mid_interface** get_mid_interfaces()
 			n_data->data=ifa->ifa_name;
 			n_data->len=strlen(ifa->ifa_name)+1;
 
-			place_data(bag,n_data);
+			place_mid_data(bag,n_data);
 
 			//Pushing the address
 
 			n_data->data=host;
 			n_data->len=strlen(host)+1;
 
-			place_data(bag,n_data);
+			place_mid_data(bag,n_data);
 
 			//Pushing the netmask
 
 			n_data->data=netmask;
 			n_data->len=strlen(netmask)+1;
 
-			place_data(bag,n_data);
+			place_mid_data(bag,n_data);
 
 			//Pushing the family
 
 			n_data->data=(char*)&ifa->ifa_addr->sa_family;
 			n_data->len=sizeof(ifa->ifa_addr->sa_family);
 
-			place_data(bag,n_data);
+			place_mid_data(bag,n_data);
 
 			//printf("\t\taddress: <%s>\n", host);
 

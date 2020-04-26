@@ -150,7 +150,7 @@ struct mid_data* scopy(struct mid_data* n_data,char* delimiter,char** dest,long 
 		}
 
 		if(dest!=NULL)
-			place_data(bag,buf);
+			place_mid_data(bag,buf);
 	}
 
 	struct mid_data* update=(struct mid_data*)malloc(sizeof(struct mid_data));

@@ -399,7 +399,7 @@ void dump_int(struct mid_bag* bag,int num)
 
 	n_data.data=(void*)&num;
 	n_data.len=sizeof(int);
-	place_data(bag,&n_data);
+	place_mid_data(bag,&n_data);
 }
 
 void dump_long(struct mid_bag* bag,long num)
@@ -408,7 +408,7 @@ void dump_long(struct mid_bag* bag,long num)
 
 	n_data.data=(void*)&num;
 	n_data.len=sizeof(long);
-	place_data(bag,&n_data);
+	place_mid_data(bag,&n_data);
 }
 
 void dump_string(struct mid_bag* bag,char* string)
@@ -420,7 +420,7 @@ void dump_string(struct mid_bag* bag,char* string)
 
 	n_data.data=(void*)string;
 	n_data.len=len;
-	place_data(bag,&n_data);
+	place_mid_data(bag,&n_data);
 }
 
 char* extract_string(FILE* ms_fp)
@@ -526,7 +526,7 @@ struct mid_bag* make_mid_state(struct http_request* gl_s_request,struct http_res
 			n_data.len=sizeof(struct http_range)*l_ranges->n_ranges;
 
 			dump_long(state_bag,l_ranges->n_ranges);
-			place_data(state_bag,&n_data);
+			place_mid_data(state_bag,&n_data);
 		}
 		else
 		{
@@ -964,7 +964,7 @@ struct mid_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_r
 
 	// Return the data bag
 
-	place_data(state_bag,flatten_mid_bag(d_state_bag));
+	place_mid_data(state_bag,flatten_mid_bag(d_state_bag));
 
 	return state_bag;
 

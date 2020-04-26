@@ -70,7 +70,7 @@ struct mid_data* ssl_sock_read(SSL* ssl)
 		if(status>0)
 		{
 			n_data->len=status;
-			place_data(bag, n_data);
+			place_mid_data(bag, n_data);
 		}
 		else
 			break;

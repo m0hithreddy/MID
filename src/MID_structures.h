@@ -46,7 +46,7 @@ int insert_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,struct mid_po
 
 int delete_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,int flag);
 
-int place_data(struct mid_bag *bag,struct mid_data *n_data);
+int place_mid_data(struct mid_bag *bag,struct mid_data *n_data);
 
 struct mid_data* flatten_mid_bag(struct mid_bag *bag);
 

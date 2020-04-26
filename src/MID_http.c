@@ -45,21 +45,21 @@ struct mid_data* create_http_request(struct http_request* s_request)
 	else
 		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",DEFAULT_HTTP_METHOD);
 
-	place_data(bag,buf);
+	place_mid_data(bag,buf);
 
 	if(s_request->path!=NULL)
 		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"/%s ",s_request->path);
 	else
 		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s ",DEFAULT_HTTP_PATH);
 
-	place_data(bag,buf);
+	place_mid_data(bag,buf);
 
 	if(s_request->version!=NULL)
 		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"HTTP/%s\r\n",s_request->version);
 	else
 		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"HTTP/%s\r\n",DEFAULT_HTTP_VERSION);
 
-	place_data(bag,buf);
+	place_mid_data(bag,buf);
 
 	if(s_request->host!=NULL)
 	{
@@ -68,7 +68,7 @@ struct mid_data* create_http_request(struct http_request* s_request)
 		else
 			buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"Host: %s:%s\r\n",s_request->host,s_request->port);
 
-		place_data(bag,buf);
+		place_mid_data(bag,buf);
 	}
 
 	//Appending Remaining headers
@@ -107,7 +107,7 @@ struct mid_data* create_http_request(struct http_request* s_request)
 
 		buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s: %s\r\n",token_buffer,*value);
 
-		place_data(bag,buf);
+		place_mid_data(bag,buf);
 
 	}
 
@@ -120,17 +120,17 @@ struct mid_data* create_http_request(struct http_request* s_request)
 		{
 			buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"%s: %s\r\n",s_request->custom_headers[i][0],s_request->custom_headers[i][1]);
 
-			place_data(bag,buf);
+			place_mid_data(bag,buf);
 		}
 	}
 
 	buf->len=snprintf(buf->data,HTTP_REQUEST_HEADERS_MAX_LEN,"\r\n");
 
-	place_data(bag,buf);
+	place_mid_data(bag,buf);
 
 	// Appending Body
 
-	place_data(bag,s_request->body);
+	place_mid_data(bag,s_request->body);
 
 	// Returning Request
 
@@ -276,12 +276,12 @@ struct http_response* parse_http_response(struct mid_data *response)
 		n_buf->data=token_buffer;
 		n_buf->len=strlen(token_buffer)+1;
 
-		place_data(bag,n_buf);
+		place_mid_data(bag,n_buf);
 
 		n_buf->data=value_buffer;
 		n_buf->len=strlen(value_buffer)+1;
 
-		place_data(bag,n_buf);
+		place_mid_data(bag,n_buf);
 	}
 
 	// Fill the custom headers matrix

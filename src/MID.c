@@ -281,7 +281,7 @@ int main(int argc, char **argv)
 		net_if_data->data=(char*)net_if[i];
 		net_if_data->len=sizeof(struct mid_interface);
 
-		place_data(net_if_bag,net_if_data);
+		place_mid_data(net_if_bag,net_if_data);
 	}
 
 	if(gl_s_response==NULL)
@@ -502,7 +502,7 @@ int main(int argc, char **argv)
 		n_unit->data=(void*)&base_unit_info;
 		n_unit->len=sizeof(struct base_unit_info*);
 
-		place_data(units_bag,n_unit);
+		place_mid_data(units_bag,n_unit);
 
 		units=(struct unit_info**)flatten_mid_bag(units_bag)->data;
 		units_len=units_bag->n_pockets;
@@ -559,7 +559,7 @@ int main(int argc, char **argv)
 			n_unit->data=(void*)&new;
 			n_unit->len=sizeof(struct unit_info*);
 
-			place_data(units_bag,n_unit);
+			place_mid_data(units_bag,n_unit);
 		}
 
 		// Scheduling download across different interfaces
@@ -715,7 +715,7 @@ int main(int argc, char **argv)
 				if(!args->quiet_flag)
 					pthread_mutex_lock(&s_progress_info->lock);
 
-				place_data(units_bag,n_unit);
+				place_mid_data(units_bag,n_unit);
 
 				if(!args->quiet_flag)
 					pthread_mutex_unlock(&s_progress_info->lock);
@@ -753,7 +753,7 @@ int main(int argc, char **argv)
 		n_unit->data=(void*)&new;
 		n_unit->len=sizeof(struct unit_info*);
 
-		place_data(units_bag,n_unit);
+		place_mid_data(units_bag,n_unit);
 
 		delete_mid_pocket(resume_bag,resume_bag->first,DELETE_AT);
 	}
@@ -1068,7 +1068,7 @@ void finalize_resume()
 		n_data.data=(void*)&new;
 		n_data.len=sizeof(struct unit_info*);
 
-		place_data(resume_bag,&n_data);
+		place_mid_data(resume_bag,&n_data);
 	}
 
 	if(n_ranges==0 || ranges[n_ranges-1].end!=en->content_length-1) // One already fetched range is not included when there is not left over range with range.end==content_length-1.
@@ -1097,6 +1097,6 @@ void finalize_resume()
 		n_data.data=(void*)&new;
 		n_data.len=sizeof(struct unit_info*);
 
-		place_data(resume_bag,&n_data);
+		place_mid_data(resume_bag,&n_data);
 	}
 }

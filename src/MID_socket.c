@@ -156,7 +156,7 @@ struct mid_data* sock_read(int sockfd,long limit)
 		if(status>0)
 		{
 			n_data->len=status;
-			place_data(bag, n_data);
+			place_mid_data(bag, n_data);
 			counter=counter+status;
 
 			if(counter>=limit)
@@ -227,7 +227,7 @@ char** resolve_dns_mirros(char* hostname,long* n_mirrors)
 		ip_data.data=hostip_ptr;
 		ip_data.len=sizeof(char*);
 
-		place_data(hostsbag,&ip_data);
+		place_mid_data(hostsbag,&ip_data);
 		mirrors_count++;
 	}
 

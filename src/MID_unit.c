@@ -247,7 +247,7 @@ void* unit(void* info)
 			n_eat_buf->data=eat_buf;
 			n_eat_buf->len=status;
 
-			place_data(eat_bag,n_eat_buf);
+			place_mid_data(eat_bag,n_eat_buf);
 
 			struct mid_data* tmp_n_data=flatten_mid_bag(eat_bag);
 
@@ -910,7 +910,7 @@ struct units_progress* get_units_progress(struct unit_info** units,long units_le
 	{
 		pthread_mutex_lock(&units[i]->lock);
 
-		place_data(ranges_bag,flatten_mid_bag(units[i]->unit_ranges));
+		place_mid_data(ranges_bag,flatten_mid_bag(units[i]->unit_ranges));
 		ranges_counter=ranges_counter+units[i]->unit_ranges->n_pockets/2;
 
 		pthread_mutex_unlock(&units[i]->lock);

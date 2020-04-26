@@ -44,15 +44,15 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		}
 
 		op_data->len=strlen(op_data->data);
-		place_data(op_bag,op_data);
+		place_mid_data(op_bag,op_data);
 
 		op_data->data=key;
 		op_data->len=strlen(op_data->data);
-		place_data(op_bag,op_data);
+		place_mid_data(op_bag,op_data);
 
 		op_data->data="\" option used but value not specified";
 		op_data->len=strlen(op_data->data)+1;
-		place_data(op_bag,op_data);
+		place_mid_data(op_bag,op_data);
 
 		mid_help(flatten_mid_bag(op_bag)->data);
 
@@ -108,7 +108,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 			n_data=scopy(n_data,",",(char**)(&if_data->data),-1,MID_DELIMIT);
 			if_data->len=strlen(if_data->data)+1;
 
-			place_data(if_bag,if_data);
+			place_mid_data(if_bag,if_data);
 
 			if(n_data==NULL || n_data->data==NULL || n_data->len==0)
 			{
@@ -309,8 +309,8 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 		n_data->len=strlen(n_data->data)+1;
 
-		place_data(hdr_bag,n_data);
-		place_data(hdr_bag,hdr_data);
+		place_mid_data(hdr_bag,n_data);
+		place_mid_data(hdr_bag,hdr_data);
 	}
 
 	else if(!strcmp(key,"detailed-progress"))
@@ -422,15 +422,15 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		}
 
 		op_data->len=strlen(op_data->data);
-		place_data(op_bag,op_data);
+		place_mid_data(op_bag,op_data);
 
 		op_data->data=key;
 		op_data->len=strlen(op_data->data);
-		place_data(op_bag,op_data);
+		place_mid_data(op_bag,op_data);
 
 		op_data->data="\" not known";
 		op_data->len=strlen(op_data->data)+1;
-		place_data(op_bag,op_data);
+		place_mid_data(op_bag,op_data);
 
 		mid_help(flatten_mid_bag(op_bag)->data);
 	}
@@ -481,7 +481,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 		}
 
 		conf_data->len=status;
-		place_data(conf_bag,conf_data);
+		place_mid_data(conf_bag,conf_data);
 	}
 
 	conf_data=flatten_mid_bag(conf_bag);
