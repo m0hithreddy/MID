@@ -18,7 +18,7 @@
 #define MID_DELIMIT 1
 #define MID_PERMIT 0
 
-typedef struct data_bag hashmap;
+typedef struct mid_bag hashmap;
 
 typedef void* (*two_to_one_func)(void*,void*);
 

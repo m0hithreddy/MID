@@ -8,8 +8,6 @@
 #ifndef MID_STRUCTURES_H_
 #define MID_STRUCTURES_H_
 
-#define MAX_DATA_POCKET_SIZE 65536
-
 #define INSERT_BEFORE 00
 #define INSERT_AFTER 01
 #define INSERT_AT 10
@@ -24,33 +22,33 @@ struct network_data
 	long len;
 };
 
-struct data_pocket
+struct mid_pocket
 {
-	struct data_pocket *previous;
+	struct mid_pocket *previous;
 	void *data;
-	struct data_pocket *next;
+	struct mid_pocket *next;
 	long len;
 };
 
-struct data_bag{
-	struct data_pocket *first;
-	struct data_pocket *end;
+struct mid_bag{
+	struct mid_pocket *first;
+	struct mid_pocket *end;
 	long n_pockets;
 };
 
-struct data_bag* create_data_bag();
+struct mid_bag* create_mid_bag();
 
-void clear_data_bag(struct data_bag* bag);
+void clear_mid_bag(struct mid_bag* bag);
 
-void append_data_pocket(struct data_bag* bag,long size);
+void append_mid_pocket(struct mid_bag* bag,long size);
 
-int insert_data_pocket(struct data_bag* bag,struct data_pocket* refer,struct data_pocket* update,int flag);
+int insert_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,struct mid_pocket* update,int flag);
 
-int delete_data_pocket(struct data_bag* bag,struct data_pocket* refer,int flag);
+int delete_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,int flag);
 
-int place_data(struct data_bag *bag,struct network_data *n_data);
+int place_data(struct mid_bag *bag,struct network_data *n_data);
 
-struct network_data* flatten_data_bag(struct data_bag *bag);
+struct network_data* flatten_mid_bag(struct mid_bag *bag);
 
 
 #endif /* MID_STRUCTURES_H_ */

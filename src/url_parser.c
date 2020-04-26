@@ -341,7 +341,7 @@ char* rectify_url(char* url)
 	if(url==NULL)
 		return NULL;
 
-	struct data_bag* r_url_bag=create_data_bag();
+	struct mid_bag* r_url_bag=create_mid_bag();
 	struct network_data* r_url_data=(struct network_data*)malloc(sizeof(struct network_data));
 
 	long url_len=strlen(url);
@@ -373,7 +373,7 @@ char* rectify_url(char* url)
 		}
 	}
 
-	return flatten_data_bag(r_url_bag)->data;
+	return flatten_mid_bag(r_url_bag)->data;
 }
 
 /*

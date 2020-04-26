@@ -32,7 +32,7 @@ struct network_interface** get_network_interfaces()
 		return NULL;
 	}
 
-	struct data_bag* bag=create_data_bag();
+	struct mid_bag* bag=create_mid_bag();
 
 	/* Walk through linked list, maintaining head pointer so we
 		  can free list later */
@@ -146,7 +146,7 @@ struct network_interface** get_network_interfaces()
 
 	struct network_interface** net_if=(struct network_interface**)malloc(sizeof(struct network_interface*)*(1+(bag->n_pockets)/4));
 
-	struct data_pocket* pocket=bag->first;
+	struct mid_pocket* pocket=bag->first;
 
 	long counter=0;
 

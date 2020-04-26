@@ -11,9 +11,9 @@
 #include<string.h>
 #include<stdio.h>
 
-struct data_bag* create_data_bag()
+struct mid_bag* create_mid_bag()
 {
-	struct data_bag *bag=(struct data_bag*)malloc(sizeof(struct data_bag));
+	struct mid_bag *bag=(struct mid_bag*)malloc(sizeof(struct mid_bag));
 	bag->n_pockets=0;
 	bag->first=NULL;
 	bag->end=NULL;
@@ -21,9 +21,9 @@ struct data_bag* create_data_bag()
 	return bag;
 }
 
-void clear_data_bag(struct data_bag* bag)
+void clear_mid_bag(struct mid_bag* bag)
 {
-	struct data_pocket *at,*prev;
+	struct mid_pocket *at,*prev;
 
 	at=bag->end;
 
@@ -40,13 +40,13 @@ void clear_data_bag(struct data_bag* bag)
 	free(bag);
 }
 
-void append_data_pocket(struct data_bag* bag,long size)
+void append_mid_pocket(struct mid_bag* bag,long size)
 {
 
 	if(bag==NULL || size==0)
 		return ;
 
-	struct data_pocket *pocket=(struct data_pocket*)malloc(sizeof(struct data_pocket));
+	struct mid_pocket *pocket=(struct mid_pocket*)malloc(sizeof(struct mid_pocket));
 
 	if(bag->n_pockets==0)
 	{
@@ -71,7 +71,7 @@ void append_data_pocket(struct data_bag* bag,long size)
 
 }
 
-int insert_data_pocket(struct data_bag* bag,struct data_pocket* refer,struct data_pocket* update,int flag)
+int insert_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,struct mid_pocket* update,int flag)
 {
 
 	if(refer==NULL)
@@ -79,7 +79,7 @@ int insert_data_pocket(struct data_bag* bag,struct data_pocket* refer,struct dat
 
 	if(flag==INSERT_BEFORE)
 	{
-		struct data_pocket* prev=refer->previous;
+		struct mid_pocket* prev=refer->previous;
 
 		if(prev==NULL)
 		{
@@ -102,7 +102,7 @@ int insert_data_pocket(struct data_bag* bag,struct data_pocket* refer,struct dat
 	}
 	else if(flag==INSERT_AFTER)
 	{
-		struct data_pocket* after=refer->next;
+		struct mid_pocket* after=refer->next;
 
 		if(after==NULL)
 		{
@@ -125,8 +125,8 @@ int insert_data_pocket(struct data_bag* bag,struct data_pocket* refer,struct dat
 	}
 	else if(flag==INSERT_AT)
 	{
-		struct data_pocket* prev=refer->previous;
-		struct data_pocket* after=refer->next;
+		struct mid_pocket* prev=refer->previous;
+		struct mid_pocket* after=refer->next;
 
 		if(prev==NULL && after==NULL)
 		{
@@ -164,19 +164,19 @@ int insert_data_pocket(struct data_bag* bag,struct data_pocket* refer,struct dat
 
 }
 
-int delete_data_pocket(struct data_bag* bag,struct data_pocket* refer,int flag)
+int delete_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,int flag)
 {
 	if(bag==NULL || bag->n_pockets==0 || refer==NULL)
 		return 0;
 
 	if(flag==DELETE_BEFORE)
 	{
-		struct data_pocket* prev=refer->previous;
+		struct mid_pocket* prev=refer->previous;
 
 		if(prev==NULL)
 			return 0;
 
-		struct data_pocket* prev2=prev->previous;
+		struct mid_pocket* prev2=prev->previous;
 
 		if(prev2==NULL)
 		{
@@ -196,12 +196,12 @@ int delete_data_pocket(struct data_bag* bag,struct data_pocket* refer,int flag)
 	}
 	else if(flag==DELETE_AFTER)
 	{
-		struct data_pocket* after=refer->next;
+		struct mid_pocket* after=refer->next;
 
 		if(after==NULL)
 			return 0;
 
-		struct data_pocket* after2=after->next;
+		struct mid_pocket* after2=after->next;
 
 		if(after2==NULL)
 		{
@@ -220,8 +220,8 @@ int delete_data_pocket(struct data_bag* bag,struct data_pocket* refer,int flag)
 	}
 	else if(flag==DELETE_AT)
 	{
-		struct data_pocket* prev=refer->previous;
-		struct data_pocket* after=refer->next;
+		struct mid_pocket* prev=refer->previous;
+		struct mid_pocket* after=refer->next;
 
 		if(prev==NULL && after==NULL)
 		{
@@ -254,12 +254,12 @@ int delete_data_pocket(struct data_bag* bag,struct data_pocket* refer,int flag)
 	return 0;
 }
 
-int place_data(struct data_bag *bag,struct network_data *n_data)
+int place_data(struct mid_bag *bag,struct network_data *n_data)
 {
 	if(bag==NULL || n_data==NULL || n_data->data==NULL || n_data->len==0)
 		return -1;
 
-	append_data_pocket(bag,n_data->len);
+	append_mid_pocket(bag,n_data->len);
 
 	memcpy(bag->end->data,n_data->data,n_data->len);
 
@@ -269,7 +269,7 @@ int place_data(struct data_bag *bag,struct network_data *n_data)
 
 }
 
-struct network_data* flatten_data_bag(struct data_bag *bag)
+struct network_data* flatten_mid_bag(struct mid_bag *bag)
 {
 
 	if(bag==NULL)
@@ -277,7 +277,7 @@ struct network_data* flatten_data_bag(struct data_bag *bag)
 
 	struct network_data* n_data=(struct network_data*)malloc(sizeof(struct network_data));
 
-	struct data_pocket *pocket=bag->first;
+	struct mid_pocket *pocket=bag->first;
 	long len=0;
 
 	while(pocket!=NULL)

@@ -22,7 +22,7 @@
 #include"config.h"
 #endif
 
-struct data_bag* hdr_bag;
+struct mid_bag* hdr_bag;
 
 void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 {
@@ -30,7 +30,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		return;
 
 	struct network_data* op_data=(struct network_data*)malloc(sizeof(struct network_data));
-	struct data_bag* op_bag=create_data_bag();
+	struct mid_bag* op_bag=create_mid_bag();
 
 	if(value==NULL)
 	{
@@ -54,7 +54,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		op_data->len=strlen(op_data->data)+1;
 		place_data(op_bag,op_data);
 
-		mid_help(flatten_data_bag(op_bag)->data);
+		mid_help(flatten_mid_bag(op_bag)->data);
 
 	}
 
@@ -92,7 +92,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		n_data->data=value;
 		n_data->len=strlen(value);
 
-		struct data_bag* if_bag=create_data_bag();
+		struct mid_bag* if_bag=create_mid_bag();
 		struct network_data* if_data=(struct network_data*)malloc(sizeof(struct network_data));
 
 		while(1)
@@ -126,7 +126,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		*ifs=(char**)malloc(sizeof(char*)*if_bag->n_pockets);
 		*ifs_count=if_bag->n_pockets;
 
-		struct data_pocket* pocket=if_bag->first;
+		struct mid_pocket* pocket=if_bag->first;
 		long if_count=0;
 
 		while(pocket!=NULL)
@@ -432,7 +432,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		op_data->len=strlen(op_data->data)+1;
 		place_data(op_bag,op_data);
 
-		mid_help(flatten_data_bag(op_bag)->data);
+		mid_help(flatten_mid_bag(op_bag)->data);
 	}
 }
 
@@ -459,7 +459,7 @@ void read_conf(char* conf,struct mid_args* args)
 	}
 
 	char* buf[MAX_TRANSACTION_SIZE];
-	struct data_bag* conf_bag=create_data_bag();
+	struct mid_bag* conf_bag=create_mid_bag();
 	struct network_data* conf_data=(struct network_data*)malloc(sizeof(struct network_data));
 	conf_data->data=buf;
 
@@ -484,9 +484,9 @@ void read_conf(char* conf,struct mid_args* args)
 		place_data(conf_bag,conf_data);
 	}
 
-	conf_data=flatten_data_bag(conf_bag);
+	conf_data=flatten_mid_bag(conf_bag);
 
-	clear_data_bag(conf_bag);
+	clear_mid_bag(conf_bag);
 
 
 
@@ -605,7 +605,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 	struct mid_args* args=(struct mid_args*)calloc(1,sizeof(struct mid_args));
 
-	hdr_bag=create_data_bag();
+	hdr_bag=create_mid_bag();
 
 	// Check if config file option is given --conf || -c
 
@@ -1086,7 +1086,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 		char*** custom_headers=(char***)malloc(sizeof(char**)*(1+hdr_bag->n_pockets/2));
 
-		struct data_pocket* pocket=hdr_bag->first;
+		struct mid_pocket* pocket=hdr_bag->first;
 		long counter=0;
 
 		while(pocket!=NULL)

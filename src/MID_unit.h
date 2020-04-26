@@ -77,7 +77,7 @@ struct unit_info
 	struct socket_info* cli_info;
 	struct http_request* s_request;
 	struct http_range* range;
-	struct data_bag* unit_ranges; // HTTP ranges downloaded by unit
+	struct mid_bag* unit_ranges; // HTTP ranges downloaded by unit
 };
 
 struct interface_report
@@ -102,7 +102,7 @@ struct show_progress_info
 	pthread_t tid;
 	pthread_mutex_t lock;
 	sigset_t sync_mask;
-	struct data_bag* units_bag;
+	struct mid_bag* units_bag;
 	struct network_interface* ifs;
 	long ifs_len;
 	long content_length;

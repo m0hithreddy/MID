@@ -130,7 +130,7 @@ struct network_data* scopy(struct network_data* n_data,char* delimiter,char** de
 	((char*)buf->data)[1]='\0';
 	buf->len=1;
 
-	struct data_bag *bag=create_data_bag();
+	struct mid_bag *bag=create_mid_bag();
 
 	long i;
 
@@ -161,7 +161,7 @@ struct network_data* scopy(struct network_data* n_data,char* delimiter,char** de
 	if(dest==NULL)
 		return update;
 
-	buf=flatten_data_bag(bag);
+	buf=flatten_mid_bag(bag);
 
 	*dest=(char*)malloc(sizeof(char)*(buf->len+1));
 
@@ -184,7 +184,7 @@ void* memndup(void* src,long n_bytes)
 
 hashmap* init_hashmap()
 {
-	return (hashmap*)create_data_bag();
+	return (hashmap*)create_mid_bag();
 }
 
 int insert_pair(hashmap* map,struct hash_token* key,struct hash_token* value)
@@ -192,7 +192,7 @@ int insert_pair(hashmap* map,struct hash_token* key,struct hash_token* value)
 	if(map==NULL)
 		return -1;
 
-	struct data_pocket* pocket=map->first;
+	struct mid_pocket* pocket=map->first;
 
 	while(pocket!=NULL)
 	{
@@ -211,10 +211,10 @@ int insert_pair(hashmap* map,struct hash_token* key,struct hash_token* value)
 		pocket=pocket->next->next;
 	}
 
-	append_data_pocket(map,key->len);
+	append_mid_pocket(map,key->len);
 	memcpy(map->end,key->token,key->len);
 
-	append_data_pocket(map,value->len);
+	append_mid_pocket(map,value->len);
 	memcpy(map->end,value->token,value->len);
 
 	return 1;
@@ -222,7 +222,7 @@ int insert_pair(hashmap* map,struct hash_token* key,struct hash_token* value)
 
 struct hash_token* get_value(hashmap* map,struct hash_token* key)
 {
-	struct data_pocket* pocket=map->first;
+	struct mid_pocket* pocket=map->first;
 
 	while(pocket!=NULL)
 	{
@@ -252,7 +252,7 @@ struct hash_token** get_keys(hashmap* map)
 
 	long counter=0;
 
-	struct data_pocket* pocket=map->first;
+	struct mid_pocket* pocket=map->first;
 
 	while(pocket!=NULL)
 	{
@@ -285,7 +285,7 @@ struct hash_token** get_values(hashmap* map)
 
 	long counter=0;
 
-	struct data_pocket* pocket=map->first;
+	struct mid_pocket* pocket=map->first;
 
 	while(pocket!=NULL)
 	{

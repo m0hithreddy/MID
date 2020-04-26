@@ -138,7 +138,7 @@ struct network_data* sock_read(int sockfd,long limit)
 	if(limit<0)
 		return NULL;
 
-	struct data_bag *bag=create_data_bag();
+	struct mid_bag *bag=create_mid_bag();
 	struct network_data *n_data=(struct network_data*)malloc(sizeof(struct network_data));
 
 	n_data->data=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
@@ -166,7 +166,7 @@ struct network_data* sock_read(int sockfd,long limit)
 			break;
 	}
 
-	n_data=flatten_data_bag(bag);
+	n_data=flatten_mid_bag(bag);
 
 	return n_data;
 }
@@ -213,7 +213,7 @@ char** resolve_dns_mirros(char* hostname,long* n_mirrors)
 
 	char** hostip_ptr;
 	struct network_data ip_data;
-	struct data_bag* hostsbag=create_data_bag();
+	struct mid_bag* hostsbag=create_mid_bag();
 
 	long mirrors_count=0;
 
@@ -236,6 +236,6 @@ char** resolve_dns_mirros(char* hostname,long* n_mirrors)
 	if(mirrors_count==0)
 		return NULL;
 	else
-		return ((char**)(flatten_data_bag(hostsbag)->data));
+		return ((char**)(flatten_mid_bag(hostsbag)->data));
 
 }

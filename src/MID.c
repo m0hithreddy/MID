@@ -55,7 +55,7 @@ struct http_response* gl_s_response=NULL;
 
 struct unit_info* base_unit_info=NULL;
 
-struct data_bag* resume_bag=NULL;
+struct mid_bag* resume_bag=NULL;
 
 void* entry=NULL;
 
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 		sock_write(fileno(stderr),request);
 	}
 
-	struct data_bag* net_if_bag=create_data_bag();
+	struct mid_bag* net_if_bag=create_mid_bag();
 
 	struct network_data* net_if_data=(struct network_data*)malloc(sizeof(struct network_data));
 
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
 
 	// Actual Interfaces
 
-	net_if_data=flatten_data_bag(net_if_bag);
+	net_if_data=flatten_mid_bag(net_if_bag);
 
 	if(net_if_data==NULL)
 		mid_flag_exit1(1,"MID: No suitable network-interface found for downloading. Exiting...\n\n");
@@ -351,7 +351,7 @@ int main(int argc, char **argv)
 
 	base_unit_info=(struct unit_info*)calloc(1,sizeof(struct unit_info));
 
-	resume_bag=create_data_bag(); // Checking for possibility of resuming the download.
+	resume_bag=create_mid_bag(); // Checking for possibility of resuming the download.
 	int resume_status=0;
 	if(pc_flag==1 && !args->no_resume)
 		resume_status=init_resume();
@@ -406,7 +406,7 @@ int main(int argc, char **argv)
 	base_unit_info->range->start=0;
 	base_unit_info->range->end=-1;
 
-	base_unit_info->unit_ranges=create_data_bag();
+	base_unit_info->unit_ranges=create_mid_bag();
 
 	if(resume_status)
 		finalize_resume();
@@ -454,7 +454,7 @@ int main(int argc, char **argv)
 
 	/* Initiating download */
 
-	struct data_bag* units_bag=create_data_bag();
+	struct mid_bag* units_bag=create_mid_bag();
 	struct network_data* n_unit=(struct network_data*)malloc(sizeof(struct network_data));
 	struct unit_info** units=NULL;
 	long units_len=0;
@@ -504,7 +504,7 @@ int main(int argc, char **argv)
 
 		place_data(units_bag,n_unit);
 
-		units=(struct unit_info**)flatten_data_bag(units_bag)->data;
+		units=(struct unit_info**)flatten_mid_bag(units_bag)->data;
 		units_len=units_bag->n_pockets;
 
 		sleep_time.tv_sec=SCHEDULER_DEFAULT_SLEEP_TIME;
@@ -589,7 +589,7 @@ int main(int argc, char **argv)
 		while(1) // Downloading....
 		{
 
-			units=(struct unit_info**)flatten_data_bag(units_bag)->data;
+			units=(struct unit_info**)flatten_mid_bag(units_bag)->data;
 			units_len=units_bag->n_pockets;
 
 			if(sigtimedwait(&sync_mask,NULL,&sleep_time)!=-1)
@@ -639,7 +639,7 @@ int main(int argc, char **argv)
 			if(resume_bag->n_pockets!=0)
 			{
 				update=*((struct unit_info**)(resume_bag->first->data));
-				delete_data_pocket(resume_bag,resume_bag->first,DELETE_AT);
+				delete_mid_pocket(resume_bag,resume_bag->first,DELETE_AT);
 
 				idle=NULL; // Should follow same initializations as that of idle==NULL;
 
@@ -734,7 +734,7 @@ int main(int argc, char **argv)
 
 	time_t end_time=time(NULL);
 
-	suspend_units((struct unit_info**)(flatten_data_bag(units_bag)->data),units_bag->n_pockets); // Suspend all download units.
+	suspend_units((struct unit_info**)(flatten_mid_bag(units_bag)->data),units_bag->n_pockets); // Suspend all download units.
 
 	if(!args->quiet_flag) // Kill the show_progress thread.
 	{
@@ -755,12 +755,12 @@ int main(int argc, char **argv)
 
 		place_data(units_bag,n_unit);
 
-		delete_data_pocket(resume_bag,resume_bag->first,DELETE_AT);
+		delete_mid_pocket(resume_bag,resume_bag->first,DELETE_AT);
 	}
 
 	// Get the latest download progress
 
-	units=(struct unit_info**)flatten_data_bag(units_bag)->data;
+	units=(struct unit_info**)flatten_mid_bag(units_bag)->data;
 	units_len=units_bag->n_pockets;
 
 	progress=get_units_progress(units, units_len);
@@ -1035,7 +1035,7 @@ void finalize_resume()
 	n_ranges=en->n_l_ranges;
 
 	if(resume_bag==NULL)
-		resume_bag=create_data_bag();
+		resume_bag=create_mid_bag();
 
 	struct unit_info* new;
 	struct network_data n_data;
@@ -1053,7 +1053,7 @@ void finalize_resume()
 
 		// Already fetched ranges are assigned to the units (one for each) for the purpose of progress indicator
 
-		append_data_pocket(new->unit_ranges,sizeof(long));
+		append_mid_pocket(new->unit_ranges,sizeof(long));
 		new->unit_ranges->end->len=sizeof(long);
 
 		if(i==0)
@@ -1061,7 +1061,7 @@ void finalize_resume()
 		else
 			*(long*)new->unit_ranges->end->data=ranges[i-1].end+1;
 
-		append_data_pocket(new->unit_ranges,sizeof(long));
+		append_mid_pocket(new->unit_ranges,sizeof(long));
 		new->unit_ranges->end->len=sizeof(long);
 		*(long*)new->unit_ranges->end->data=ranges[i].start-1;
 
@@ -1082,7 +1082,7 @@ void finalize_resume()
 
 		// Already fetched range (for sake of progress indicator)
 
-		append_data_pocket(new->unit_ranges,sizeof(long));
+		append_mid_pocket(new->unit_ranges,sizeof(long));
 		new->unit_ranges->end->len=sizeof(long);
 
 		if(n_ranges==0)
@@ -1090,7 +1090,7 @@ void finalize_resume()
 		else
 			*(long*)new->unit_ranges->end->data=ranges[n_ranges-1].end+1;
 
-		append_data_pocket(new->unit_ranges,sizeof(long));
+		append_mid_pocket(new->unit_ranges,sizeof(long));
 		new->unit_ranges->end->len=sizeof(long);
 		*(long*)new->unit_ranges->end->data=en->content_length-1;
 

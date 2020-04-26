@@ -58,7 +58,7 @@ struct network_data* ssl_sock_read(SSL* ssl)
 	if(ssl==NULL)
 		return NULL;
 
-	struct data_bag *bag=create_data_bag();
+	struct mid_bag *bag=create_mid_bag();
 	struct network_data *n_data=(struct network_data*)malloc(sizeof(struct network_data));
 
 	n_data->data=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
@@ -76,7 +76,7 @@ struct network_data* ssl_sock_read(SSL* ssl)
 			break;
 	}
 
-	n_data=flatten_data_bag(bag);
+	n_data=flatten_mid_bag(bag);
 
 	return n_data;
 }

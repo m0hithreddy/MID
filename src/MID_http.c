@@ -36,7 +36,7 @@ struct network_data* create_http_request(struct http_request* s_request)
 	struct network_data* buf=(struct network_data*)malloc(sizeof(struct network_data));
 	buf->data=malloc(HTTP_REQUEST_HEADERS_MAX_LEN*sizeof(char));
 
-	struct data_bag *bag=create_data_bag();
+	struct mid_bag *bag=create_mid_bag();
 
 	// Appending the start line and headers
 
@@ -134,7 +134,7 @@ struct network_data* create_http_request(struct http_request* s_request)
 
 	// Returning Request
 
-	return flatten_data_bag(bag);
+	return flatten_mid_bag(bag);
 }
 
 struct http_response* parse_http_response(struct network_data *response)
@@ -207,7 +207,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 	// Headers Extraction
 
-	struct data_bag *bag=create_data_bag(); /* bag[i]="header" bag[i+1]="value" where i is even*/
+	struct mid_bag *bag=create_mid_bag(); /* bag[i]="header" bag[i+1]="value" where i is even*/
 
 	struct network_data* n_buf=(struct network_data*)malloc(sizeof(struct network_data));
 
@@ -290,7 +290,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 	s_response->custom_headers=(char***)malloc(sizeof(char**)*cus_size);
 
-	struct data_pocket *pocket=bag->first;
+	struct mid_pocket *pocket=bag->first;
 
 	for(int i=0;i<cus_size-1;i++)
 	{

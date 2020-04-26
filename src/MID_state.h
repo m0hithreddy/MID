@@ -55,19 +55,19 @@ struct d_ms_entry
 
 char* get_ms_filename();
 
-void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress);
 
-void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress);
 
-void dump_int(struct data_bag* bag,int num);
+void dump_int(struct mid_bag* bag,int num);
 
-void dump_long(struct data_bag* bag,long num);
+void dump_long(struct mid_bag* bag,long num);
 
-void dump_string(struct data_bag* bag,char* string);
+void dump_string(struct mid_bag* bag,char* string);
 
 char* extract_string(FILE* ms_fp);
 
-struct data_bag* make_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+struct mid_bag* make_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress);
 
 struct ms_entry* process_ms_entry(FILE* ms_fp);
 
@@ -76,7 +76,7 @@ void print_ms_entry(struct ms_entry* en);
 int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,struct http_response* gl_s_response,int flag);
 
 #ifdef LIBSSL_SANE
-struct data_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress);
+struct mid_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress);
 
 struct d_ms_entry* process_d_ms_entry(FILE* ms_fp);
 

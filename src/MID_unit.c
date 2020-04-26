@@ -163,7 +163,7 @@ void* unit(void* info)
 
 		/* Read the response and eat the HTTP response headers */
 
-		struct data_bag* eat_bag=create_data_bag();
+		struct mid_bag* eat_bag=create_mid_bag();
 		char* eat_buf=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
 		struct network_data* n_eat_buf=(struct network_data*)malloc(sizeof(struct network_data));
 
@@ -249,7 +249,7 @@ void* unit(void* info)
 
 			place_data(eat_bag,n_eat_buf);
 
-			struct network_data* tmp_n_data=flatten_data_bag(eat_bag);
+			struct network_data* tmp_n_data=flatten_mid_bag(eat_bag);
 
 			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len-1)!=NULL) // read until crlfcrlf is encountered.
 				break;
@@ -260,7 +260,7 @@ void* unit(void* info)
 		if(status<0)
 			goto self_repair;
 
-		n_eat_buf=flatten_data_bag(eat_bag);
+		n_eat_buf=flatten_mid_bag(eat_bag);
 
 		struct http_response* s_response=parse_http_response(n_eat_buf); //parse the partial response.
 
@@ -348,11 +348,11 @@ void* unit(void* info)
 		status=s_response->body->len;
 
 		pthread_mutex_lock(&unit_info->lock); // Initialize fetched unit range entries (range.start,range.start-1)
-		append_data_pocket(unit_info->unit_ranges,sizeof(long));
+		append_mid_pocket(unit_info->unit_ranges,sizeof(long));
 		unit_info->unit_ranges->end->len=sizeof(long);
 		*((long*)unit_info->unit_ranges->end->data)=unit_info->range->start;
 
-		append_data_pocket(unit_info->unit_ranges,sizeof(long));
+		append_mid_pocket(unit_info->unit_ranges,sizeof(long));
 		unit_info->unit_ranges->end->len=sizeof(long);
 		*((long*)unit_info->unit_ranges->end->data)=unit_info->range->start-1;
 		pthread_mutex_unlock(&unit_info->lock);
@@ -854,13 +854,13 @@ struct units_progress* merge_units_progress(struct units_progress* progress)
 
 	sort((void*)progress->ranges,sizeof(struct http_range),0,progress->n_ranges-1,compare_units_progress);
 
-	struct data_bag* u_bag=create_data_bag();
+	struct mid_bag* u_bag=create_mid_bag();
 
-	append_data_pocket(u_bag,sizeof(long));
+	append_mid_pocket(u_bag,sizeof(long));
 	u_bag->end->len=sizeof(long);
 	*(long*)u_bag->end->data=progress->ranges[0].start;
 
-	append_data_pocket(u_bag,sizeof(long));
+	append_mid_pocket(u_bag,sizeof(long));
 	u_bag->end->len=sizeof(long);
 	*(long*)u_bag->end->data=progress->ranges[0].end;
 
@@ -868,11 +868,11 @@ struct units_progress* merge_units_progress(struct units_progress* progress)
 	{
 		if (*(long*)u_bag->end->data < progress->ranges[i].start)
 		{
-			append_data_pocket(u_bag,sizeof(long));
+			append_mid_pocket(u_bag,sizeof(long));
 			u_bag->end->len=sizeof(long);
 			*(long*)u_bag->end->data=progress->ranges[i].start;
 
-			append_data_pocket(u_bag,sizeof(long));
+			append_mid_pocket(u_bag,sizeof(long));
 			u_bag->end->len=sizeof(long);
 			*(long*)u_bag->end->data=progress->ranges[i].end;
 
@@ -886,7 +886,7 @@ struct units_progress* merge_units_progress(struct units_progress* progress)
 
 	struct units_progress* u_progress=(struct units_progress*)malloc(sizeof(struct units_progress));
 
-	u_progress->ranges=(struct http_range*)flatten_data_bag(u_bag)->data;
+	u_progress->ranges=(struct http_range*)flatten_mid_bag(u_bag)->data;
 	u_progress->n_ranges=u_bag->n_pockets/2;
 
 	u_progress->content_length=LONG_MIN;
@@ -902,7 +902,7 @@ struct units_progress* get_units_progress(struct unit_info** units,long units_le
 	if(units==NULL || units_len==0 )
 		return progress;
 
-	struct data_bag* ranges_bag=create_data_bag();
+	struct mid_bag* ranges_bag=create_mid_bag();
 
 	long ranges_counter=0;
 
@@ -910,14 +910,14 @@ struct units_progress* get_units_progress(struct unit_info** units,long units_le
 	{
 		pthread_mutex_lock(&units[i]->lock);
 
-		place_data(ranges_bag,flatten_data_bag(units[i]->unit_ranges));
+		place_data(ranges_bag,flatten_mid_bag(units[i]->unit_ranges));
 		ranges_counter=ranges_counter+units[i]->unit_ranges->n_pockets/2;
 
 		pthread_mutex_unlock(&units[i]->lock);
 
 	}
 
-	struct network_data* n_ranges=flatten_data_bag(ranges_bag);
+	struct network_data* n_ranges=flatten_mid_bag(ranges_bag);
 
 	if(n_ranges==NULL)
 		return progress;
@@ -1007,7 +1007,7 @@ void* show_progress(void* s_progress_info)
 
 		pthread_mutex_lock(&p_info->lock);
 
-		units=(struct unit_info**)flatten_data_bag(p_info->units_bag)->data;
+		units=(struct unit_info**)flatten_mid_bag(p_info->units_bag)->data;
 		units_len=p_info->units_bag->n_pockets;
 
 		current=get_interface_report(units, units_len, p_info->ifs, p_info->ifs_len, prev);
@@ -1255,7 +1255,7 @@ struct unit_info* unitdup(struct unit_info* src)
 
 	new->range=(struct http_range*)malloc(sizeof(struct http_range));
 
-	new->unit_ranges=create_data_bag();
+	new->unit_ranges=create_mid_bag();
 
 	return new;
 }

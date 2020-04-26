@@ -75,7 +75,7 @@ char* get_ms_filename()
 	return ms_file;
 }
 
-void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress)
 {
 	if(gl_s_request==NULL || gl_s_response == NULL || gl_s_response->status_code[0]!='2') // Enough progress isn't made or not an expected status code to save the state.
 		return;
@@ -114,7 +114,7 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 		return;
 	}
 
-	struct data_bag* state_bag;
+	struct mid_bag* state_bag;
 
 #ifdef LIBSSL_SANE
 	if(args->detailed_save)
@@ -125,7 +125,7 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 	state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 #endif
 
-	struct network_data* state_data=flatten_data_bag(state_bag);
+	struct network_data* state_data=flatten_mid_bag(state_bag);
 
 	if(state_data==NULL || state_data->data==NULL)
 	{
@@ -143,7 +143,7 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 	return;
 }
 
-void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress)
 {
 	if(gl_s_request==NULL || gl_s_response == NULL || gl_s_response->status_code[0]!='2') // Enough progress isn't made or not an expected status code to re-save the state.
 		return;
@@ -187,7 +187,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 		return;
 	}
 
-	struct data_bag* state_bag;
+	struct mid_bag* state_bag;
 
 #ifdef LIBSSL_SANE
 	if(args->detailed_save)
@@ -198,7 +198,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 	state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 #endif
 
-	struct network_data* state_data=flatten_data_bag(state_bag);
+	struct network_data* state_data=flatten_mid_bag(state_bag);
 
 	if(state_data==NULL || state_data->data==NULL)
 	{
@@ -393,7 +393,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 	return;
 }
 
-void dump_int(struct data_bag* bag,int num)
+void dump_int(struct mid_bag* bag,int num)
 {
 	struct network_data n_data;
 
@@ -402,7 +402,7 @@ void dump_int(struct data_bag* bag,int num)
 	place_data(bag,&n_data);
 }
 
-void dump_long(struct data_bag* bag,long num)
+void dump_long(struct mid_bag* bag,long num)
 {
 	struct network_data n_data;
 
@@ -411,7 +411,7 @@ void dump_long(struct data_bag* bag,long num)
 	place_data(bag,&n_data);
 }
 
-void dump_string(struct data_bag* bag,char* string)
+void dump_string(struct mid_bag* bag,char* string)
 {
 	struct network_data n_data;
 	long len=strlen(string)+1;
@@ -441,14 +441,14 @@ char* extract_string(FILE* ms_fp)
 	return string;
 }
 
-struct data_bag* make_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+struct mid_bag* make_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress)
 {
 
-	struct network_data* tmp=flatten_data_bag(units_bag);
+	struct network_data* tmp=flatten_mid_bag(units_bag);
 	struct unit_info** units= (struct unit_info**)(tmp==NULL ? NULL : tmp->data);
 	long units_len= tmp==NULL ? 0 : units_bag->n_pockets;
 
-	struct data_bag* state_bag=create_data_bag();
+	struct mid_bag* state_bag=create_mid_bag();
 	struct network_data* state_data;
 
 	// Type of file 0 => MID state file | 1 => MID detailed state file
@@ -484,7 +484,7 @@ struct data_bag* make_mid_state(struct http_request* gl_s_request,struct http_re
 
 	// number of left over ranges + left over ranges
 
-	struct data_bag* ranges_bag=create_data_bag();
+	struct mid_bag* ranges_bag=create_mid_bag();
 
 	if(units==NULL || units_len==0)
 	{
@@ -516,7 +516,7 @@ struct data_bag* make_mid_state(struct http_request* gl_s_request,struct http_re
 		{
 			struct units_progress* l_ranges=(struct units_progress*)malloc(sizeof(struct units_progress));
 
-			l_ranges->ranges=(struct http_range*)flatten_data_bag(ranges_bag)->data;
+			l_ranges->ranges=(struct http_range*)flatten_mid_bag(ranges_bag)->data;
 			l_ranges->n_ranges=range_counter;
 
 			l_ranges=merge_units_progress(l_ranges);
@@ -870,16 +870,16 @@ int validate_ms_entry(struct ms_entry* en,struct http_request* gl_s_request,stru
 
 #ifdef LIBSSL_SANE
 
-struct data_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct data_bag* units_bag,struct units_progress* progress)
+struct mid_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress)
 {
-	struct data_bag* state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
+	struct mid_bag* state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 
 	if(state_bag==NULL)
 		return NULL;
 
 	*((int*)state_bag->first->data)=1;
 
-	struct data_bag* d_state_bag=create_data_bag();
+	struct mid_bag* d_state_bag=create_mid_bag();
 
 	// Number of Ranges + Ranges along with their hashes
 
@@ -964,7 +964,7 @@ struct data_bag* make_d_mid_state(struct http_request* gl_s_request,struct http_
 
 	// Return the data bag
 
-	place_data(state_bag,flatten_data_bag(d_state_bag));
+	place_data(state_bag,flatten_mid_bag(d_state_bag));
 
 	return state_bag;
 
