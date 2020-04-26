@@ -342,7 +342,7 @@ char* rectify_url(char* url)
 		return NULL;
 
 	struct mid_bag* r_url_bag=create_mid_bag();
-	struct network_data* r_url_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* r_url_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	long url_len=strlen(url);
 	char* sp_ptr=NULL;

@@ -16,7 +16,7 @@
 #define DELETE_AFTER 01
 #define DELETE_AT 10
 
-struct network_data
+struct mid_data
 {
 	void *data;
 	long len;
@@ -46,9 +46,9 @@ int insert_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,struct mid_po
 
 int delete_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,int flag);
 
-int place_data(struct mid_bag *bag,struct network_data *n_data);
+int place_data(struct mid_bag *bag,struct mid_data *n_data);
 
-struct network_data* flatten_mid_bag(struct mid_bag *bag);
+struct mid_data* flatten_mid_bag(struct mid_bag *bag);
 
 
 #endif /* MID_STRUCTURES_H_ */

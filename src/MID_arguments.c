@@ -29,7 +29,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	if(key==NULL)
 		return;
 
-	struct network_data* op_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* op_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 	struct mid_bag* op_bag=create_mid_bag();
 
 	if(value==NULL)
@@ -87,13 +87,13 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 			ifs_count=&args->exclude_ifs_count;
 		}
 
-		struct network_data* n_data=(struct network_data*)malloc(sizeof(struct network_data));
+		struct mid_data* n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 		n_data->data=value;
 		n_data->len=strlen(value);
 
 		struct mid_bag* if_bag=create_mid_bag();
-		struct network_data* if_data=(struct network_data*)malloc(sizeof(struct network_data));
+		struct mid_data* if_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 		while(1)
 		{
@@ -162,7 +162,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 	else if(!strcmp(key,"unit-break"))
 	{
-		struct network_data* v_data=(struct network_data*)malloc(sizeof(struct network_data));
+		struct mid_data* v_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 		v_data->data=value;
 		v_data->len=strlen(value);
 
@@ -280,8 +280,8 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	else if(!strcmp(key,"header"))
 	{
 
-		struct network_data* n_data=(struct network_data*)malloc(sizeof(struct network_data));
-		struct network_data* hdr_data=(struct network_data*)malloc(sizeof(struct network_data));
+		struct mid_data* n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
+		struct mid_data* hdr_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 		hdr_data->data=value;
 		hdr_data->len=strlen(value)+1;
@@ -460,7 +460,7 @@ void read_conf(char* conf,struct mid_args* args)
 
 	char* buf[MAX_TRANSACTION_SIZE];
 	struct mid_bag* conf_bag=create_mid_bag();
-	struct network_data* conf_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* conf_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 	conf_data->data=buf;
 
 	long status=0;

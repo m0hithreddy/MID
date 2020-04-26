@@ -83,14 +83,14 @@ char* strcaselocate(char* haystack,char* needle,long start,long end)
 	return haystack+start+(long)(str_ptr-mod_haystack);
 }
 
-struct network_data* sseek(struct network_data* n_data,char* delimiter,long len,int delimiting)
+struct mid_data* sseek(struct mid_data* n_data,char* delimiter,long len,int delimiting)
 {
 	// seek through the string unless the delimiter string character is not hit
 
 	if(n_data==NULL || n_data->data==NULL)
 		return NULL;
 
-	struct network_data *update=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data *update=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	char in[2]; in[1]='\0';
 
@@ -117,14 +117,14 @@ struct network_data* sseek(struct network_data* n_data,char* delimiter,long len,
 	return update;
 }
 
-struct network_data* scopy(struct network_data* n_data,char* delimiter,char** dest,long len,int delimitng)
+struct mid_data* scopy(struct mid_data* n_data,char* delimiter,char** dest,long len,int delimitng)
 {
 	// Copy and seek though the string till the delimiter string character
 
 	if(n_data==NULL || n_data->data==NULL)
 		return NULL;
 
-	struct network_data* buf=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* buf=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	buf->data=(char*)malloc(2*sizeof(char));
 	((char*)buf->data)[1]='\0';
@@ -153,7 +153,7 @@ struct network_data* scopy(struct network_data* n_data,char* delimiter,char** de
 			place_data(bag,buf);
 	}
 
-	struct network_data* update=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* update=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	update->data=n_data->data+i;
 	update->len=n_data->len-i;

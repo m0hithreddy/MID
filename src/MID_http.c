@@ -28,12 +28,12 @@
 #include"config.h"
 #endif
 
-struct network_data* create_http_request(struct http_request* s_request)
+struct mid_data* create_http_request(struct http_request* s_request)
 {
 	if(s_request==NULL)
 		return NULL;
 
-	struct network_data* buf=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* buf=(struct mid_data*)malloc(sizeof(struct mid_data));
 	buf->data=malloc(HTTP_REQUEST_HEADERS_MAX_LEN*sizeof(char));
 
 	struct mid_bag *bag=create_mid_bag();
@@ -73,7 +73,7 @@ struct network_data* create_http_request(struct http_request* s_request)
 
 	//Appending Remaining headers
 
-	struct network_data* n_buf=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* n_buf=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	char* index_buffer;
 	char* token_buffer;
@@ -137,7 +137,7 @@ struct network_data* create_http_request(struct http_request* s_request)
 	return flatten_mid_bag(bag);
 }
 
-struct http_response* parse_http_response(struct network_data *response)
+struct http_response* parse_http_response(struct mid_data *response)
 {
 	if(response==NULL)
 		return NULL;
@@ -146,7 +146,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 	// Segregate Response Headers and Response Body
 
-	struct network_data* hdrs=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* hdrs=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	char* current=strlocate(response->data,"\r\n\r\n",0,response->len);
 
@@ -156,7 +156,7 @@ struct http_response* parse_http_response(struct network_data *response)
 	hdrs->data=response->data;
 	hdrs->len=(long)(current-(char*)response->data)+strlen("\r\n\r\n");
 
-	s_response->body=(struct network_data*)malloc(sizeof(struct network_data));
+	s_response->body=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	s_response->body->len=response->len-hdrs->len;
 	s_response->body->data=(char*)memndup(response->data+hdrs->len,sizeof(char)*(s_response->body->len));
@@ -209,7 +209,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 	struct mid_bag *bag=create_mid_bag(); /* bag[i]="header" bag[i+1]="value" where i is even*/
 
-	struct network_data* n_buf=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* n_buf=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	char* token_buffer;
 	char* value_buffer;
@@ -317,7 +317,7 @@ struct http_response* parse_http_response(struct network_data *response)
 
 }
 
-void* send_http_request(int sockfd,struct network_data* request,char* hostname,int flag)
+void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int flag)
 {
 	if(request==NULL)
 		return NULL;
@@ -345,7 +345,7 @@ void* send_http_request(int sockfd,struct network_data* request,char* hostname,i
 
 	if(flag==SEND_RECEIVE)
 	{
-		struct network_data* response=sock_read(sockfd,LONG_MAX);
+		struct mid_data* response=sock_read(sockfd,LONG_MAX);
 
 		return (void*)response;
 	}
@@ -354,7 +354,7 @@ void* send_http_request(int sockfd,struct network_data* request,char* hostname,i
 }
 
 #ifdef LIBSSL_SANE
-void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag)
+void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag)
 {
 
 	if(sockfd<0)
@@ -375,19 +375,19 @@ void* send_https_request(int sockfd,struct network_data* request,char* hostname,
 		return (void*)ssl;
 	}
 
-	struct network_data* response=ssl_sock_read(ssl);
+	struct mid_data* response=ssl_sock_read(ssl);
 
 	return (void*)response;
 }
 #else
-void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag)
+void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag)
 {
 	https_quit();
 	return NULL;
 }
 #endif
 
-void* follow_redirects(struct http_request* c_s_request,struct network_data* response,long max_redirects,struct socket_info* cli_info,int flag)
+void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,long max_redirects,struct socket_info* cli_info,int flag)
 {
 
 	if(response==NULL)
@@ -395,7 +395,7 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 
 	struct http_response* s_response;
 	struct parsed_url* purl;
-	struct network_data* request=create_http_request(c_s_request);
+	struct mid_data* request=create_http_request(c_s_request);
 	struct http_request* s_request=(struct http_request*)memndup(c_s_request,sizeof(struct http_request));
 
 	long redirect_count=0;
@@ -464,11 +464,11 @@ void* follow_redirects(struct http_request* c_s_request,struct network_data* res
 
 		if(!strcmp(purl->scheme,"http"))
 		{
-			response=(struct network_data*)send_http_request(sockfd,request,NULL,0);
+			response=(struct mid_data*)send_http_request(sockfd,request,NULL,0);
 		}
 		else
 		{
-			response=(struct network_data*)send_https_request(sockfd,request,purl->host,0);
+			response=(struct mid_data*)send_https_request(sockfd,request,purl->host,0);
 		}
 
 		if(response==NULL)

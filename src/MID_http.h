@@ -96,7 +96,7 @@ struct http_request
 	char* range;
 	char* te;
 	char ***custom_headers; /* custom[i][0]="Header" custom[i][1]="Value" custom[end]==NULL (NULL terminating) */
-	struct network_data* body;
+	struct mid_data* body;
 
 	// Misc Entries
 	char* url;
@@ -143,7 +143,7 @@ struct http_response
 	char* extension_header;
 	char ***custom_headers; /* custom[i][0]="Header" custom[i][1]="Value" custom[end]==NULL (NULL terminating) */
 	char* url;
-	struct network_data *body;
+	struct mid_data *body;
 };
 
 struct http_range
@@ -164,15 +164,15 @@ struct encoding_info
 	void* data; // Encoding specific data used by function handling the encoding
 };
 
-struct network_data* create_http_request(struct http_request* s_request);
+struct mid_data* create_http_request(struct http_request* s_request);
 
-struct http_response* parse_http_response(struct network_data *response);
+struct http_response* parse_http_response(struct mid_data *response);
 
-void* send_http_request(int sockfd,struct network_data* request,char* hostname,int flag);
+void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int flag);
 
-void* send_https_request(int sockfd,struct network_data* request,char* hostname,int flag);
+void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag);
 
-void* follow_redirects(struct http_request* c_s_request,struct network_data* response,long max_redirects,struct socket_info* cli_info,int flag);
+void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,long max_redirects,struct socket_info* cli_info,int flag);
 
 char* determine_filename(char* path,FILE** fp_ptr);
 

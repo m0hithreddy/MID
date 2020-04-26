@@ -41,9 +41,9 @@ struct socket_info* create_socket_info(char* if_name,char* if_addr);
 
 int open_connection(struct socket_info* sock_info,struct sockaddr* addr);
 
-long sock_write(int sockfd,struct network_data* n_data);
+long sock_write(int sockfd,struct mid_data* n_data);
 
-struct network_data* sock_read(int sockfd,long limit);
+struct mid_data* sock_read(int sockfd,long limit);
 
 char* resolve_dns(char* hostname);
 

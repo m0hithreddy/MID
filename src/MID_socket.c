@@ -108,7 +108,7 @@ struct socket_info* create_socket_info(char* if_name,char* if_addr)
 	return sock_info;
 
 }
-long sock_write(int sockfd,struct network_data* n_data)
+long sock_write(int sockfd,struct mid_data* n_data)
 {
 	if(n_data==NULL || n_data->data==NULL || n_data->len<=0)
 		return 0;
@@ -133,13 +133,13 @@ long sock_write(int sockfd,struct network_data* n_data)
 	}
 }
 
-struct network_data* sock_read(int sockfd,long limit)
+struct mid_data* sock_read(int sockfd,long limit)
 {
 	if(limit<0)
 		return NULL;
 
 	struct mid_bag *bag=create_mid_bag();
-	struct network_data *n_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data *n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	n_data->data=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
 
@@ -212,7 +212,7 @@ char** resolve_dns_mirros(char* hostname,long* n_mirrors)
 	char** n_hosts=dnsptr->h_addr_list;
 
 	char** hostip_ptr;
-	struct network_data ip_data;
+	struct mid_data ip_data;
 	struct mid_bag* hostsbag=create_mid_bag();
 
 	long mirrors_count=0;

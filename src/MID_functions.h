@@ -35,9 +35,9 @@ char* strlocate(char* haystack,char* needle,long start,long end);
 
 char* strcaselocate(char* haystack,char* needle,long start,long end);
 
-struct network_data* sseek(struct network_data* n_data,char* delimiter,long len,int delimiting);  /*len<0 to neglect length*/
+struct mid_data* sseek(struct mid_data* n_data,char* delimiter,long len,int delimiting);  /*len<0 to neglect length*/
 
-struct network_data* scopy(struct network_data* n_data, char* delimiter, char** dest, long len,int delimiting); /*len<0 to neglect length*/
+struct mid_data* scopy(struct mid_data* n_data, char* delimiter, char** dest, long len,int delimiting); /*len<0 to neglect length*/
 
 #ifndef HAVE_MEMNDUP
 void* memndup(void* src,long n_bytes);

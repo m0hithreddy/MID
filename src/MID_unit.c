@@ -123,7 +123,7 @@ void* unit(void* info)
 		}
 		pthread_mutex_unlock(&unit_info->lock);
 
-		struct network_data* request=create_http_request(unit_info->s_request); // create request
+		struct mid_data* request=create_http_request(unit_info->s_request); // create request
 
 		if(!strcmp(unit_info->s_request->scheme,"http"))  // determine whether HTTP[S] request.
 			http_flag=1;
@@ -165,7 +165,7 @@ void* unit(void* info)
 
 		struct mid_bag* eat_bag=create_mid_bag();
 		char* eat_buf=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
-		struct network_data* n_eat_buf=(struct network_data*)malloc(sizeof(struct network_data));
+		struct mid_data* n_eat_buf=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 		long status;
 
@@ -249,7 +249,7 @@ void* unit(void* info)
 
 			place_data(eat_bag,n_eat_buf);
 
-			struct network_data* tmp_n_data=flatten_mid_bag(eat_bag);
+			struct mid_data* tmp_n_data=flatten_mid_bag(eat_bag);
 
 			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len-1)!=NULL) // read until crlfcrlf is encountered.
 				break;
@@ -917,7 +917,7 @@ struct units_progress* get_units_progress(struct unit_info** units,long units_le
 
 	}
 
-	struct network_data* n_ranges=flatten_mid_bag(ranges_bag);
+	struct mid_data* n_ranges=flatten_mid_bag(ranges_bag);
 
 	if(n_ranges==NULL)
 		return progress;

@@ -27,8 +27,8 @@ int SSL_read(void* ran1,void* ran2,long ran3);
 
 SSL* ssl_open_connection(int sockfd,char* hostname);
 
-int ssl_sock_write(SSL* ssl,struct network_data* n_data);
+int ssl_sock_write(SSL* ssl,struct mid_data* n_data);
 
-struct network_data* ssl_sock_read(SSL* ssl);
+struct mid_data* ssl_sock_read(SSL* ssl);
 
 #endif /* MID_SSL_SOCKET_H_ */

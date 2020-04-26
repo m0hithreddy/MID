@@ -45,7 +45,7 @@ SSL* ssl_open_connection(int sockfd,char* hostname)
 	return ssl;
 }
 
-int ssl_sock_write(SSL* ssl,struct network_data* n_data)
+int ssl_sock_write(SSL* ssl,struct mid_data* n_data)
 {
 	if(ssl==NULL || n_data->data==NULL || n_data->len==0)
 		return 0;
@@ -53,13 +53,13 @@ int ssl_sock_write(SSL* ssl,struct network_data* n_data)
 	return SSL_write(ssl,n_data->data,n_data->len);
 }
 
-struct network_data* ssl_sock_read(SSL* ssl)
+struct mid_data* ssl_sock_read(SSL* ssl)
 {
 	if(ssl==NULL)
 		return NULL;
 
 	struct mid_bag *bag=create_mid_bag();
-	struct network_data *n_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data *n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	n_data->data=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
 
@@ -87,13 +87,13 @@ SSL* ssl_open_connection(int sockfd,char* hostname)
 	return NULL;
 }
 
-int ssl_sock_write(SSL* ssl,struct network_data* n_data)
+int ssl_sock_write(SSL* ssl,struct mid_data* n_data)
 {
 	https_quit();
 	return -1;
 }
 
-struct network_data* ssl_sock_read(SSL* ssl)
+struct mid_data* ssl_sock_read(SSL* ssl)
 {
 	https_quit();
 	return NULL;

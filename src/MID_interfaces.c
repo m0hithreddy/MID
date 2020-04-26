@@ -105,7 +105,7 @@ struct network_interface** get_network_interfaces()
 			if (s != 0)
 				continue;
 
-			struct network_data* n_data=(struct network_data* )malloc(sizeof(struct network_data));
+			struct mid_data* n_data=(struct mid_data* )malloc(sizeof(struct mid_data));
 
 			//Pushing the if_name
 

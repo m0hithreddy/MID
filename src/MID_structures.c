@@ -254,7 +254,7 @@ int delete_mid_pocket(struct mid_bag* bag,struct mid_pocket* refer,int flag)
 	return 0;
 }
 
-int place_data(struct mid_bag *bag,struct network_data *n_data)
+int place_data(struct mid_bag *bag,struct mid_data *n_data)
 {
 	if(bag==NULL || n_data==NULL || n_data->data==NULL || n_data->len==0)
 		return -1;
@@ -269,13 +269,13 @@ int place_data(struct mid_bag *bag,struct network_data *n_data)
 
 }
 
-struct network_data* flatten_mid_bag(struct mid_bag *bag)
+struct mid_data* flatten_mid_bag(struct mid_bag *bag)
 {
 
 	if(bag==NULL)
 		return NULL;
 
-	struct network_data* n_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	struct mid_pocket *pocket=bag->first;
 	long len=0;

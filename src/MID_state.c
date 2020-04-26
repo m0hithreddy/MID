@@ -125,7 +125,7 @@ void save_mid_state(struct http_request* gl_s_request,struct http_response* gl_s
 	state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 #endif
 
-	struct network_data* state_data=flatten_mid_bag(state_bag);
+	struct mid_data* state_data=flatten_mid_bag(state_bag);
 
 	if(state_data==NULL || state_data->data==NULL)
 	{
@@ -198,7 +198,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 	state_bag=make_mid_state(gl_s_request,gl_s_response,base_unit_info,units_bag,progress);
 #endif
 
-	struct network_data* state_data=flatten_mid_bag(state_bag);
+	struct mid_data* state_data=flatten_mid_bag(state_bag);
 
 	if(state_data==NULL || state_data->data==NULL)
 	{
@@ -395,7 +395,7 @@ void resave_mid_state(struct http_request* gl_s_request,struct http_response* gl
 
 void dump_int(struct mid_bag* bag,int num)
 {
-	struct network_data n_data;
+	struct mid_data n_data;
 
 	n_data.data=(void*)&num;
 	n_data.len=sizeof(int);
@@ -404,7 +404,7 @@ void dump_int(struct mid_bag* bag,int num)
 
 void dump_long(struct mid_bag* bag,long num)
 {
-	struct network_data n_data;
+	struct mid_data n_data;
 
 	n_data.data=(void*)&num;
 	n_data.len=sizeof(long);
@@ -413,7 +413,7 @@ void dump_long(struct mid_bag* bag,long num)
 
 void dump_string(struct mid_bag* bag,char* string)
 {
-	struct network_data n_data;
+	struct mid_data n_data;
 	long len=strlen(string)+1;
 
 	dump_long(bag,len);
@@ -444,12 +444,12 @@ char* extract_string(FILE* ms_fp)
 struct mid_bag* make_mid_state(struct http_request* gl_s_request,struct http_response* gl_s_response,struct unit_info* base_unit_info,struct mid_bag* units_bag,struct units_progress* progress)
 {
 
-	struct network_data* tmp=flatten_mid_bag(units_bag);
+	struct mid_data* tmp=flatten_mid_bag(units_bag);
 	struct unit_info** units= (struct unit_info**)(tmp==NULL ? NULL : tmp->data);
 	long units_len= tmp==NULL ? 0 : units_bag->n_pockets;
 
 	struct mid_bag* state_bag=create_mid_bag();
-	struct network_data* state_data;
+	struct mid_data* state_data;
 
 	// Type of file 0 => MID state file | 1 => MID detailed state file
 
@@ -521,7 +521,7 @@ struct mid_bag* make_mid_state(struct http_request* gl_s_request,struct http_res
 
 			l_ranges=merge_units_progress(l_ranges);
 
-			struct network_data n_data;
+			struct mid_data n_data;
 			n_data.data=l_ranges->ranges;
 			n_data.len=sizeof(struct http_range)*l_ranges->n_ranges;
 

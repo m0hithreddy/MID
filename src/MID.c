@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 	s_request->hostip=hostip;
 	s_request->scheme=purl->scheme;
 
-	struct network_data* request=create_http_request(s_request);
+	struct mid_data* request=create_http_request(s_request);
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 
 	struct mid_bag* net_if_bag=create_mid_bag();
 
-	struct network_data* net_if_data=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* net_if_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	// For each network interface check whether server is accessible
 
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
 		if(sockfd<0)
 			continue;
 
-		struct network_data *response;
+		struct mid_data *response;
 
 		if(!strcmp(purl->scheme,"http"))
 			response=send_http_request(sockfd,request,NULL,0);
@@ -455,7 +455,7 @@ int main(int argc, char **argv)
 	/* Initiating download */
 
 	struct mid_bag* units_bag=create_mid_bag();
-	struct network_data* n_unit=(struct network_data*)malloc(sizeof(struct network_data));
+	struct mid_data* n_unit=(struct mid_data*)malloc(sizeof(struct mid_data));
 	struct unit_info** units=NULL;
 	long units_len=0;
 	struct interface_report* prev=NULL;
@@ -1038,7 +1038,7 @@ void finalize_resume()
 		resume_bag=create_mid_bag();
 
 	struct unit_info* new;
-	struct network_data n_data;
+	struct mid_data n_data;
 
 	for(long i=0;i<n_ranges;i++)
 	{
