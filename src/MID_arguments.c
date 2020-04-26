@@ -436,7 +436,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	}
 }
 
-void read_conf(char* conf,struct mid_args* args)
+void read_mid_conf(char* conf,struct mid_args* args)
 {
 	args->max_unit_retries=MAX_UNIT_RETRIES;
 	args->max_redirects=DEFAULT_MAX_HTTP_REDIRECTS;
@@ -617,7 +617,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			{
 				mid_help("MID: --conf option used but the file name is not specified");
 			}
-			read_conf(argv[i+1],args);
+			read_mid_conf(argv[i+1],args);
 			break;
 		}
 
@@ -628,11 +628,11 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			if(fp!=NULL) // Default config file exits use it.
 			{
 				fclose(fp);
-				read_conf(DEFAULT_CONFIG_FILE,args);
+				read_mid_conf(DEFAULT_CONFIG_FILE,args);
 			}
-			else // No file exits, call the read_conf with NULL to initialize args with default parameters
+			else // No file exits, call the read_mid_conf with NULL to initialize args with default parameters
 			{
-				read_conf(NULL,args);
+				read_mid_conf(NULL,args);
 			}
 		}
 	}

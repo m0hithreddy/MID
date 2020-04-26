@@ -58,7 +58,7 @@ struct mid_args
 
 void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag);
 
-void read_conf(char* conf,struct mid_args* args);
+void read_mid_conf(char* conf,struct mid_args* args);
 
 struct mid_args* parse_mid_args(char** argv,long argc);
 
