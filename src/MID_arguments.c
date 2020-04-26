@@ -899,7 +899,7 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 
 		}
 
-		else if(!strcmp(argv[counter],"--detailed-progress") || !strcmp(argv[counter],"-pd")) // --detailed-progress || -pd
+		else if(!strcmp(argv[counter],"--detailed-progress") || !strcmp(argv[counter],"-dp")) // --detailed-progress || -dp
 		{
 			args->detailed_progress=1;
 
@@ -1137,7 +1137,7 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --unit-sleep-time t                    -us t                 Download unit sleeps for t seconds before retrying. \n");
 	fprintf(stderr,"   --io-timeout t                         -io t                 Set an I/O timeout of t seconds. \n");
 	fprintf(stderr,"   --progress-update-time t               -pu t                 Progress information updates after evert t seconds. \n");
-	fprintf(stderr,"   --detailed-progress                    -pd                   Show detailed download progress. \n");
+	fprintf(stderr,"   --detailed-progress                    -dp                   Show detailed download progress. \n");
 	fprintf(stderr,"   --force-resume                         -fr                   Skip the checks and start the download. \n");
 	fprintf(stderr,"   --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume. \n");
 #ifdef LIBSSL_SANE

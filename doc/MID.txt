@@ -30,7 +30,7 @@ OPTIONS
    --unit-sleep-time t                    -us t                 Download unit sleeps for t seconds before retrying.
    --io-timeout t                         -io t                 Set an I/O timeout of t seconds
    --progress-update-time t               -pu t                 Progress information updates after evert t seconds.
-   --detailed-progress                    -pd                   Show detailed download progress.
+   --detailed-progress                    -dp                   Show detailed download progress.
    --force-resume                         -fr                   Skip the checks and start the download.
    --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume.
    --detailed-save                        -ds                   Save the hashes of downloaded ranges to .ms file. Default action is not to save. (SSL support required).
