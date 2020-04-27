@@ -311,6 +311,8 @@ struct http_response* parse_http_response(struct mid_data *response)
 		if(pocket==NULL)  // Should not happen, but return;
 		{
 			s_response->custom_headers[i]=NULL;
+			free_mid_bag(cus_hdrs_bag);
+
 			return s_response;
 		}
 
@@ -320,6 +322,7 @@ struct http_response* parse_http_response(struct mid_data *response)
 	}
 
 	s_response->custom_headers[cus_size-1]=NULL;
+	free_mid_bag(cus_hdrs_bag);
 
 	return s_response;
 }
@@ -394,10 +397,10 @@ void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int 
 }
 #endif
 
-void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,long max_redirects,struct socket_info* cli_info,int flag)
+void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct socket_info* cli_info,long max_redirects,int flag)
 {
 
-	if(response==NULL)
+	if(response==NULL || response->data==NULL || response->len==0 || c_s_request==NULL)
 		return NULL;
 
 	struct http_response* s_response;
@@ -414,14 +417,12 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		if(s_response==NULL)
 			return NULL;
 
-		if(s_response->status_code[0]!='3' || s_response->location==NULL)
-		{
+		if(s_response->status_code[0]!='3' || s_response->location==NULL)   // If status_code is anything than 3xx then break
 			break;
-		}
 
 		purl=parse_url(s_response->location); // Parse the URL
 
-		if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
+		if(purl==NULL || !(!strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http")))  // If the redirection led to different scheme than HTTP[S]
 			return NULL;
 
 		char* hostip=resolve_dns(purl->host); // Resolve DNS
@@ -429,12 +430,14 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		if(hostip==NULL)
 			return NULL;
 
-		struct sockaddr *servaddr=create_sockaddr_in(hostip,atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),AF_INET);
+		struct sockaddr *servaddr=create_sockaddr_in(hostip,\
+				atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),\
+				AF_INET);    // Server socket address structure.
 
 		if(servaddr==NULL)
 			return NULL;
 
-		s_request->host=purl->host;
+		s_request->host=purl->host;    // Set the new s_request fields
 		if(purl->path!=NULL)
 		{
 			char* tmp_path=(char*)malloc(sizeof(char)*HTTP_REQUEST_HEADERS_MAX_LEN);
@@ -455,28 +458,17 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		request=create_http_request(s_request); // Create HTTP Request
 
 		if(cli_info==NULL)
-		{
-			cli_info=(struct socket_info*)malloc(sizeof(struct socket_info));
-			cli_info->address=NULL;
-			cli_info->port=0;
-			cli_info->family=DEFAULT_HTTP_SOCKET_FAMILY;
-			cli_info->type=DEFAULT_HTTP_SOCKET_TYPE;
-			cli_info->protocol=DEFAULT_HTTP_SOCKET_PROTOCOL;
-		}
+			cli_info=create_socket_info(NULL,NULL);  // Create a default mid_socket
 
 		int sockfd = open_connection(cli_info,servaddr);
 
 		if(sockfd<0)
 			return NULL;
 
-		if(!strcmp(purl->scheme,"http"))
-		{
-			response=(struct mid_data*)send_http_request(sockfd,request,NULL,0);
-		}
+		if(!strcmp(purl->scheme,"http"))   // send and receive response as per the scheme.
+			response=(struct mid_data*)send_http_request(sockfd,request,NULL,SEND_RECEIVE);
 		else
-		{
-			response=(struct mid_data*)send_https_request(sockfd,request,purl->host,0);
-		}
+			response=(struct mid_data*)send_https_request(sockfd,request,purl->host,SEND_RECEIVE);
 
 		if(response==NULL)
 			return NULL;
@@ -484,8 +476,7 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		redirect_count++;
 	}
 
-
-	// Return values as caller requested
+	/* Return values as caller requested */
 
 	if(flag==RETURN_RESPONSE)
 		return (void*)response;

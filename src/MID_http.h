@@ -172,7 +172,7 @@ void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int f
 
 void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag);
 
-void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,long max_redirects,struct socket_info* cli_info,int flag);
+void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct socket_info* cli_info,long max_redirects,int flag);
 
 char* determine_filename(char* path,FILE** fp_ptr);
 

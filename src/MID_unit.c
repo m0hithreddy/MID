@@ -279,7 +279,7 @@ void* unit(void* info)
 			pthread_mutex_unlock(&unit_info->lock);
 			unit_info->s_request->method="HEAD";
 			unit_info->s_request->range=NULL;
-			void* tmp_s_request_s_response=follow_redirects(unit_info->s_request,n_eat_buf,args->max_redirects,unit_info->cli_info,RETURN_S_REQUEST_S_RESPONSE);
+			void* tmp_s_request_s_response=follow_redirects(unit_info->s_request,n_eat_buf,unit_info->cli_info,args->max_redirects,RETURN_S_REQUEST_S_RESPONSE);
 
 			if(tmp_s_request_s_response==NULL)
 				goto self_repair;

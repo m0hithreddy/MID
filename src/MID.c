@@ -230,7 +230,7 @@ int main(int argc, char **argv)
 			sock_write(fileno(stderr),response);
 		}
 
-		void* s_rqst_s_resp=follow_redirects(s_request, response, args->max_redirects,cli_info,RETURN_S_REQUEST_S_RESPONSE);
+		void* s_rqst_s_resp=follow_redirects(s_request,response,cli_info,args->max_redirects,RETURN_S_REQUEST_S_RESPONSE);
 
 		if(s_rqst_s_resp==NULL)
 			continue;
