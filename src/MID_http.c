@@ -144,77 +144,78 @@ struct mid_data* create_http_request(struct http_request* s_request)
 
 struct http_response* parse_http_response(struct mid_data *response)
 {
-	if(response==NULL)
+	if(response==NULL || response->data==NULL || response->len==0)
 		return NULL;
 
 	struct http_response *s_response=(struct http_response*)calloc(1,sizeof(struct http_response));
 
-	// Segregate Response Headers and Response Body
+	/* Segregate Response Headers and Response Body */
 
-	struct mid_data* hdrs=(struct mid_data*)malloc(sizeof(struct mid_data));
+	struct mid_data* hdrs_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
-	char* current=strlocate(response->data,"\r\n\r\n",0,response->len);
+	char* current=strlocate(response->data,"\r\n\r\n",0,response->len-1);
 
-	if(current==NULL)
+	if(current==NULL)  // If \r\n\r\n not found, then not a valid HTTP response message.
 		return NULL;
 
-	hdrs->data=response->data;
-	hdrs->len=(long)(current-(char*)response->data)+strlen("\r\n\r\n");
+	hdrs_data->data=response->data;
+	hdrs_data->len=(long)(current-(char*)response->data)+sizeof(char)*strlen("\r\n\r\n");   // Total length of the HTTP response headers (including \r\n\r\n).
 
 	s_response->body=(struct mid_data*)malloc(sizeof(struct mid_data));
+	s_response->body->len=response->len-hdrs_data->len;
 
-	s_response->body->len=response->len-hdrs->len;
-	s_response->body->data=(char*)memndup(response->data+hdrs->len,sizeof(char)*(s_response->body->len));
+	if(s_response->body->len!=0)
+		s_response->body->data=(void*)memndup(response->data+hdrs_data->len,s_response->body->len);  // Duplicate the response body data into s_response->body
+	else
+		s_response->body->data=NULL;
 
-	// Response Version
+	/* Few fields need special handling */
 
-	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
+	hdrs_data=sseek(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);   // Seek through ' ', : , \r , \n
 
-	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+	if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 		return NULL;
 
-	current=strlocate(hdrs->data,"HTTP/",0,response->len);
+	current=strlocate(hdrs_data->data,"HTTP/",0,response->len);
 
-	if(current==NULL)
+	if(current==NULL)  // If HTTP/ not found then return NULL
 		return NULL;
 
-	hdrs->data=current+strlen("HTTP/");
-	hdrs->len=hdrs->len-(long)(current-(char*)hdrs->data)-strlen("HTTP/");
+	hdrs_data->data=current+sizeof(char)*strlen("HTTP/");   // Update hdrs_data->data and hdrs_data->len past the HTTP/
+	hdrs_data->len=hdrs_data->len-(long)(current-(char*)hdrs_data->data)-sizeof(char)*strlen("HTTP/");
 
-	hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&s_response->version,-1,MID_DELIMIT);
+	hdrs_data=scopy(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,&s_response->version,-1,MID_DELIMIT);  // read the HTTP version into s_response->version
 
-	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+	if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)  // Should not happen, but let the caller take decision.
 		return s_response;
 
-	// Response Status Code
+	/* Repeat the same procedure as above for HTTP response status_code and status */
 
-	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
+	hdrs_data=sseek(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
-	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+	if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 		return s_response;
 
-	hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&s_response->status_code,-1,MID_DELIMIT);
+	hdrs_data=scopy(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,&s_response->status_code,-1,MID_DELIMIT);  // Response status_code.
 
-	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+	if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 		return s_response;
 
-	// Response Status
+	hdrs_data=sseek(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
-	hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
-
-	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+	if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 		return s_response;
 
-	hdrs=scopy(hdrs,MID_HTTP_VALUE_DELIMITERS,&s_response->status,-1,MID_DELIMIT);
+	hdrs_data=scopy(hdrs_data,MID_HTTP_VALUE_DELIMITERS,&s_response->status,-1,MID_DELIMIT);  // Response status.
 
-	if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+	if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 		return s_response;
 
-	// Headers Extraction
+	/* Headers Extraction */
 
-	struct mid_bag *bag=create_mid_bag(); /* bag[i]="header" bag[i+1]="value" where i is even*/
+	struct mid_bag *cus_hdrs_bag=create_mid_bag(); /* hdrs_bag[i]="header" hdrs_bag[i+1]="value", i is even*/
 
-	struct mid_data* n_buf=(struct mid_data*)malloc(sizeof(struct mid_data));
+	struct mid_data* tmp_data=(struct mid_data*)malloc(sizeof(struct mid_data));
 
 	char* token_buffer;
 	char* value_buffer;
@@ -224,52 +225,54 @@ struct http_response* parse_http_response(struct mid_data *response)
 
 	while(1)
 	{
-		//Token Extraction
+		// HTTP header format -> Token : Value
 
-		hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
+		hdrs_data=sseek(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
-		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+		if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 			break;
 
-		hdrs=scopy(hdrs,MID_HTTP_TOKEN_DELIMITERS,&token_buffer,-1,MID_DELIMIT);
+		hdrs_data=scopy(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,&token_buffer,-1,MID_DELIMIT);   // extract token.
 
-		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+		if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 			break;
 
-		//Value Extraction
+		hdrs_data=sseek(hdrs_data,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
 
-		hdrs=sseek(hdrs,MID_HTTP_TOKEN_DELIMITERS,-1,MID_PERMIT);
-
-		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+		if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 			break;
 
-		hdrs=scopy(hdrs,MID_HTTP_VALUE_DELIMITERS,&value_buffer,-1,MID_DELIMIT);
+		hdrs_data=scopy(hdrs_data,MID_HTTP_VALUE_DELIMITERS,&value_buffer,-1,MID_DELIMIT);  // extract value.
 
-		if(hdrs==NULL || hdrs->data==NULL || hdrs->len==0)
+		if(hdrs_data==NULL || hdrs_data->data==NULL || hdrs_data->len==0)
 			break;
 
-		//Inserting the token-value pair
+		// Inserting the token-value pair either in s_response if entry is there or else in custom_header matrix.
 
 		char* comp_buffer=(char*)malloc(sizeof(char)*(strlen(token_buffer)+3));
 
 		comp_buffer[0]=' ';
-		memcpy(comp_buffer+1,token_buffer,strlen(token_buffer));
+		memcpy(comp_buffer+1,token_buffer,strlen(token_buffer));  /* Token is made " Token " , for the purpose of searching in HTTP_RESPONSE_HEADERS.
+
+		HTTP_RESPONSE_HEADERS be like this "TOKEN i" , where TOKEN is HTTP header Token and i is the corresponding index in the s_response structure
+		(used to compute the absolute address). " Token " is used to prevent any substring matches */
+
 		comp_buffer[strlen(token_buffer)+1]=' ';
 		comp_buffer[strlen(token_buffer)+2]='\0';
 
-		if((current=strcaselocate(HTTP_RESPONSE_HEADERS,comp_buffer,0,strlen(HTTP_RESPONSE_HEADERS)))!=NULL) // If found in the default headers string
+		if((current=strcaselocate(HTTP_RESPONSE_HEADERS,comp_buffer,0,strlen(HTTP_RESPONSE_HEADERS)))!=NULL) // If found in the default headers string then insert in s_response
 		{
-			n_buf->data=current+strlen(token_buffer)+2;
-			n_buf->len=strlen(current);
+			tmp_data->data=1+current+sizeof(char)*strlen(token_buffer)+1;
+			tmp_data->len=strlen(current);
 
-			n_buf=sseek(n_buf," ",-1,MID_PERMIT);
+			tmp_data=sseek(tmp_data," ",-1,MID_PERMIT);
 
-			if(n_buf==NULL || n_buf->data==NULL || n_buf->len==0)
+			if(tmp_data==NULL || tmp_data->data==NULL || tmp_data->len==0)
 				continue;
 
-			scopy(n_buf," ",&index_buffer,-1,MID_DELIMIT);
+			scopy(tmp_data," ",&index_buffer,-1,MID_DELIMIT);  // index number
 
-			char** header_token=(char**)(v_s_response+(sizeof(char*)*(atoi(index_buffer)-1)));
+			char** header_token=(char**)(v_s_response+(sizeof(char*)*(atoi(index_buffer)-1)));  // absolute address of the token
 
 			*header_token=(char*)memndup(value_buffer,sizeof(char)*(strlen(value_buffer)+1));
 
@@ -278,37 +281,37 @@ struct http_response* parse_http_response(struct mid_data *response)
 
 		// Else should be placed in the custom headers matrix
 
-		n_buf->data=token_buffer;
-		n_buf->len=strlen(token_buffer)+1;
+		tmp_data->data=token_buffer;
+		tmp_data->len=strlen(token_buffer)+1;
 
-		place_mid_data(bag,n_buf);
+		place_mid_data(cus_hdrs_bag,tmp_data);  // place token
 
-		n_buf->data=value_buffer;
-		n_buf->len=strlen(value_buffer)+1;
+		tmp_data->data=value_buffer;
+		tmp_data->len=strlen(value_buffer)+1;
 
-		place_mid_data(bag,n_buf);
+		place_mid_data(cus_hdrs_bag,tmp_data);  // place header.
 	}
 
-	// Fill the custom headers matrix
+	/* Fill the custom headers matrix */
 
-	int cus_size=(bag->n_pockets/2)+(bag->n_pockets%2)+1;
+	long cus_size=(cus_hdrs_bag->n_pockets/2)+(cus_hdrs_bag->n_pockets%2)+1;   // +1 for the NULL at the end.
 
 	s_response->custom_headers=(char***)malloc(sizeof(char**)*cus_size);
 
-	struct mid_pocket *pocket=bag->first;
+	struct mid_pocket *pocket=cus_hdrs_bag->first;
 
-	for(int i=0;i<cus_size-1;i++)
+	for(long i=0;i<cus_size-1;i++)
 	{
 		s_response->custom_headers[i]=(char**)malloc(sizeof(char*)*2);
 
-		s_response->custom_headers[i][0]=(char*)memndup(pocket->data,pocket->len);
+		s_response->custom_headers[i][0]=(char*)memndup(pocket->data,pocket->len);  // token
 
 		pocket=pocket->next;
 
-		if(pocket==NULL)
+		if(pocket==NULL)  // Should not happen, but return;
 		{
-			s_response->custom_headers[i][1]=NULL;
-			break;
+			s_response->custom_headers[i]=NULL;
+			return s_response;
 		}
 
 		s_response->custom_headers[i][1]=(char*)memndup(pocket->data,pocket->len);
@@ -319,7 +322,6 @@ struct http_response* parse_http_response(struct mid_data *response)
 	s_response->custom_headers[cus_size-1]=NULL;
 
 	return s_response;
-
 }
 
 void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int flag)
