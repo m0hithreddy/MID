@@ -21,6 +21,7 @@ OPTIONS
    --help                                 -h                    Print the help message and exit.
    --url URL                              -u URL                URL to be used in the download.
    --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. 
+   --scheduler-algorithm alg              -sa alg               Use alg scheduler algorithm (case insensitive). alg => MAXOUT, ALL. (see the SCHEDULER ALOGORITHM section).
    --max-parallel-downloads x             -n x                  At max x parallel connections are opened.
    --max-unit-retries x                   -ur x                 At max x retries are made by a unit to download a chunk. If failed the download is terminated.
    --unit-break Nu                        -ub Nu                Chunk size limit to split the unit further, default is 100K.
@@ -46,7 +47,23 @@ OPTIONS
    --vverbose                             -vv                   Print the very verbose information.
    --surpass-root-check                   -s                    If had the sufficient permissions, use -s to surpass the root-check. (See the NOTE).
    --conf file                            -c file               Specify the configuration file path. Preference order: cmd_line > conf_file > default_values
-     
+
+SCHEDULER ALGORITHM
+ Scheduler algorithm takes the responsibility of scheduling the download. It decides when to open a new connection and which network-interface to use.
+ The MID scheduler algorithms are MAXOUT and ALL (case insensitive); They can be selected using --scheduler-algorithm option. Scheduler takes decesions based 
+ on the connection parameters (max_speed, current_speed, max_connections, current_connections). Below each alogrithm is explained in breif, to let the user decide 
+ which one to use.
+ 
+ MAXOUT
+  MAXOUT operates within the boundaries of --max-parallel-downloads. It is guranteed that MAXOUT wont open more connections than the specified value.
+  MAXOUT aims to maxout the interface utilization by increasing one connection at a time before moving to the next interface. It does a timely check to make 
+  sure that the interface is utilized to the full extent, if there is a drop in speed by the threshold_value, a new connection is triggered (within the limits
+  of --max-parallel-downloads). So a MAXOUT scheduler wont always open the specified number of max connections.
+  
+ ALL
+  ALL operates within the boundaries of --max-parallel-downloads. ALL scheduler has no logic, it divides the --max-parallel-downloads among the network-interfaces, 
+  and new connection is triggered on the interface when the connection_count falls below the precomputed max_value.
+ 
 NOTE
  For binding to a network-interface, MID uses SO_BINDTODEVICE socket-option. This generally requires elevated (super user) permissions and CAP_NET_RAW capability.
  So super user check is performed when application is invoked. If the program is not invoked as super user, it terminates printing the mentioned note. 

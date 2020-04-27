@@ -149,6 +149,20 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		args->up_file=strdup(value);
 	}
 
+	else if(!strcmp(key,"scheduler-algorithm"))
+	{
+		if(!strcasecmp(value,"MAXOUT"))
+			args->schd_alg=maxout_scheduler;
+		else if(!strcasecmp(value,"ALL"))
+			args->schd_alg=all_scheduler;
+		else
+		{
+			if(conf_flag)
+				mid_help("MID: Configuration file not understood, value given for \"scheduler-algorithm\" unknown");
+			else
+				mid_help("MID: Value given for \"scheduler-algorithm\" unknown");
+		}
+	}
 
 	else if(!strcmp(key,"max-parallel-downloads"))
 	{
@@ -438,6 +452,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 void read_mid_conf(char* conf,struct mid_args* args)
 {
+	args->schd_alg=MID_DEFAULT_SCHEDULER_ALOGORITHM;
 	args->max_unit_retries=MAX_UNIT_RETRIES;
 	args->max_redirects=DEFAULT_MAX_HTTP_REDIRECTS;
 	args->max_parallel_downloads=MAX_PARALLEL_DOWNLOADS;
@@ -725,6 +740,22 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			}
 
 			fill_mid_args("unprocessed-file",value,args,0);
+
+			counter++;
+		}
+
+		else if( !strcmp(argv[counter],"--scheduler-algorithm") || !strcmp(argv[counter],"-sa") ) // --scheduler-algorithm || -sa
+		{
+			char* value=NULL;
+
+			counter++;
+
+			if(counter<argc)
+			{
+				value=argv[counter];
+			}
+
+			fill_mid_args("scheduler-algorithm",value,args,0);
 
 			counter++;
 		}
@@ -1120,39 +1151,40 @@ void mid_help(char* err_msg)
 	}
 
 	fprintf(stderr,"Usage: {MID | mid} --url URL [OPTIONS]\n\n");
-	fprintf(stderr,"   --output-file file                     -o file               Use this output file instead of determining from the URL. \n");
-	fprintf(stderr,"   --interfaces nic1,nic2...              -i nic1,nic2...       Network-interfaces which are used in the file download. \n");
-	fprintf(stderr,"   --exclude-interfaces nic1,nic2...      -ni nic1,nic2...      Network-interfaces which are excluded from the file download. \n");
-	fprintf(stderr,"   --help                                 -h                    Print this help message. \n");
-	fprintf(stderr,"   --url URL                              -u URL                URL to be used in the download. \n");
-	fprintf(stderr,"   --unprocessed-file file                -up file              Use this .up file instead of determining from the URL. \n");
-	fprintf(stderr,"   --max-parallel-downloads x             -n x                  At max x parallel connections are opened. \n");
-	fprintf(stderr,"   --max-unit-retries x                   -ur x                 At max x retries are made by a unit to download a chunk. \n");
-	fprintf(stderr,"   --unit-break Nu                        -ub Nu                Chunk size limit to split the unit further, default is 100K. \n");
-	fprintf(stderr,"                                                                u => {' ',B,b}=*1, K=*1024, k=*1000, M=K*1024, m=k*1000, G=M*1024, g=m*1000\n");
-	fprintf(stderr,"   --max-redirects x                      -R x                  At max x HTTP redirects are followed. \n");
-	fprintf(stderr,"   --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted. \n");
-	fprintf(stderr,"   --unit-sleep-time t                    -us t                 Download unit sleeps for t seconds before retrying. \n");
-	fprintf(stderr,"   --io-timeout t                         -io t                 Set an I/O timeout of t seconds. \n");
-	fprintf(stderr,"   --progress-update-time t               -pu t                 Progress information updates after evert t seconds. \n");
-	fprintf(stderr,"   --detailed-progress                    -dp                   Show detailed download progress. \n");
-	fprintf(stderr,"   --force-resume                         -fr                   Skip the checks and start the download. \n");
-	fprintf(stderr,"   --no-resume                            -nr                   Do not resume the partial downloads. Default action is to resume. \n");
+	fprintf(stderr,"   --output-file file                        -o file                  Use this output file instead of determining from the URL. \n");
+	fprintf(stderr,"   --interfaces nic1,nic2...                 -i nic1,nic2...          Network-interfaces which are used in the file download. \n");
+	fprintf(stderr,"   --exclude-interfaces nic1,nic2...         -ni nic1,nic2...         Network-interfaces which are excluded from the file download. \n");
+	fprintf(stderr,"   --help                                    -h                       Print this help message. \n");
+	fprintf(stderr,"   --url URL                                 -u URL                   URL to be used in the download. \n");
+	fprintf(stderr,"   --unprocessed-file file                   -up file                 Use this .up file instead of determining from the URL. \n");
+	fprintf(stderr,"   --scheduler-algorithm alg                 -sa alg                  Use alg scheduler algorithm (case insensitive). alg => MAXOUT, ALL. (see man page). \n");
+	fprintf(stderr,"   --max-parallel-downloads x                -n x                     At max x parallel connections are opened. \n");
+	fprintf(stderr,"   --max-unit-retries x                      -ur x                    At max x retries are made by a unit to download a chunk. \n");
+	fprintf(stderr,"   --unit-break Nu                           -ub Nu                   Chunk size limit to split the unit further, default is 100K. \n");
+	fprintf(stderr,"                                                                      u => {' ',B,b}=*1, K=*1024, k=*1000, M=K*1024, m=k*1000, G=M*1024, g=m*1000\n");
+	fprintf(stderr,"   --max-redirects x                         -R x                     At max x HTTP redirects are followed. \n");
+	fprintf(stderr,"   --max-tcp-syn-retransmits x               -sr x                    At max x TCP SYNs are retransmitted. \n");
+	fprintf(stderr,"   --unit-sleep-time t                       -us t                    Download unit sleeps for t seconds before retrying. \n");
+	fprintf(stderr,"   --io-timeout t                            -io t                    Set an I/O timeout of t seconds. \n");
+	fprintf(stderr,"   --progress-update-time t                  -pu t                    Progress information updates after evert t seconds. \n");
+	fprintf(stderr,"   --detailed-progress                       -dp                      Show detailed download progress. \n");
+	fprintf(stderr,"   --force-resume                            -fr                      Skip the checks and start the download. \n");
+	fprintf(stderr,"   --no-resume                               -nr                      Do not resume the partial downloads. Default action is to resume. \n");
 #ifdef LIBSSL_SANE
-	fprintf(stderr,"   --detailed-save                        -ds                   Save the hashes of downloaded ranges to .ms file. Default action is not to save. \n");
+	fprintf(stderr,"   --detailed-save                           -ds                      Save the hashes of downloaded ranges to .ms file. Default action is not to save. \n");
 #endif
-	fprintf(stderr,"   --entry-number x                       -e x                  If multiple partial downloads exists, select the x-th download. \n");
-	fprintf(stderr,"   --ms-file file                         -ms file              Use this .ms file instead of determining from the URL. \n");
-	fprintf(stderr,"   --print-ms file                        -pm file              Print the MID state information and exit. \n");
-	fprintf(stderr,"   --delete-ms file                       -dm file              Delete ms entry, entry number should be specified with option -e. \n");
-	fprintf(stderr,"   --validate-ms file                     -vm file              Validate ms entry, entry number should be specified with option -e. \n");
-	fprintf(stderr,"   --version                              -V                    Print the version and exit. \n");
-	fprintf(stderr,"   --header h=v                           -H h=v                Add custom headers to HTTP request message (can be used multiple times). \n");
-	fprintf(stderr,"   --quiet                                -q                    Silent mode, don't output anything. \n");
-	fprintf(stderr,"   --verbose                              -v                    Print the verbose information. \n");
-	fprintf(stderr,"   --vverbose                             -vv                   Print the very verbose information. \n");
-	fprintf(stderr,"   --surpass-root-check                   -s                    If had the sufficient permissions, use -s to surpass the root-check. \n");
-	fprintf(stderr,"   --conf file                            -c file               Specify the conf file. Preference order: cmd_line > conf_file > default_values. \n");
+	fprintf(stderr,"   --entry-number x                          -e x                     If multiple partial downloads exists, select the x-th download. \n");
+	fprintf(stderr,"   --ms-file file                            -ms file                 Use this .ms file instead of determining from the URL. \n");
+	fprintf(stderr,"   --print-ms file                           -pm file                 Print the MID state information and exit. \n");
+	fprintf(stderr,"   --delete-ms file                          -dm file                 Delete ms entry, entry number should be specified with option -e. \n");
+	fprintf(stderr,"   --validate-ms file                        -vm file                 Validate ms entry, entry number should be specified with option -e. \n");
+	fprintf(stderr,"   --version                                 -V                       Print the version and exit. \n");
+	fprintf(stderr,"   --header h=v                              -H h=v                   Add custom headers to HTTP request message (can be used multiple times). \n");
+	fprintf(stderr,"   --quiet                                   -q                       Silent mode, don't output anything. \n");
+	fprintf(stderr,"   --verbose                                 -v                       Print the verbose information. \n");
+	fprintf(stderr,"   --vverbose                                -vv                      Print the very verbose information. \n");
+	fprintf(stderr,"   --surpass-root-check                      -s                       If had the sufficient permissions, use -s to surpass the root-check. \n");
+	fprintf(stderr,"   --conf file                               -c file                  Specify the conf file. Preference order: cmd_line > conf_file > default_values. \n");
 	fprintf(stderr,"\n");
 	fprintf(stderr,"Project homepage: { %s }",PACKAGE_URL);
 	fprintf(stderr,"\n\n");

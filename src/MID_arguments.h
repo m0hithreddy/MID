@@ -10,6 +10,8 @@
 
 #define DEFAULT_CONFIG_FILE "/usr/local/etc/MID.conf"
 
+#include"MID_unit.h"
+
 #ifndef CONFIG_H
 #define CONFIG_H
 #include"config.h"
@@ -28,6 +30,7 @@ struct mid_args
 	char** include_ifs;
 	char** exclude_ifs;
 	char*** custom_headers;
+	scheduler schd_alg;
 	long include_ifs_count;
 	long exclude_ifs_count;
 	long arg_count;

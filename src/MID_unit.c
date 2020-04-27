@@ -726,54 +726,62 @@ struct unit_info* idle_unit(struct unit_info** units,long units_len)
 	return NULL;
 }
 
-void scheduler(struct scheduler_info* sch_info)
+void maxout_scheduler(struct scheduler_info* sch_info)
 {
 
-	sch_info->sleep_time=SCHEDULER_DEFAULT_SLEEP_TIME;
+	if(sch_info->data==NULL)
+		sch_info->data=calloc(1,sch_info->ifs_len*sizeof(long)\
+				+sch_info->ifs_len*sizeof(long)+sizeof(int));  // max_speed array + max_connections array + probing_done flag
 
-	if( sch_info->current==NULL || sch_info->ifs==NULL || sch_info->ifs_len<=0 )
+	sch_info->sch_sleep_time=MID_DEFAULT_SCHEDULER_SLEEP_TIME;
+
+	if( sch_info->ifs_report==NULL || sch_info->ifs==NULL || sch_info->ifs_len<=0 )
 	{
-		sch_info->sch_id=-1;
+		sch_info->sch_if_id=-1;
 		return;
 	}
+
+	long* max_speed=sch_info->data;
+	long* max_connections=(long*)(sch_info->data+sizeof(long)*sch_info->ifs_len);
+	int* probing_done=(int*)(sch_info->data+sizeof(long)*sch_info->ifs_len+sizeof(long)*sch_info->ifs_len);
 
 	long t_conn=0;
 
 	for(long i=0;i<sch_info->ifs_len;i++)
 	{
-		t_conn=t_conn+sch_info->current[i].connections;
+		t_conn=t_conn+sch_info->ifs_report[i].connections;
 	}
 
 	if(t_conn >= sch_info->max_parallel_downloads)
 	{
-		sch_info->sch_id=-1;
+		sch_info->sch_if_id=-1;
 		goto maxs_update;
 	}
 
-	if(!sch_info->probing_done && sch_info->sch_id==-1) // First scheduling decision
+	if(!(*probing_done) && sch_info->sch_if_id==-1) // First scheduling decision
 	{
-		sch_info->sch_id=0;
+		sch_info->sch_if_id=0;
 		goto maxs_update;
 	}
 
-	if(!sch_info->probing_done)
+	if(!(*probing_done))
 	{
-		long sch_id=sch_info->sch_id;
+		long sch_if_id=sch_info->sch_if_id;
 
-		if( 2*sch_info->max_speed[sch_id] <= sch_info->current[sch_id].speed || sch_info->max_speed[sch_id] + SCHEDULER_THRESHOLD_SPEED <= sch_info->current[sch_id].speed )
+		if( 2*max_speed[sch_if_id] <= sch_info->ifs_report[sch_if_id].speed || max_speed[sch_if_id] + SCHEDULER_THRESHOLD_SPEED <= sch_info->ifs_report[sch_if_id].speed )
 		{
 			goto maxs_update;
 		}
 		else
 		{
-			sch_id++;
+			sch_if_id++;
 
-			if(sch_id<sch_info->ifs_len)
-				sch_info->sch_id=sch_id;
+			if(sch_if_id<sch_info->ifs_len)
+				sch_info->sch_if_id=sch_if_id;
 			else
 			{
-				sch_info->sch_id=-1;
-				sch_info->probing_done=1;
+				sch_info->sch_if_id=-1;
+				*probing_done=1;
 			}
 
 			goto maxs_update;
@@ -784,15 +792,15 @@ void scheduler(struct scheduler_info* sch_info)
 
 		for(long i=0;i<sch_info->ifs_len;i++)
 		{
-			if( sch_info->current[i].speed + (sch_info->max_speed[i]>2*SCHEDULER_THRESHOLD_SPEED ? SCHEDULER_THRESHOLD_SPEED:sch_info->max_speed[i]/2 ) < sch_info->max_speed[i] && sch_info->current[i].connections <= sch_info->max_connections[i])
+			if( sch_info->ifs_report[i].speed + (max_speed[i]>2*SCHEDULER_THRESHOLD_SPEED ? SCHEDULER_THRESHOLD_SPEED:max_speed[i]/2 ) < max_speed[i] && sch_info->ifs_report[i].connections <= max_connections[i])
 			{
-				sch_info->sch_id=i;
+				sch_info->sch_if_id=i;
 
 				goto maxs_update;
 			}
 		}
 
-		sch_info->sch_id=-1;
+		sch_info->sch_if_id=-1;
 
 		goto maxs_update;
 	}
@@ -801,16 +809,44 @@ void scheduler(struct scheduler_info* sch_info)
 
 	for(long i=0;i<sch_info->ifs_len;i++)
 	{
-		if(sch_info->max_speed[i] < sch_info->current[i].speed)
+		if(max_speed[i] < sch_info->ifs_report[i].speed)
 		{
-			sch_info->max_speed[i]=sch_info->current[i].speed;
+			max_speed[i]=sch_info->ifs_report[i].speed;
 
-			if(sch_info->max_connections[i] < sch_info->current[i].connections)
-				sch_info->max_connections[i]=sch_info->current[i].connections;
+			if(max_connections[i] < sch_info->ifs_report[i].connections)
+				max_connections[i]=sch_info->ifs_report[i].connections;
 		}
 	}
 
 	return;
+}
+
+void all_scheduler(struct scheduler_info* sch_info)
+{
+	if(sch_info->data==NULL)
+	{
+		sch_info->data=calloc(1,sizeof(long)*sch_info->ifs_len);
+
+		long q=sch_info->max_parallel_downloads/sch_info->ifs_len;
+		long r=sch_info->max_parallel_downloads%sch_info->ifs_len;
+
+		for(long i=0;i<sch_info->ifs_len;i++)
+			((long*)sch_info->data)[i]= q + (r ? r--,1 : 0);
+	}
+
+	sch_info->sch_sleep_time=MID_MIN_ALL_SCHEDULER_SLEEP_TIME;
+
+	for(long i=0;i<sch_info->ifs_len;i++)
+	{
+		if(sch_info->ifs_report[i].connections < ((long*)sch_info->data)[i])
+		{
+			sch_info->sch_if_id=i;
+			return;
+		}
+	}
+
+	sch_info->sch_sleep_time=MID_MAX_ALL_SCHEDULER_SLEEP_TIME;
+	sch_info->sch_if_id=-1;
 }
 
 long suspend_units(struct unit_info** units,long units_len)

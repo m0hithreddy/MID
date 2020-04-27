@@ -20,8 +20,12 @@
 #define UNIT_RETRY_SLEEP_TIME 5
 #define ERR_CODE_503_HEALING_TIME 10
 #define PROGRESS_UPDATE_TIME 1
-#define SCHEDULER_DEFAULT_SLEEP_TIME 2
+#define MID_DEFAULT_SCHEDULER_SLEEP_TIME 2
+#define MID_DEFAULT_ALL_SCHEDULER_SLEEP_TIME 1
+#define MID_MIN_ALL_SCHEDULER_SLEEP_TIME 1
+#define MID_MAX_ALL_SCHEDULER_SLEEP_TIME 5
 #define SCHEDULER_THRESHOLD_SPEED 2097152
+#define MID_DEFAULT_SCHEDULER_ALOGORITHM maxout_scheduler
 
 #include"MID_http.h"
 #include"MID_socket.h"
@@ -113,16 +117,19 @@ struct show_progress_info
 
 struct scheduler_info
 {
-	struct interface_report* current;
 	struct mid_interface* ifs;
 	long ifs_len;
-	long* max_speed;
-	long* max_connections;
-	long sleep_time;
-	long sch_id;
+	struct interface_report* ifs_report;
 	long max_parallel_downloads;
-	int probing_done;
+	long sch_sleep_time;
+	long sch_if_id;
+
+	// Scheduler specific data.
+
+	void* data;
 };
+
+typedef void (*scheduler)(struct scheduler_info*);
 
 void* unit(void* info);
 
@@ -134,7 +141,9 @@ struct unit_info* largest_unit(struct unit_info** units,long units_len);
 
 struct unit_info* idle_unit(struct unit_info** units,long units_len);
 
-void scheduler(struct scheduler_info* sch_info);
+void maxout_scheduler(struct scheduler_info* sch_info);
+
+void all_scheduler(struct scheduler_info* sch_info);
 
 long suspend_units(struct unit_info** units,long units_len);
 

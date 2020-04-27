@@ -507,7 +507,7 @@ int main(int argc, char **argv)
 		units=(struct unit_info**)flatten_mid_bag(units_bag)->data;
 		units_len=units_bag->n_pockets;
 
-		sleep_time.tv_sec=SCHEDULER_DEFAULT_SLEEP_TIME;
+		sleep_time.tv_sec=MID_DEFAULT_SCHEDULER_SLEEP_TIME;
 		sleep_time.tv_nsec=0;
 		int signo;
 
@@ -575,15 +575,12 @@ int main(int argc, char **argv)
 
 		struct scheduler_info* sch_info=(struct scheduler_info*)calloc(1,sizeof(struct scheduler_info));
 
-		sch_info->current=NULL;
 		sch_info->ifs=ok_net_if;
 		sch_info->ifs_len=ok_net_if_len;
-		sch_info->max_speed=(long*)calloc(ok_net_if_len,sizeof(long));
-		sch_info->max_connections=(long*)calloc(ok_net_if_len,sizeof(long));
 		sch_info->max_parallel_downloads=max_parallel_downloads;
-		sch_info->sleep_time=SCHEDULER_DEFAULT_SLEEP_TIME;
+		sch_info->sch_sleep_time=MID_DEFAULT_SCHEDULER_SLEEP_TIME;
 
-		sleep_time.tv_sec=sch_info->sleep_time;
+		sleep_time.tv_sec=sch_info->sch_sleep_time;
 		sleep_time.tv_nsec=0;
 
 		while(1) // Downloading....
@@ -624,12 +621,12 @@ int main(int argc, char **argv)
 			if(progress->content_length==content_length) // Download complete
 				break;
 
-			sch_info->current=current;
+			sch_info->ifs_report=current;
 
-			scheduler(sch_info); // Contact the scheduler
+			(*args->schd_alg)(sch_info); // Contact the scheduler
 
-			if_id=sch_info->sch_id;
-			sleep_time.tv_sec=sch_info->sleep_time;
+			if_id=sch_info->sch_if_id;
+			sleep_time.tv_sec=sch_info->sch_sleep_time;
 
 			prev=current;
 
