@@ -397,7 +397,7 @@ void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int 
 }
 #endif
 
-void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct socket_info* cli_info,long max_redirects,int flag)
+void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct mid_interface* mid_if,long max_redirects,int flag)
 {
 
 	if(response==NULL || response->data==NULL || response->len==0 || c_s_request==NULL)
@@ -425,16 +425,9 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		if(purl==NULL || !(!strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http")))  // If the redirection led to different scheme than HTTP[S]
 			return NULL;
 
-		char* hostip=resolve_dns(purl->host); // Resolve DNS
+		struct mid_client* mid_cli=create_mid_client(mid_if,purl);
 
-		if(hostip==NULL)
-			return NULL;
-
-		struct sockaddr *servaddr=create_sockaddr_in(hostip,\
-				atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),\
-				AF_INET);    // Server socket address structure.
-
-		if(servaddr==NULL)
+		if(!init_mid_client(mid_cli))
 			return NULL;
 
 		s_request->host=purl->host;    // Set the new s_request fields
@@ -452,23 +445,19 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		else
 			s_request->path=NULL;
 		s_request->url=s_response->location;
-		s_request->hostip=hostip;
 		s_request->scheme=purl->scheme;
+		s_request->hostip=mid_cli->hostip;
 
 		request=create_http_request(s_request); // Create HTTP Request
 
-		if(cli_info==NULL)
-			cli_info=create_socket_info(NULL,NULL);  // Create a default mid_socket
-
-		int sockfd = open_connection(cli_info,servaddr);
-
-		if(sockfd<0)
-			return NULL;
-
 		if(!strcmp(purl->scheme,"http"))   // send and receive response as per the scheme.
-			response=(struct mid_data*)send_http_request(sockfd,request,NULL,SEND_RECEIVE);
+			response=(struct mid_data*)send_http_request(mid_cli->sockfd,request,NULL,SEND_RECEIVE);
 		else
-			response=(struct mid_data*)send_https_request(sockfd,request,purl->host,SEND_RECEIVE);
+			response=(struct mid_data*)send_https_request(mid_cli->sockfd,request,purl->host,SEND_RECEIVE);
+
+		close(mid_cli->sockfd);
+
+		free_mid_client(mid_cli);
 
 		if(response==NULL)
 			return NULL;

@@ -30,6 +30,18 @@
 /* Define to 1 if you have the <ctype.h> header file. */
 #undef HAVE_CTYPE_H
 
+/* Define to 1 if you have the declaration of `AF_INET', and to 0 if you
+   don't. */
+#undef HAVE_DECL_AF_INET
+
+/* Define to 1 if you have the declaration of `AF_INET6', and to 0 if you
+   don't. */
+#undef HAVE_DECL_AF_INET6
+
+/* Define to 1 if you have the declaration of `AI_ADDRCONFIG', and to 0 if you
+   don't. */
+#undef HAVE_DECL_AI_ADDRCONFIG
+
 /* Define to 1 if you have the declaration of `EINTR', and to 0 if you don't.
    */
 #undef HAVE_DECL_EINTR
@@ -58,6 +70,10 @@
    don't. */
 #undef HAVE_DECL_F_SETFL
 
+/* Define to 1 if you have the declaration of `INET6_ADDRSTRLEN', and to 0 if
+   you don't. */
+#undef HAVE_DECL_INET6_ADDRSTRLEN
+
 /* Define to 1 if you have the declaration of `INET_ADDRSTRLEN', and to 0 if
    you don't. */
 #undef HAVE_DECL_INET_ADDRSTRLEN
@@ -65,6 +81,10 @@
 /* Define to 1 if you have the declaration of `inflateInit2', and to 0 if you
    don't. */
 #undef HAVE_DECL_INFLATEINIT2
+
+/* Define to 1 if you have the declaration of `IPPROTO_TCP', and to 0 if you
+   don't. */
+#undef HAVE_DECL_IPPROTO_TCP
 
 /* Define to 1 if you have the declaration of `LOCK_EX', and to 0 if you
    don't. */
@@ -117,6 +137,10 @@
 /* Define to 1 if you have the declaration of `SIG_BLOCK', and to 0 if you
    don't. */
 #undef HAVE_DECL_SIG_BLOCK
+
+/* Define to 1 if you have the declaration of `SOCK_STREAM', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SOCK_STREAM
 
 /* Define to 1 if you have the declaration of `SSL_ERROR_SYSCALL', and to 0 if
    you don't. */
@@ -205,11 +229,11 @@
 /* Define to 1 if you have the `ftruncate' function. */
 #undef HAVE_FTRUNCATE
 
+/* Define to 1 if you have the `getaddrinfo' function. */
+#undef HAVE_GETADDRINFO
+
 /* Define to 1 if you have the `geteuid' function. */
 #undef HAVE_GETEUID
-
-/* Define to 1 if you have the `gethostbyname' function. */
-#undef HAVE_GETHOSTBYNAME
 
 /* Define to 1 if you have the `getifaddrs' function. */
 #undef HAVE_GETIFADDRS

@@ -95,19 +95,6 @@ int main(int argc, char **argv)
 		fprintf(stderr,"->Query: %s\n",purl->query);
 	}
 
-	//DNS Query
-
-	char* hostip=resolve_dns(purl->host);
-
-	if(hostip==NULL)
-		mid_flag_exit1(1,"MID: Unable to find the IPV4 address of %s. Exiting...\n\n",purl->host);
-
-	if(args->verbose_flag && !args->quiet_flag)
-	{
-		fprintf(stderr,"\nDNS Resolve:\n\n");
-		fprintf(stderr,"->%s IPV4 address: %s\n",purl->host,hostip);
-	}
-
 	// Get Network Interfaces Info and Check whether Server is accessible or not
 
 	struct mid_interface** net_if;
@@ -142,12 +129,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	struct sockaddr *servaddr=create_sockaddr_in(hostip,atoi((purl->port!=NULL)? purl->port:(!(strcmp(purl->scheme,"http"))? DEFAULT_HTTP_PORT:DEFAULT_HTTPS_PORT)),DEFAULT_HTTP_SOCKET_FAMILY);
-
-	if(servaddr==NULL)
-		mid_flag_exit1(1,"MID: Error Checking partial content support. Exiting...\n\n");
-
-
 	struct http_request* s_request=(struct http_request*)calloc(1,sizeof(struct http_request));
 
 	s_request->method="HEAD";
@@ -178,7 +159,6 @@ int main(int argc, char **argv)
 	s_request->connection="close";
 	s_request->custom_headers=args->custom_headers;
 	s_request->url=args->url;
-	s_request->hostip=hostip;
 	s_request->scheme=purl->scheme;
 
 	struct mid_data* request=create_http_request(s_request);
@@ -204,21 +184,27 @@ int main(int argc, char **argv)
 		if(net_if[i]->family!=AF_INET)
 			continue;
 
-		struct socket_info* cli_info=create_socket_info(net_if[i]->name,net_if[i]->address);
+		/* Initiate struct mid_client */
 
-		int sockfd=open_connection(cli_info,servaddr);
+		s_request->hostip=NULL;
 
-		if(sockfd<0)
+		struct mid_client* mid_cli = create_mid_client(net_if[i], purl);
+
+		if(!init_mid_client(mid_cli))
 			continue;
+
+		s_request->hostip=mid_cli->hostip;
 
 		struct mid_data *response;
 
 		if(!strcmp(purl->scheme,"http"))
-			response=send_http_request(sockfd,request,NULL,0);
+			response=send_http_request(mid_cli->sockfd,request,NULL,0);
 		else
-			response=send_https_request(sockfd,request,purl->host,0);
+			response=send_https_request(mid_cli->sockfd,request,purl->host,0);
 
-		close(sockfd);
+		close(mid_cli->sockfd);
+
+		free_mid_client(mid_cli);
 
 		if(response==NULL)
 			continue;
@@ -230,7 +216,7 @@ int main(int argc, char **argv)
 			sock_write(fileno(stderr),response);
 		}
 
-		void* s_rqst_s_resp=follow_redirects(s_request,response,cli_info,args->max_redirects,RETURN_S_REQUEST_S_RESPONSE);
+		void* s_rqst_s_resp=follow_redirects(s_request, response, net_if[i], args->max_redirects, RETURN_S_REQUEST_S_RESPONSE);
 
 		if(s_rqst_s_resp==NULL)
 			continue;
@@ -390,7 +376,6 @@ int main(int argc, char **argv)
 	sigaddset(&base_unit_info->sync_mask,SIGRTMIN);
 
 	base_unit_info->p_tid=pthread_self();
-	base_unit_info->if_name=ok_net_if[0].name;
 	base_unit_info->scheme=fin_scheme;
 	base_unit_info->host=fin_host;
 	base_unit_info->report_size=(long*)calloc(ok_net_if_len,sizeof(long));
@@ -400,7 +385,7 @@ int main(int argc, char **argv)
 	base_unit_info->resume=2;
 	base_unit_info->pc_flag=pc_flag;
 	base_unit_info->unit_retry_sleep_time=args->unit_retry_sleep_time;
-	base_unit_info->cli_info=create_socket_info(ok_net_if[0].name,ok_net_if[0].address);
+	base_unit_info->mid_if=ok_net_if;
 	base_unit_info->s_request=(struct http_request*)memndup(gl_s_request,sizeof(struct http_request));
 	base_unit_info->range=(struct http_range*)malloc(sizeof(struct http_range));
 	base_unit_info->range->start=0;
@@ -694,10 +679,8 @@ int main(int argc, char **argv)
 
 			// Assign an network-interface
 
-			update->if_name=ok_net_if[if_id].name;
 			update->if_id=if_id;
-
-			update->cli_info=create_socket_info(ok_net_if[if_id].name,ok_net_if[if_id].address);
+			update->mid_if=ok_net_if+if_id;
 
 			// Resume or initiate the unit
 

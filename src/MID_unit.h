@@ -59,7 +59,6 @@ struct unit_info
 	pthread_t p_tid;
 	char* file;
 	char* up_file;
-	char* if_name;
 	char* scheme;
 	char* host;
 	long if_id;
@@ -78,7 +77,7 @@ struct unit_info
 	long unit_retry_sleep_time;
 	long healing_time;
 	time_t start_time;
-	struct socket_info* cli_info;
+	struct mid_interface* mid_if;
 	struct http_request* s_request;
 	struct http_range* range;
 	struct mid_bag* unit_ranges; // HTTP ranges downloaded by unit

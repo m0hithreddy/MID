@@ -4684,6 +4684,7 @@ select \
 signalfd \
 getifaddrs \
 getnameinfo \
+getaddrinfo \
 htons \
 inet_pton \
 socket \
@@ -4692,7 +4693,6 @@ bind \
 connect \
 close \
 shutdown \
-gethostbyname \
 inet_ntop \
 sigemptyset \
 sigaddset \
@@ -4738,6 +4738,7 @@ ac_fn_c_check_decl "$LINENO" "NULL" "ac_cv_have_decl_NULL" "#include<stddef.h>
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_NULL" = xyes; then :
@@ -4761,6 +4762,7 @@ ac_fn_c_check_decl "$LINENO" "EINTR" "ac_cv_have_decl_EINTR" "#include<stddef.h>
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_EINTR" = xyes; then :
@@ -4777,29 +4779,6 @@ if test $ac_have_decl = 1; then :
 else
   as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
 fi
-ac_fn_c_check_decl "$LINENO" "INET_ADDRSTRLEN" "ac_cv_have_decl_INET_ADDRSTRLEN" "#include<stddef.h>
-#include<limits.h>
-#include<sys/file.h>
-#include<errno.h>
-#include<netinet/in.h>
-#include<fcntl.h>
-#include<signal.h>
-
-"
-if test "x$ac_cv_have_decl_INET_ADDRSTRLEN" = xyes; then :
-  ac_have_decl=1
-else
-  ac_have_decl=0
-fi
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_INET_ADDRSTRLEN $ac_have_decl
-_ACEOF
-if test $ac_have_decl = 1; then :
-
-else
-  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
-fi
 ac_fn_c_check_decl "$LINENO" "LONG_MAX" "ac_cv_have_decl_LONG_MAX" "#include<stddef.h>
 #include<limits.h>
 #include<sys/file.h>
@@ -4807,6 +4786,7 @@ ac_fn_c_check_decl "$LINENO" "LONG_MAX" "ac_cv_have_decl_LONG_MAX" "#include<std
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_LONG_MAX" = xyes; then :
@@ -4830,6 +4810,7 @@ ac_fn_c_check_decl "$LINENO" "LONG_MIN" "ac_cv_have_decl_LONG_MIN" "#include<std
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_LONG_MIN" = xyes; then :
@@ -4853,6 +4834,7 @@ ac_fn_c_check_decl "$LINENO" "LOCK_EX" "ac_cv_have_decl_LOCK_EX" "#include<stdde
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_LOCK_EX" = xyes; then :
@@ -4876,6 +4858,7 @@ ac_fn_c_check_decl "$LINENO" "LOCK_UN" "ac_cv_have_decl_LOCK_UN" "#include<stdde
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_LOCK_UN" = xyes; then :
@@ -4899,6 +4882,7 @@ ac_fn_c_check_decl "$LINENO" "LOCK_NB" "ac_cv_have_decl_LOCK_NB" "#include<stdde
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_LOCK_NB" = xyes; then :
@@ -4922,6 +4906,7 @@ ac_fn_c_check_decl "$LINENO" "SEEK_SET" "ac_cv_have_decl_SEEK_SET" "#include<std
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_SEEK_SET" = xyes; then :
@@ -4945,6 +4930,7 @@ ac_fn_c_check_decl "$LINENO" "SIGINT" "ac_cv_have_decl_SIGINT" "#include<stddef.
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_SIGINT" = xyes; then :
@@ -4968,6 +4954,7 @@ ac_fn_c_check_decl "$LINENO" "SIGQUIT" "ac_cv_have_decl_SIGQUIT" "#include<stdde
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_SIGQUIT" = xyes; then :
@@ -4991,6 +4978,7 @@ ac_fn_c_check_decl "$LINENO" "SIGRTMIN" "ac_cv_have_decl_SIGRTMIN" "#include<std
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_SIGRTMIN" = xyes; then :
@@ -5014,6 +5002,7 @@ ac_fn_c_check_decl "$LINENO" "SIG_BLOCK" "ac_cv_have_decl_SIG_BLOCK" "#include<s
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_SIG_BLOCK" = xyes; then :
@@ -5037,6 +5026,7 @@ ac_fn_c_check_decl "$LINENO" "F_GETFL" "ac_cv_have_decl_F_GETFL" "#include<stdde
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_F_GETFL" = xyes; then :
@@ -5060,6 +5050,7 @@ ac_fn_c_check_decl "$LINENO" "F_SETFL" "ac_cv_have_decl_F_SETFL" "#include<stdde
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_F_SETFL" = xyes; then :
@@ -5083,6 +5074,7 @@ ac_fn_c_check_decl "$LINENO" "FD_ZERO" "ac_cv_have_decl_FD_ZERO" "#include<stdde
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_FD_ZERO" = xyes; then :
@@ -5106,6 +5098,7 @@ ac_fn_c_check_decl "$LINENO" "FD_SET" "ac_cv_have_decl_FD_SET" "#include<stddef.
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_FD_SET" = xyes; then :
@@ -5129,6 +5122,7 @@ ac_fn_c_check_decl "$LINENO" "FD_ISSET" "ac_cv_have_decl_FD_ISSET" "#include<std
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_FD_ISSET" = xyes; then :
@@ -5152,6 +5146,7 @@ ac_fn_c_check_decl "$LINENO" "EWOULDBLOCK" "ac_cv_have_decl_EWOULDBLOCK" "#inclu
 #include<netinet/in.h>
 #include<fcntl.h>
 #include<signal.h>
+#include<netdb.h>
 
 "
 if test "x$ac_cv_have_decl_EWOULDBLOCK" = xyes; then :
@@ -5162,6 +5157,174 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_EWOULDBLOCK $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "AF_INET" "ac_cv_have_decl_AF_INET" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_AF_INET" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_AF_INET $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "AF_INET6" "ac_cv_have_decl_AF_INET6" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_AF_INET6" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_AF_INET6 $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "SOCK_STREAM" "ac_cv_have_decl_SOCK_STREAM" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_SOCK_STREAM" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SOCK_STREAM $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "IPPROTO_TCP" "ac_cv_have_decl_IPPROTO_TCP" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_IPPROTO_TCP" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_IPPROTO_TCP $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "AI_ADDRCONFIG" "ac_cv_have_decl_AI_ADDRCONFIG" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_AI_ADDRCONFIG" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_AI_ADDRCONFIG $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "INET_ADDRSTRLEN" "ac_cv_have_decl_INET_ADDRSTRLEN" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_INET_ADDRSTRLEN" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_INET_ADDRSTRLEN $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "INET6_ADDRSTRLEN" "ac_cv_have_decl_INET6_ADDRSTRLEN" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_INET6_ADDRSTRLEN" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_INET6_ADDRSTRLEN $ac_have_decl
 _ACEOF
 if test $ac_have_decl = 1; then :
 

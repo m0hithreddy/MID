@@ -130,21 +130,25 @@ void* unit(void* info)
 		else
 			http_flag=0;
 
-		struct sockaddr* servaddr = create_sockaddr_in(unit_info->s_request->hostip,\
-				atol(unit_info->s_request->port == NULL ? (http_flag ? DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT ) : unit_info->s_request->port),\
-				DEFAULT_HTTP_SOCKET_FAMILY);   // create server struct sockaddr* structure;
+		struct mid_client* mid_cli;
+		struct parsed_url purl;
 
-		if(servaddr==NULL)
-			goto fatal_error;
+		purl.host = unit_info->s_request->host;
+		purl.port = unit_info->s_request->port;
+		purl.scheme = unit_info->s_request->scheme;
 
-		unit_quit();
-
-		sockfd=open_connection(unit_info->cli_info,servaddr); // open connection
+		mid_cli=create_mid_client(unit_info->mid_if,&purl);
 
 		unit_quit();
 
-		if(sockfd<0)
+		init_mid_client(mid_cli); // open connection
+
+		unit_quit();
+
+		if(mid_cli->sockfd<0)
 			goto self_repair;
+
+		sockfd=mid_cli->sockfd;
 
 		SSL* ssl;
 
@@ -279,7 +283,8 @@ void* unit(void* info)
 			pthread_mutex_unlock(&unit_info->lock);
 			unit_info->s_request->method="HEAD";
 			unit_info->s_request->range=NULL;
-			void* tmp_s_request_s_response=follow_redirects(unit_info->s_request,n_eat_buf,unit_info->cli_info,args->max_redirects,RETURN_S_REQUEST_S_RESPONSE);
+			void* tmp_s_request_s_response=follow_redirects(unit_info->s_request, n_eat_buf, unit_info->mid_if,\
+					args->max_redirects,RETURN_S_REQUEST_S_RESPONSE);
 
 			if(tmp_s_request_s_response==NULL)
 				goto self_repair;
@@ -1282,10 +1287,6 @@ struct unit_info* unitdup(struct unit_info* src)
 	// No the exact dup!! Only replicating some sensitive fields (dependent on program logic !)
 
 	new->report_size=(long*)calloc(src->report_len,sizeof(long));
-
-	new->cli_info=(struct socket_info*)memndup(src->cli_info,sizeof(struct socket_info));
-
-	new->cli_info->sock_opts=(struct socket_opt*)memndup(src->cli_info->sock_opts,sizeof(struct socket_opt)*2);
 
 	new->s_request=(struct http_request*)memndup(src->s_request,sizeof(struct http_request));
 

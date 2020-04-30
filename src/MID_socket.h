@@ -13,40 +13,46 @@
 #define MID_DEFAULT_IO_TIMEOUT 60
 
 #include"MID_structures.h"
+#include"MID_interfaces.h"
+#include"url_parser.h"
 #include<netinet/in.h>
 #include<sys/socket.h>
 
-struct socket_info
+#ifndef CONFIG_H
+#define CONFIG_H
+#include"config.h"
+#endif
+
+#ifdef LIBSSL_SANE
+#include<openssl/ssl.h>
+#endif
+
+struct mid_client
 {
-	char* address;
-	int port;
+	char* if_name;
+	char* if_addr;
+	char* hostname;
+	char* port;
 	int family;
 	int type;
 	int protocol;
-	struct socket_opt* sock_opts;
-	long opts_len;
+	int sockfd;
+	char* hostip;
+
+#ifdef LIBSSL_SANE
+	SSL* ssl;
+#endif
+
 };
 
-struct socket_opt
-{
-	int level;
-	int optname;
-	void* optval;
-	socklen_t optlen;
-};
+struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl);
 
-struct sockaddr* create_sockaddr_in(char* host,short port,int family);
+int init_mid_client(struct mid_client* mid_cli);
 
-struct socket_info* create_socket_info(char* if_name,char* if_addr);
-
-int open_connection(struct socket_info* sock_info,struct sockaddr* addr);
+void free_mid_client(struct mid_client* mid_cli);
 
 long sock_write(int sockfd,struct mid_data* n_data);
 
 struct mid_data* sock_read(int sockfd,long limit);
-
-char* resolve_dns(char* hostname);
-
-char** resolve_dns_mirros(char* hostname,long* n_mirrors);
 
 #endif /* MID_SOCKET_H_ */

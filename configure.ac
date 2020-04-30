@@ -148,6 +148,7 @@ select \
 signalfd \
 getifaddrs \
 getnameinfo \
+getaddrinfo \
 htons \
 inet_pton \
 socket \
@@ -156,7 +157,6 @@ bind \
 connect \
 close \
 shutdown \
-gethostbyname \
 inet_ntop \
 sigemptyset \
 sigaddset \
@@ -181,7 +181,6 @@ AC_CHECK_FUNCS(
 AC_CHECK_DECLS(
 [NULL,
 EINTR,
-INET_ADDRSTRLEN,
 LONG_MAX,
 LONG_MIN,
 LOCK_EX,
@@ -197,7 +196,14 @@ F_SETFL,
 FD_ZERO,
 FD_SET,
 FD_ISSET,
-EWOULDBLOCK],
+EWOULDBLOCK,
+AF_INET,
+AF_INET6,
+SOCK_STREAM,
+IPPROTO_TCP,
+AI_ADDRCONFIG,
+INET_ADDRSTRLEN,
+INET6_ADDRSTRLEN],
 [],
 [AC_MSG_ERROR([Symbol required but not found. Should be included in libc, check the libc variant installed in your system.])],
 [[#include<stddef.h>
@@ -206,7 +212,8 @@ EWOULDBLOCK],
 #include<errno.h>
 #include<netinet/in.h>
 #include<fcntl.h>
-#include<signal.h>]]
+#include<signal.h>
+#include<netdb.h>]]
 )
 
 # Pthread library checks

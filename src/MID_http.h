@@ -16,8 +16,8 @@
 #define DEFAULT_HTTP_PORT "80"
 #define DEFAULT_HTTPS_PORT "443"
 #define DEFAULT_HTTP_SOCKET_FAMILY AF_INET
-#define DEFAULT_HTTP_SOCKET_TYPE SOCK_STREAM
-#define DEFAULT_HTTP_SOCKET_PROTOCOL IPPROTO_TCP
+#define MID_DEFAULT_HTTP_SOCKET_TYPE SOCK_STREAM
+#define MID_DEFAULT_HTTP_SOCKET_PROTOCOL IPPROTO_TCP
 #define DEFAULT_MAX_HTTP_REDIRECTS 20
 #define MID_HTTP_TOKEN_DELIMITERS "\r\n: "
 #define MID_HTTP_VALUE_DELIMITERS "\r\n"
@@ -172,7 +172,7 @@ void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int f
 
 void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag);
 
-void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct socket_info* cli_info,long max_redirects,int flag);
+void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct mid_interface* mid_if,long max_redirects,int flag);
 
 char* determine_filename(char* path,FILE** fp_ptr);
 

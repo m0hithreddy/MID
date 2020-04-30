@@ -10,6 +10,8 @@
 #include"MID_functions.h"
 #include"MID_http.h"
 #include"MID.h"
+#include"MID_interfaces.h"
+#include"url_parser.h"
 #include<errno.h>
 #include<unistd.h>
 #include<string.h>
@@ -19,95 +21,136 @@
 #include<arpa/inet.h>
 #include<netdb.h>
 #include<netinet/tcp.h>
+#include<sys/socket.h>
+#include<sys/types.h>
 
-struct sockaddr* create_sockaddr_in(char* host,short port,int family)
+struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl)
 {
-	struct sockaddr_in* addr=(struct sockaddr_in*)malloc(sizeof(struct sockaddr_in));
+	struct mid_client* mid_cli=calloc(1,sizeof(struct mid_client));
 
-	bzero(addr,sizeof(struct sockaddr_in));
-
-	addr->sin_family=family;
-
-	addr->sin_port=htons(port);
-
-	if(inet_pton(family,host,&addr->sin_addr)!=1)
+	if(mid_cli == NULL)
 		return NULL;
 
-	return (struct sockaddr*)addr;
+	if(mid_if != NULL)
+	{
+		mid_cli->if_name = strdup(mid_if->name);
+		mid_cli->if_addr = strdup(mid_if->address);
+		mid_cli->family = mid_if->family;
+	}
 
+	if(purl != NULL)
+	{
+		mid_cli->hostname = strdup(purl->host);
+		mid_cli->port= strdup(purl->port == NULL ? \
+				( strcmp(purl->scheme,"http") == 0 ?  DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT ): \
+						purl->port);
+	}
+
+	mid_cli->type = MID_DEFAULT_HTTP_SOCKET_TYPE;
+	mid_cli->protocol = MID_DEFAULT_HTTP_SOCKET_PROTOCOL;
+	mid_cli->sockfd = -1;
+	mid_cli->hostip = NULL;
+#ifdef LIBSSL_SANE
+	mid_cli->ssl = NULL;
+#endif
+
+	return mid_cli;
 }
 
-int open_connection(struct socket_info* sock_info,struct sockaddr* addr)
+int init_mid_client(struct mid_client* mid_cli)
 {
+	if(mid_cli == NULL)
+		return 0;
 
-	if(sock_info==NULL || addr==NULL)
-		return -1;
+	struct addrinfo hints,*result,*rp;
 
-	int sockfd=socket(sock_info->family,sock_info->type,sock_info->protocol);
+	memset(&hints,0,sizeof(struct addrinfo));   // Set the hints as caller requested
+	hints.ai_family = mid_cli->family;
+	hints.ai_socktype = mid_cli->type;
+	hints.ai_flags = AI_ADDRCONFIG;
+	hints.ai_protocol = mid_cli->protocol;
 
-	if(sockfd<0)
-		return -1;
+	int s = getaddrinfo(mid_cli->hostname, mid_cli->port, &hints, &result);   // Call getaddrinfo
+	if (s != 0)
+		goto init_error;
 
-	for(long i=0;i<sock_info->opts_len;i++)
-	{
-		if(setsockopt(sockfd,sock_info->sock_opts[i].level,sock_info->sock_opts[i].optname,sock_info->sock_opts[i].optval,sock_info->sock_opts[i].optlen)!=0)
-			return -1;
+	for (rp = result; rp != NULL; rp = rp->ai_next) {
+		mid_cli->sockfd = socket(rp->ai_family, rp->ai_socktype,rp->ai_protocol);
+
+		if(mid_cli->sockfd == -1)
+			continue;
+
+		/* Set the socket options */
+
+		if(setsockopt(mid_cli->sockfd, IPPROTO_TCP, TCP_SYNCNT, &args->max_tcp_syn_retransmits, sizeof(int)) != 0)   // TCP SYN retransmit count
+			continue;
+
+		if(mid_cli->if_name != NULL && mid_cli->if_addr!=NULL)
+		{
+			if(setsockopt(mid_cli->sockfd, SOL_SOCKET, SO_BINDTODEVICE, mid_cli->if_name, strlen(mid_cli->if_name)) != 0)   // Set the interface
+			continue;
+
+			/* Bind to the interface */
+
+			struct sockaddr_in cli_addr;
+			memset(&cli_addr,0,sizeof(struct sockaddr_in));
+
+			cli_addr.sin_family=rp->ai_family;   // Initialize the client side sockaddr_in
+			cli_addr.sin_port=htons(0);
+			inet_pton(rp->ai_family,mid_cli->if_addr,&cli_addr.sin_addr);
+
+			if(bind(mid_cli->sockfd,(struct sockaddr*)&cli_addr,sizeof(struct sockaddr_in)) != 0)   // call the bind
+				continue;
+		}
+
+		if(connect(mid_cli->sockfd, rp->ai_addr, rp->ai_addrlen) != -1)
+		{
+			if(rp->ai_family == AF_INET || rp->ai_family == AF_INET6)   //  If only AF_INET or AF_INET6 then copy
+			{
+				mid_cli->hostip = (char*)malloc(sizeof(char)*(rp->ai_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN));
+				inet_ntop(rp->ai_family, rp->ai_addr, mid_cli->hostip, rp->ai_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+			}
+
+			break;
+		}
+
+		close(mid_cli->sockfd);
 	}
 
-	if(sock_info->address!=NULL)
-	{
+	freeaddrinfo(result);
 
-		struct sockaddr* cliaddr=create_sockaddr_in(sock_info->address,sock_info->port,sock_info->family);
+	if (rp == NULL)      // No address succeeded return ;
+		goto init_error;
 
-		if(cliaddr==NULL)
-			return -1;
+	return 1;
 
-		if(bind(sockfd,cliaddr,sizeof(struct sockaddr_in))!=0)
-			return -1;
-	}
+	init_error:
 
-	if(connect(sockfd,addr,sizeof(struct sockaddr_in))!=0)
-		return -1;
+	mid_cli->sockfd = -1;
+#ifdef LIBSSL_SANE
+	mid_cli->ssl = NULL;
+#endif
+	mid_cli->hostip = NULL;
 
-	return sockfd;
+	return 0;
 }
 
-struct socket_info* create_socket_info(char* if_name,char* if_addr)
+void free_mid_client(struct mid_client* mid_cli)
 {
-	struct socket_info* sock_info=(struct socket_info*)malloc(sizeof(struct socket_info));
+	if(mid_cli == NULL)
+		return;
 
-	if(if_name!=NULL && if_addr!=NULL)
-		sock_info->address=if_addr;
-	else
-		sock_info->address=NULL;
-
-	sock_info->port=0;
-	sock_info->family=DEFAULT_HTTP_SOCKET_FAMILY;
-	sock_info->type=DEFAULT_HTTP_SOCKET_TYPE;
-	sock_info->protocol=DEFAULT_HTTP_SOCKET_PROTOCOL;
-
-	sock_info->sock_opts=(struct socket_opt*)malloc(sizeof(struct socket_opt)*((if_addr==NULL || if_name==NULL)? 1 : 2));
-
-	sock_info->sock_opts[0].level=IPPROTO_TCP;
-	sock_info->sock_opts[0].optname=TCP_SYNCNT;
-	sock_info->sock_opts[0].optval=&args->max_tcp_syn_retransmits;
-	sock_info->sock_opts[0].optlen=sizeof(int);
-
-	if(if_name!=NULL && if_addr!=NULL)
-	{
-		sock_info->sock_opts[1].level=SOL_SOCKET;
-		sock_info->sock_opts[1].optname=SO_BINDTODEVICE;
-		sock_info->sock_opts[1].optval=if_name;
-		sock_info->sock_opts[1].optlen=strlen(if_name);
-
-		sock_info->opts_len=2;
-	}
-	else
-		sock_info->opts_len=1;
-
-	return sock_info;
-
+	free(mid_cli->if_name);
+	free(mid_cli->if_addr);
+	free(mid_cli->hostname);
+	free(mid_cli->port);
+	free(mid_cli->hostip);
+#ifdef LIBSSL_SANE
+	free(mid_cli->ssl);
+#endif
+	free(mid_cli);
 }
+
 long sock_write(int sockfd,struct mid_data* n_data)
 {
 	if(n_data==NULL || n_data->data==NULL || n_data->len<=0)
@@ -169,73 +212,4 @@ struct mid_data* sock_read(int sockfd,long limit)
 	n_data=flatten_mid_bag(bag);
 
 	return n_data;
-}
-
-char* resolve_dns(char* hostname)
-{
-	struct hostent *dnsptr=gethostbyname(hostname);
-
-	if(dnsptr==NULL)
-	{
-		return NULL;
-	}
-
-	if(dnsptr->h_addrtype!=AF_INET) //Confining the application to IPV4
-	{
-		return NULL;
-	}
-
-	char* hostip=(char*)malloc(sizeof(char)*INET_ADDRSTRLEN);
-
-	inet_ntop(dnsptr->h_addrtype,*dnsptr->h_addr_list,hostip,INET_ADDRSTRLEN);
-
-	return hostip;
-
-}
-
-char** resolve_dns_mirros(char* hostname,long* n_mirrors)
-{
-	struct hostent *dnsptr=gethostbyname(hostname);
-
-	if(dnsptr==NULL)
-	{
-		*n_mirrors=0;
-		return NULL;
-	}
-
-	if(dnsptr->h_addrtype!=AF_INET) //Confining the application to IPV4
-	{
-		*n_mirrors=0;
-		return NULL;
-	}
-
-	char** n_hosts=dnsptr->h_addr_list;
-
-	char** hostip_ptr;
-	struct mid_data ip_data;
-	struct mid_bag* hostsbag=create_mid_bag();
-
-	long mirrors_count=0;
-
-	for( ; *n_hosts!=NULL && mirrors_count<*n_mirrors; n_hosts++)
-	{
-		hostip_ptr=(char**)malloc(sizeof(char*));
-		*hostip_ptr=(char*)malloc(sizeof(char)*INET_ADDRSTRLEN);
-
-		inet_ntop(dnsptr->h_addrtype,*n_hosts,*hostip_ptr,INET_ADDRSTRLEN);
-
-		ip_data.data=hostip_ptr;
-		ip_data.len=sizeof(char*);
-
-		place_mid_data(hostsbag,&ip_data);
-		mirrors_count++;
-	}
-
-	*n_mirrors=mirrors_count;
-
-	if(mirrors_count==0)
-		return NULL;
-	else
-		return ((char**)(flatten_mid_bag(hostsbag)->data));
-
 }
