@@ -16,45 +16,96 @@
 #include"config.h"
 #endif
 
-#ifdef LIBSSL_SANE
-SSL* ssl_open_connection(int sockfd,char* hostname)
+void setup_ssl()
 {
+#ifdef LIBSSL_SANE
 	SSL_library_init();
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
+#else
+	SSL_quit();
+#endif
+}
 
-	const SSL_METHOD* method=TLS_method();
+int init_mid_ssl(struct mid_client* mid_cli)
+{
+#ifdef LIBSSL_SANE
+	if(mid_cli == NULL)
+		return 0;
 
-	SSL_CTX* ctx=SSL_CTX_new(method);
+	const SSL_METHOD* method = TLS_client_method();
 
-	if(ctx==NULL)
-		return NULL;
+	SSL_CTX* ctx = SSL_CTX_new(method);
 
-	SSL* ssl=SSL_new(ctx);
+	if(ctx == NULL)
+		goto init_error;
 
-	SSL_set_fd(ssl,sockfd);
+	mid_cli->ssl = SSL_new(ctx);
 
-	if(hostname!=NULL)
-		SSL_set_tlsext_host_name(ssl, hostname); // Host used during certificate verification
+	SSL_set_fd(mid_cli->ssl, mid_cli->sockfd);
 
-	if(SSL_connect(ssl)<0)
-	{
-		return NULL;
-	}
+	if(mid_cli->hostname != NULL)
+		SSL_set_tlsext_host_name(mid_cli->ssl, mid_cli->hostname); // Hostname used during certificate verification
 
-	return ssl;
+	if(SSL_connect(mid_cli->ssl) < 0)
+		goto init_error;
+
+	return 1;
+
+	init_error:
+
+	mid_cli->ssl = NULL;
+	return 0;
+#else
+	SSL_quit();
+#endif
+
+}
+
+int close_mid_ssl(struct mid_client* mid_cli)
+{
+#ifdef LIBSSL_SANE
+	if(mid_cli == NULL)
+		return 0;
+
+	int ssl_status = SSL_shutdown(mid_cli->ssl);   // May not actually shutdown for non-blocking sockets.
+
+	if(ssl_status == 0 || ssl_status == 1)  // Return success when uni-directional or bi-directional shutdown happens.
+		return 1;
+
+	return 0;
+#else
+	SSL_quit();
+#endif
+}
+
+void free_mid_ssl(struct mid_client* mid_cli)
+{
+#ifdef LIBSSL_SANE
+	if(mid_cli == NULL)
+		return;
+
+	SSL_free(mid_cli->ssl);
+#else
+	SSL_quit();
+#endif
 }
 
 int ssl_sock_write(SSL* ssl,struct mid_data* n_data)
 {
+#ifdef LIBSSL_SANE
 	if(ssl==NULL || n_data->data==NULL || n_data->len==0)
 		return 0;
 
 	return SSL_write(ssl,n_data->data,n_data->len);
+#else
+	SSL_quit();
+#endif
 }
 
 struct mid_data* ssl_sock_read(SSL* ssl)
 {
+#ifdef LIBSSL_SANE
 	if(ssl==NULL)
 		return NULL;
 
@@ -79,30 +130,7 @@ struct mid_data* ssl_sock_read(SSL* ssl)
 	n_data=flatten_mid_bag(bag);
 
 	return n_data;
-}
 #else
-SSL* ssl_open_connection(int sockfd,char* hostname)
-{
-	https_quit();
-	return NULL;
-}
-
-int ssl_sock_write(SSL* ssl,struct mid_data* n_data)
-{
-	https_quit();
-	return -1;
-}
-
-struct mid_data* ssl_sock_read(SSL* ssl)
-{
-	https_quit();
-	return NULL;
-}
-
-int SSL_read(void* ran1,void* ran2,long ran3)
-{
-	https_quit();
-	return -1;
-}
-
+	SSL_quit();
 #endif
+}

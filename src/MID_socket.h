@@ -11,6 +11,9 @@
 #define MAX_TRANSACTION_SIZE 65536
 #define MAX_TCP_SYN_RETRANSMITS 2
 #define MID_DEFAULT_IO_TIMEOUT 60
+#define MID_CONSTANT_APPLICATION_PROTOCOL_HTTP 0
+#define MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS 1
+#define MID_CONSTANT_APPLICATION_PROTOCOL_UNKNOWN 2
 
 #include"MID_structures.h"
 #include"MID_interfaces.h"
@@ -38,6 +41,7 @@ struct mid_client
 	int protocol;
 	int sockfd;
 	char* hostip;
+	int mid_protocol;
 
 #ifdef LIBSSL_SANE
 	SSL* ssl;
@@ -50,6 +54,12 @@ struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed
 int init_mid_client(struct mid_client* mid_cli);
 
 void free_mid_client(struct mid_client* mid_cli);
+
+int close_mid_client(struct mid_client* mid_cli);
+
+int destroy_mid_client(struct mid_client* mid_cli);
+
+void mid_protocol_quit(struct mid_client* mid_cli);
 
 long sock_write(int sockfd,struct mid_data* n_data);
 

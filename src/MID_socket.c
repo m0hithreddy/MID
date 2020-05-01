@@ -11,6 +11,7 @@
 #include"MID_http.h"
 #include"MID.h"
 #include"MID_interfaces.h"
+#include"MID_ssl_socket.h"
 #include"url_parser.h"
 #include<errno.h>
 #include<unistd.h>
@@ -50,6 +51,14 @@ struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed
 	mid_cli->protocol = MID_DEFAULT_HTTP_SOCKET_PROTOCOL;
 	mid_cli->sockfd = -1;
 	mid_cli->hostip = NULL;
+
+	if(!strcmp(purl->scheme,"http"))
+		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_HTTP;
+	else if(!strcmp(purl->scheme,"https"))
+		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS;
+	else
+		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_UNKNOWN;
+
 #ifdef LIBSSL_SANE
 	mid_cli->ssl = NULL;
 #endif
@@ -119,8 +128,16 @@ int init_mid_client(struct mid_client* mid_cli)
 
 	freeaddrinfo(result);
 
-	if (rp == NULL)      // No address succeeded return ;
+	if (rp == NULL)      // No address succeeded, return ;
 		goto init_error;
+
+#ifdef LIBSSL_SANE
+	if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+	{
+		if(!init_mid_ssl(mid_cli))
+			goto init_error;
+	}
+#endif
 
 	return 1;
 
@@ -135,20 +152,77 @@ int init_mid_client(struct mid_client* mid_cli)
 	return 0;
 }
 
+int close_mid_client(struct mid_client* mid_cli)
+{
+	if(mid_cli == NULL)
+		return 0;
+
+	int return_code = 1;
+
+#ifdef LIBSSL_SANE
+	if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS && mid_cli->ssl != NULL) {
+		if(close_mid_ssl(mid_cli) != 1)
+			return_code = 0;
+	}
+#endif
+
+	if(mid_cli->sockfd >=0 ) {
+		if(close(mid_cli->sockfd) != 0)
+			return_code = 0;
+	}
+
+	return return_code;
+}
+
 void free_mid_client(struct mid_client* mid_cli)
 {
 	if(mid_cli == NULL)
 		return;
+
+	/* Free the SSL pointer*/
+
+#ifdef LIBSSL_SANE
+	free_mid_ssl(mid_cli);
+#endif
+
+	/* Free the pointers */
 
 	free(mid_cli->if_name);
 	free(mid_cli->if_addr);
 	free(mid_cli->hostname);
 	free(mid_cli->port);
 	free(mid_cli->hostip);
-#ifdef LIBSSL_SANE
-	free(mid_cli->ssl);
-#endif
+
+	/* Free the struct */
+
 	free(mid_cli);
+
+}
+
+int destroy_mid_client(struct mid_client* mid_cli)
+{
+	int close_status = close_mid_client(mid_cli);
+	free_mid_client(mid_cli);
+
+	return close_status;
+}
+
+void mid_protocol_quit(struct mid_client* mid_cli)
+{
+	if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)    // Is always supported, but quitting as user requested.
+		exit(3);
+#ifdef LIBSSL_SANE
+	else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)  // Is supported, but quitting as user requested
+		exit(3);
+#else
+	else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)    // MID not compiled with SSL support
+		SSL_quit();
+#endif
+	else
+	{
+		mid_err("\nMID: Unsupported protocol encountered. Exiting...\n\n");
+		exit(3);
+	}
 }
 
 long sock_write(int sockfd,struct mid_data* n_data)

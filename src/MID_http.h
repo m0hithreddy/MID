@@ -168,9 +168,9 @@ struct mid_data* create_http_request(struct http_request* s_request);
 
 struct http_response* parse_http_response(struct mid_data *response);
 
-void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int flag);
+void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag);
 
-void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag);
+void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag);
 
 void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct mid_interface* mid_if,long max_redirects,int flag);
 

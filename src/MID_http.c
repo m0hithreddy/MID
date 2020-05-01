@@ -327,12 +327,12 @@ struct http_response* parse_http_response(struct mid_data *response)
 	return s_response;
 }
 
-void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int flag)
+void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag)
 {
-	if(request==NULL)
+	if(request == NULL || mid_cli == NULL || mid_cli->sockfd < 0)
 		return NULL;
 
-	if(sockfd<0)
+	if(mid_cli->sockfd < 0)
 		return NULL;
 
 	if(flag==0)
@@ -340,22 +340,22 @@ void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int f
 
 	long* status=(long*)malloc(sizeof(long));
 
-	if(flag==JUST_SEND || flag==SEND_RECEIVE)
+	if(flag == JUST_SEND || flag == SEND_RECEIVE)
 	{
-		if(request->len!=(*status=sock_write(sockfd,request)))
+		if(request->len!=(*status=sock_write(mid_cli->sockfd, request)))
 		{
 			return (void*)status;
 		}
 	}
 
-	if(flag==JUST_SEND)
+	if(flag == JUST_SEND)
 	{
 		return (void*)status;
 	}
 
-	if(flag==SEND_RECEIVE)
+	if(flag == SEND_RECEIVE)
 	{
-		struct mid_data* response=sock_read(sockfd,LONG_MAX);
+		struct mid_data* response=sock_read(mid_cli->sockfd, LONG_MAX);
 
 		return (void*)response;
 	}
@@ -364,33 +364,28 @@ void* send_http_request(int sockfd,struct mid_data* request,char* hostname,int f
 }
 
 #ifdef LIBSSL_SANE
-void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag)
+void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag)
 {
 
-	if(sockfd<0)
+	if(request == NULL || mid_cli == NULL || mid_cli->ssl == NULL)
 		return NULL;
 
-	SSL* ssl=ssl_open_connection(sockfd,hostname);
-
-	if(ssl==NULL)
-		return NULL;
-
-	if(ssl_sock_write(ssl,request)!=request->len)
+	if(ssl_sock_write(mid_cli->ssl,request)!=request->len)
 	{
 		return NULL;
 	}
 
 	if(flag==JUST_SEND)
 	{
-		return (void*)ssl;
+		return (void*)mid_cli->ssl;
 	}
 
-	struct mid_data* response=ssl_sock_read(ssl);
+	struct mid_data* response=ssl_sock_read(mid_cli->ssl);
 
 	return (void*)response;
 }
 #else
-void* send_https_request(int sockfd,struct mid_data* request,char* hostname,int flag)
+void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag)
 {
 	https_quit();
 	return NULL;
@@ -451,13 +446,11 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		request=create_http_request(s_request); // Create HTTP Request
 
 		if(!strcmp(purl->scheme,"http"))   // send and receive response as per the scheme.
-			response=(struct mid_data*)send_http_request(mid_cli->sockfd,request,NULL,SEND_RECEIVE);
+			response=(struct mid_data*)send_http_request(mid_cli ,request,NULL,SEND_RECEIVE);
 		else
-			response=(struct mid_data*)send_https_request(mid_cli->sockfd,request,purl->host,SEND_RECEIVE);
+			response=(struct mid_data*)send_https_request(mid_cli, request,purl->host,SEND_RECEIVE);
 
-		close(mid_cli->sockfd);
-
-		free_mid_client(mid_cli);
+		destroy_mid_client(mid_cli);
 
 		if(response==NULL)
 			return NULL;

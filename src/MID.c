@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 
 
 	if( purl==NULL || !( !strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http") ) )
-		mid_flag_exit1(1,"MID: Not a HTTP or HTTPS URL. Exiting...\n\n");
+		mid_flag_exit1(1,"\nMID: Unsupported protocol encountered. Exiting...\n\n");
 
 	if(args->verbose_flag && !args->quiet_flag)
 	{
@@ -94,6 +94,12 @@ int main(int argc, char **argv)
 		fprintf(stderr,"->PATH: %s\n",purl->path);
 		fprintf(stderr,"->Query: %s\n",purl->query);
 	}
+
+	// If SSL enabled then initialize SSL.
+
+#ifdef LIBSSL_SANE
+	setup_ssl();
+#endif
 
 	// Get Network Interfaces Info and Check whether Server is accessible or not
 
@@ -180,13 +186,12 @@ int main(int argc, char **argv)
 
 	for (int i = 0; net_if[i]!=NULL ; i++)
 	{
+		s_request->hostip=NULL;
 
 		if(net_if[i]->family!=AF_INET)
 			continue;
 
 		/* Initiate struct mid_client */
-
-		s_request->hostip=NULL;
 
 		struct mid_client* mid_cli = create_mid_client(net_if[i], purl);
 
@@ -197,14 +202,14 @@ int main(int argc, char **argv)
 
 		struct mid_data *response;
 
-		if(!strcmp(purl->scheme,"http"))
-			response=send_http_request(mid_cli->sockfd,request,NULL,0);
+		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
+			response=send_http_request(mid_cli,request,NULL,0);
+		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+			response=send_https_request(mid_cli,request,purl->host,0);
 		else
-			response=send_https_request(mid_cli->sockfd,request,purl->host,0);
+			mid_protocol_quit(mid_cli);
 
-		close(mid_cli->sockfd);
-
-		free_mid_client(mid_cli);
+		destroy_mid_client(mid_cli);
 
 		if(response==NULL)
 			continue;

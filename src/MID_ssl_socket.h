@@ -9,6 +9,7 @@
 #define MID_SSL_SOCKET_H_
 
 #include"MID_socket.h"
+#include"MID_err.h"
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -21,11 +22,21 @@
 #include<openssl/evp.h>
 #include<openssl/md5.h>
 #else
-typedef void* SSL;
-int SSL_read(void* ran1,void* ran2,long ran3);
+#define SSL_quit() do {\
+	mid_err("\nMID: HTTPS URL encountered! MID is not built with the SSL support. Please recompile MID with the SSL support. Exiting...\n\n");\
+	exit(3);\
+} while(0)
+
+typedef void SSL;
 #endif
 
-SSL* ssl_open_connection(int sockfd,char* hostname);
+void setup_ssl();
+
+int init_mid_ssl(struct mid_client* mid_cli);
+
+int close_mid_ssl(struct mid_client* mid_cli);
+
+void free_mid_ssl(struct mid_client* mid_cli);
 
 int ssl_sock_write(SSL* ssl,struct mid_data* n_data);
 

@@ -35,7 +35,10 @@ void* unit(void* info)
 	struct unit_info* unit_info=(struct unit_info*)info;
 
 	long retries_count=0;
-	int signo,sockfd,http_flag;
+	int signo,sockfd;
+#ifdef LIBSSL_SANE
+	SSL* ssl;
+#endif
 
 	struct timespec sleep_time;
 	sleep_time.tv_nsec=0;
@@ -125,19 +128,10 @@ void* unit(void* info)
 
 		struct mid_data* request=create_http_request(unit_info->s_request); // create request
 
-		if(!strcmp(unit_info->s_request->scheme,"http"))  // determine whether HTTP[S] request.
-			http_flag=1;
-		else
-			http_flag=0;
-
 		struct mid_client* mid_cli;
-		struct parsed_url purl;
+		struct parsed_url* purl = parse_url(unit_info->s_request->url);
 
-		purl.host = unit_info->s_request->host;
-		purl.port = unit_info->s_request->port;
-		purl.scheme = unit_info->s_request->scheme;
-
-		mid_cli=create_mid_client(unit_info->mid_if,&purl);
+		mid_cli=create_mid_client(unit_info->mid_if, purl);
 
 		unit_quit();
 
@@ -145,23 +139,26 @@ void* unit(void* info)
 
 		unit_quit();
 
-		if(mid_cli->sockfd<0)
+		if(mid_cli->sockfd < 0)
 			goto self_repair;
 
-		sockfd=mid_cli->sockfd;
+#ifdef LIBSSL_SANE
+		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS && mid_cli->ssl == NULL)
+			goto self_repair;
 
-		SSL* ssl;
+		ssl = mid_cli->ssl;
+#endif
 
-		if(http_flag)
-			send_http_request(sockfd,request,NULL,JUST_SEND); // send HTTP request
-		else
-		{
-			http_flag=0;
-			ssl=(SSL*)send_https_request(sockfd,request,unit_info->host,JUST_SEND); // send HTTPS request
+		sockfd = mid_cli->sockfd;
 
-			if(ssl==NULL)
-				goto self_repair;
-		}
+		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
+			write(sockfd, request->data, request->len); // send HTTP request
+#ifdef LIBSSL_SANE
+		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+			SSL_write(ssl,request->data,request->len); // send HTTPS request
+#endif
+		else // protocol unknown
+			goto fatal_error;
 
 		unit_quit();
 
@@ -207,7 +204,7 @@ void* unit(void* info)
 				break;
 			}
 
-			if(http_flag)  // if non encrypted socket.
+			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)  // if non encrypted socket.
 			{
 				status=read(sockfd,eat_buf,MAX_TRANSACTION_SIZE);
 
@@ -218,7 +215,7 @@ void* unit(void* info)
 				}
 			}
 #ifdef LIBSSL_SANE
-			else  // encrypted socket.
+			else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS) // encrypted socket.
 			{
 				status=SSL_read(ssl,eat_buf,MAX_TRANSACTION_SIZE);
 
@@ -244,6 +241,8 @@ void* unit(void* info)
 				}
 			}
 #endif
+			else    // protocol unknown
+				goto fatal_error;
 
 			if(status<=0)
 				break;
@@ -274,12 +273,11 @@ void* unit(void* info)
 		pthread_mutex_lock(&unit_info->lock);    // Act based on HTTP response status code.
 		unit_info->status_code=atoi(s_response->status_code);
 
-		if( (unit_info->pc_flag && !strcmp(s_response->status_code,"206")) || (!unit_info->pc_flag && s_response->status_code[0]=='2') ) // If (pc && range staisfied) || (non-pc && 2xx)
-		{
+		if( ( unit_info->pc_flag && !strcmp(s_response->status_code,"206") ) || \
+				( !unit_info->pc_flag && s_response->status_code[0] == '2' ) ) {   // If (pc && range staisfied) || (non-pc && 2xx)
 			unit_info->resume=unit_info->resume-1;
 		}
-		else if(s_response->status_code[0]=='3')  // if the response header is 3xx
-		{
+		else if(s_response->status_code[0]=='3') {   // If the response header is 3xx
 			pthread_mutex_unlock(&unit_info->lock);
 			unit_info->s_request->method="HEAD";
 			unit_info->s_request->range=NULL;
@@ -309,7 +307,7 @@ void* unit(void* info)
 				}
 
 				if(tmp_s_response->accept_ranges==NULL || strcmp(tmp_s_response->accept_ranges,"bytes")!=0 ||\
-						tmp_s_response->content_length==NULL || atol(tmp_s_response->content_length)!=unit_info->content_length){   // Server is insane!
+						tmp_s_response->content_length==NULL || atol(tmp_s_response->content_length)!=unit_info->content_length) {   // Server is insane!
 
 					goto fatal_error;
 				}
@@ -324,8 +322,7 @@ void* unit(void* info)
 			unit_info->s_request=tmp_s_request;
 			goto http_request;
 		}
-		else  // main supervision is required .
-		{
+		else { // main supervision is required .
 			unknown_status_code:
 
 			unit_info->err_flag=2;  // err_flag 2 represents main() supervision in dealing with error,
@@ -438,7 +435,7 @@ void* unit(void* info)
 				break;
 			}
 
-			if(http_flag)
+			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 			{
 				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
 
@@ -449,7 +446,7 @@ void* unit(void* info)
 				}
 			}
 #ifdef LIBSSL_SANE
-			else
+			else if(mid_cli->mid_protocol  == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 			{
 				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
 
@@ -475,6 +472,11 @@ void* unit(void* info)
 				}
 			}
 #endif
+			else    // protocol unknown
+			{
+				f_error = 1;
+				break;
+			}
 
 			if(status<=0)
 				break;
