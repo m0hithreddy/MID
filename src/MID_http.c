@@ -369,8 +369,9 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 	if(request == NULL || mid_cli == NULL || mid_cli->ssl == NULL)
 		return NULL;
 
-	if(ssl_sock_write(mid_cli->ssl,request)!=request->len)
-	{
+	if(mid_ssl_socket_write(mid_cli, request, \
+			MID_MODE_SOCK_WRITE_AUTO_RETRY, NULL) != MID_ERROR_SOCK_WRITE_NONE) {
+
 		return NULL;
 	}
 

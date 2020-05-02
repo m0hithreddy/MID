@@ -293,18 +293,6 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 	return MID_ERROR_SOCK_READ_NONE;
 }
 
-int ssl_sock_write(SSL* ssl,struct mid_data* n_data)
-{
-#ifdef LIBSSL_SANE
-	if(ssl==NULL || n_data->data==NULL || n_data->len==0)
-		return 0;
-
-	return SSL_write(ssl,n_data->data,n_data->len);
-#else
-	SSL_quit();
-#endif
-}
-
 struct mid_data* ssl_sock_read(SSL* ssl)
 {
 #ifdef LIBSSL_SANE
