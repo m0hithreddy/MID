@@ -96,6 +96,7 @@ void free_mid_ssl(struct mid_client* mid_cli)
 
 int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status)
 {
+#ifdef LIBSSL_SANE
 	if(mid_cli == NULL || mid_cli->sockfd < 0 || mid_cli->ssl == NULL || \
 			m_data == NULL || m_data->data == NULL || m_data->len <= 0 ) {  // Invalid input.
 
@@ -192,10 +193,14 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 
 	status != NULL ? *status = wr_counter : 0;
 	return MID_ERROR_SOCK_WRITE_NONE;
+#else
+	SSL_quit();
+#endif
 }
 
 int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status)
 {
+#ifdef LIBSSL_SANE
 	if(mid_cli == NULL || mid_cli->sockfd <= 0 || mid_cli->ssl == NULL || \
 			m_data == NULL || m_data->data == NULL || m_data->len <= 0) {  // Invalid input given.
 
@@ -291,6 +296,9 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 
 	status != NULL ? *status = rd_counter : 0;
 	return MID_ERROR_SOCK_READ_NONE;
+#else
+	SSL_quit();
+#endif
 }
 
 struct mid_data* ssl_sock_read(SSL* ssl)
