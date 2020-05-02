@@ -38,6 +38,10 @@ int close_mid_ssl(struct mid_client* mid_cli);
 
 void free_mid_ssl(struct mid_client* mid_cli);
 
+int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
+
+int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
+
 int ssl_sock_write(SSL* ssl,struct mid_data* n_data);
 
 struct mid_data* ssl_sock_read(SSL* ssl);

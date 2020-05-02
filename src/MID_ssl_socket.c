@@ -10,6 +10,9 @@
 #include"MID_structures.h"
 #include"MID_http.h"
 #include<stdlib.h>
+#include<sys/socket.h>
+#include<sys/select.h>
+#include<sys/types.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -89,6 +92,205 @@ void free_mid_ssl(struct mid_client* mid_cli)
 #else
 	SSL_quit();
 #endif
+}
+
+int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status)
+{
+	if(mid_cli == NULL || mid_cli->sockfd < 0 || mid_cli->ssl == NULL || \
+			m_data == NULL || m_data->data == NULL || m_data->len <= 0 ) {  // Invalid input.
+
+		status != NULL ? *status = 0 : 0;
+		return MID_ERROR_SOCK_WRITE_INVAL;
+	}
+
+	long wr_status = 0, wr_counter = 0;
+
+	fd_set wr_set, tp_set;
+	FD_ZERO(&wr_set);
+	FD_SET(mid_cli->sockfd, &wr_set);
+
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0, \
+			ssl_err = 0, rel_err = 0;
+
+	for( ;  ; )
+	{
+		if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY) {  /* If mode is auto-retry and non blocking sockets are used,
+		loop may become busy wait. So use select (works with blocking as well !) */
+
+			tp_set = wr_set;
+			sl_status = select(maxfds, NULL, &tp_set, NULL, NULL);
+
+			if(sl_status == -1)
+			{
+				if(errno == EINTR)
+					continue;
+				else
+				{
+					status != NULL ? *status = wr_counter : 0;
+					return MID_ERROR_SOCK_WRITE_ERROR;
+				}
+			}
+		}
+
+		wr_status = SSL_write(mid_cli->ssl, m_data->data + wr_counter, \
+				m_data->len - wr_counter);  // Commence the write operation.
+
+		if(wr_status <= 0)  // Error reported by SSL_write.
+		{
+			ssl_err = SSL_get_error(mid_cli->ssl, wr_status);
+
+			if(ssl_err == SSL_ERROR_WANT_WRITE || \
+					ssl_err == SSL_ERROR_WANT_READ) {  // Probable recoverable errors.
+
+				if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)
+					continue;
+				else
+				{
+					status != NULL ? *status = wr_counter : 0;
+					return MID_ERROR_SOCK_WRITE_RETRY;
+				}
+			}
+			else if(ssl_err == SSL_ERROR_ZERO_RETURN)  // TLS session closed cleanly
+			{
+				status != NULL ? *status = wr_counter : 0;
+				return MID_ERROR_SOCK_WRITE_NONE;
+			}
+			else if(ssl_err == SSL_ERROR_SYSCALL)   // Check for real error, and report status.
+			{
+				status != NULL ? *status = wr_counter : 0;
+
+				rel_err = ERR_get_error();
+				if(rel_err == 0)  // No real error.
+					return MID_ERROR_SOCK_WRITE_NONE;
+				else
+					return MID_ERROR_SOCK_WRITE_ERROR;
+			}
+			else   // Fatal Error.
+			{
+				status != NULL ? *status = wr_counter : 0;
+				return MID_ERROR_SOCK_WRITE_ERROR;
+			}
+		}
+
+		wr_counter = wr_counter + wr_status;
+
+		if(wr_counter < m_data->len)  // If fewer bytes are transfered.
+		{
+			if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)  // Act as caller requested.
+				continue;
+			else
+			{
+				status != NULL ? *status = wr_counter : 0;
+				return MID_ERROR_SOCK_WRITE_RETRY;
+			}
+		}
+
+		// Else all bytes are transfered, break.
+
+		break;
+	}
+
+	status != NULL ? *status = wr_counter : 0;
+	return MID_ERROR_SOCK_WRITE_NONE;
+}
+
+int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status)
+{
+	if(mid_cli == NULL || mid_cli->sockfd <= 0 || mid_cli->ssl == NULL || \
+			m_data == NULL || m_data->data == NULL || m_data->len <= 0) {  // Invalid input given.
+
+		status != NULL ? *status = 0 : 0;
+		return MID_ERROR_SOCK_READ_INVAL;
+	}
+
+	long rd_status = 0, rd_counter = 0;
+
+	fd_set rd_set, tp_set;
+	FD_ZERO(&rd_set);
+	FD_SET(mid_cli->sockfd, &rd_set);
+
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0, \
+			ssl_err = 0, rel_err = 0;
+
+	for( ;  ; )
+	{
+		if(mode == MID_MODE_SOCK_READ_AUTO_RETRY) {  /* If mode is auto-retry and non blocking sockets are used,
+		loop may become busy wait. So use select (works with blocking as well !) */
+
+			tp_set = rd_set;
+			sl_status = select(maxfds, &tp_set, NULL, NULL, NULL);
+
+			if(sl_status == -1)
+			{
+				if(errno == EINTR)
+					continue;
+				else
+				{
+					status != NULL ? *status = rd_counter : 0;
+					return MID_ERROR_SOCK_READ_ERROR;
+				}
+			}
+		}
+
+		rd_status = SSL_read(mid_cli->ssl, m_data->data + rd_counter, \
+				m_data->len - rd_counter);  // Commence the read operation.
+
+		if(rd_status <= 0)
+		{
+			ssl_err = SSL_get_error(mid_cli->ssl, rd_status);
+
+			if(ssl_err == SSL_ERROR_WANT_READ || \
+					ssl_err == SSL_ERROR_WANT_WRITE) {   // A probable recoverable errors.
+
+				if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)
+					continue;
+				else
+				{
+					status != NULL ? *status = rd_counter : 0;
+					return MID_ERROR_SOCK_READ_RETRY;
+				}
+			}
+			else if(ssl_err == SSL_ERROR_ZERO_RETURN)  // TLS session closed cleanly.
+			{
+				status != NULL ? *status = rd_counter : 0;
+				return MID_ERROR_SOCK_READ_NONE;
+			}
+			else if(ssl_err == SSL_ERROR_SYSCALL)  // Check if error occurred, and report back.
+			{
+				status != NULL ? *status = rd_counter : 0;
+
+				rel_err = ERR_get_error();
+				if(rel_err == 0)
+					return MID_ERROR_SOCK_READ_NONE;
+				else
+					return MID_ERROR_SOCK_READ_ERROR;
+			}
+			else  // Fatal error, report back.
+			{
+				status != NULL ? *status = rd_counter : 0;
+				return MID_ERROR_SOCK_READ_ERROR;
+			}
+		}
+
+		rd_counter = rd_counter + rd_status;
+
+		if(rd_counter == m_data->len)  // If buffer is full.
+		{
+			status != NULL ? *status = rd_counter : 0;
+			return MID_ERROR_SOCK_READ_BUFFER_FULL;
+		}
+
+		if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)  // After reading, act as user requested.
+			continue;
+		else
+		{
+			status != NULL ? *status = rd_counter : 0;
+			return MID_ERROR_SOCK_READ_RETRY;
+		}
+	}
+
+	status != NULL ? *status = rd_counter : 0;
+	return MID_ERROR_SOCK_READ_NONE;
 }
 
 int ssl_sock_write(SSL* ssl,struct mid_data* n_data)
