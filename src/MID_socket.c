@@ -231,8 +231,11 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 {
 
 	if(mid_cli == NULL || mid_cli->sockfd < 0 || m_data == NULL || \
-			m_data->data == NULL || m_data->len <=0 )   // Invalid input.
+			m_data->data == NULL || m_data->len <=0 ) { // Invalid input.
+
+		status != NULL ? *status = 0 : 0;
 		return MID_ERROR_SOCK_WRITE_INVAL;
+	}
 
 	long wr_status = 0, wr_counter = 0;
 
@@ -311,8 +314,11 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status)
 {
 	if(mid_cli == NULL || mid_cli->sockfd < 0 || m_data == NULL || \
-			m_data->data == NULL || m_data->len <= 0)   // Invalid input.
+			m_data->data == NULL || m_data->len <= 0) {  // Invalid input.
+
+		status != NULL ? *status = 0 : 0;
 		return MID_ERROR_SOCK_READ_INVAL;
+	}
 
 	long rd_status = 0, rd_counter = 0;
 
