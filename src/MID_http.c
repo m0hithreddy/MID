@@ -342,10 +342,9 @@ void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,cha
 
 	if(flag == JUST_SEND || flag == SEND_RECEIVE)
 	{
-		if(request->len!=(*status=sock_write(mid_cli->sockfd, request)))
-		{
-			return (void*)status;
-		}
+		if(mid_socket_write(mid_cli, request, MID_MODE_SOCK_WRITE_AUTO_RETRY, \
+				status) != MID_ERROR_SOCK_WRITE_NONE)
+			return (void*) status;
 	}
 
 	if(flag == JUST_SEND)
@@ -355,7 +354,7 @@ void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,cha
 
 	if(flag == SEND_RECEIVE)
 	{
-		struct mid_data* response=sock_read(mid_cli->sockfd, LONG_MAX);
+		struct mid_data* response = sock_read(mid_cli->sockfd, LONG_MAX);
 
 		return (void*)response;
 	}

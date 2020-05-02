@@ -24,6 +24,8 @@
 #include<netinet/tcp.h>
 #include<sys/socket.h>
 #include<sys/types.h>
+#include<sys/select.h>
+#include<sys/time.h>
 
 struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl)
 {
@@ -225,29 +227,174 @@ void mid_protocol_quit(struct mid_client* mid_cli)
 	}
 }
 
-long sock_write(int sockfd,struct mid_data* n_data)
+int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status)
 {
-	if(n_data==NULL || n_data->data==NULL || n_data->len<=0)
-		return 0;
 
-	int status;
-	int written=0;
+	if(mid_cli == NULL || mid_cli->sockfd < 0 || m_data == NULL || \
+			m_data->data == NULL || m_data->len <=0 )   // Invalid input.
+		return MID_ERROR_SOCK_WRITE_INVAL;
 
-	while(1)
+	long wr_status = 0, wr_counter = 0;
+
+	fd_set wr_set, tp_set;
+	FD_ZERO(&wr_set);
+	FD_SET(mid_cli->sockfd, &wr_set);
+
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+
+	for( ;  ; )
 	{
-		status=write(sockfd,n_data->data+written,n_data->len-written);
+		if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY) {  /* If mode is auto-retry and non blocking sockets are used,
+		loop may become busy wait. So use select (works with blocking as well !) */
 
-		if(status==-1 && errno!=EINTR)
-		{
-			return written;
+			tp_set = wr_set;
+			sl_status = select(maxfds, NULL, &tp_set, NULL, NULL);
+
+			if(sl_status == -1)
+			{
+				if(errno == EINTR)
+					continue;
+				else
+				{
+					status != NULL ? *status = wr_counter : 0;
+					return MID_ERROR_SOCK_WRITE_ERROR;
+				}
+			}
 		}
 
-		if(status!=-1)
-			written=written+status;
+		wr_status = write(mid_cli->sockfd, m_data->data + wr_counter, \
+				m_data->len - wr_counter);    // Commence the write operation.
 
-		if(written>=n_data->len)
-			return written;
+		if(wr_status < 0)  // If the error condition.
+		{
+			if(errno == EWOULDBLOCK || errno == EAGAIN || \
+					errno == EINTR)  // Probable recoverable errors, act according to caller request.
+			{
+				if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)  // If mode is auto-retry then try again.
+					continue;
+				else
+				{
+					status != NULL ? *status = wr_counter : 0;
+					return MID_ERROR_SOCK_WRITE_RETRY;
+				}
+			}
+			else   // Fatal Error, report back.
+			{
+				status != NULL ? *status = wr_counter : 0;
+				return MID_ERROR_SOCK_WRITE_ERROR;
+			}
+		}
+
+		if(wr_status > 0)
+			wr_counter = wr_counter + wr_status;
+
+		if(wr_counter < m_data->len)   // If fewer bytes transfered
+		{
+			if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)   // Act as user requested.
+				continue;
+			else
+			{
+				status != NULL ? *status = wr_counter : 0;
+				return MID_ERROR_SOCK_WRITE_RETRY;
+			}
+		}
+
+		// Else all bytes are transferred, break;
+
+		break;
 	}
+
+	status != NULL ? *status = wr_counter : 0;
+	return MID_ERROR_SOCK_WRITE_NONE;
+}
+
+int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status)
+{
+	if(mid_cli == NULL || mid_cli->sockfd < 0 || m_data == NULL || \
+			m_data->data == NULL || m_data->len <= 0)   // Invalid input.
+		return MID_ERROR_SOCK_READ_INVAL;
+
+	long rd_status = 0, rd_counter = 0;
+
+	fd_set rd_set, tp_set;
+	FD_ZERO(&rd_set);
+	FD_SET(mid_cli->sockfd, &rd_set);
+
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+
+	for( ;  ; )
+	{
+		if(mode == MID_MODE_SOCK_READ_AUTO_RETRY) { /* If mode is auto-retry and non blocking sockets are used,
+		loop may become busy wait. So use select (works with blocking as well !) */
+
+			tp_set = rd_set;
+			sl_status = select(maxfds, &tp_set, NULL, NULL, NULL);
+
+			if(sl_status == -1)
+			{
+				if(errno == EINTR)
+					continue;
+				else
+				{
+					status != NULL ? *status = rd_counter : 0;
+					return MID_ERROR_SOCK_READ_ERROR;
+				}
+			}
+		}
+
+		rd_status = read(mid_cli->sockfd, m_data->data + rd_counter, \
+				m_data->len - rd_counter);    // Commence the read operation.
+
+		if(rd_status < 0)
+		{
+			if(errno == EWOULDBLOCK || errno == EAGAIN || \
+					errno == EINTR)   // Probable recoverable errors, act as caller requested.
+			{
+				if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)  // If mode is auto-retry then read again.
+					continue;
+				else
+				{
+					status != NULL ? *status = rd_counter : 0;
+					return MID_ERROR_SOCK_READ_RETRY;
+				}
+			}
+			else if(errno == EFAULT)  // Faulty buffer
+			{
+				status != NULL ? *status = rd_counter : 0;
+				return MID_ERROR_SOCK_READ_BUFFER_FULL;
+			}
+			else  // Fatal Error, report back.
+			{
+				status != NULL ? *status = rd_counter : 0;
+				return MID_ERROR_SOCK_READ_ERROR;
+			}
+		}
+		else if(rd_status > 0)   // If some bytes were read.
+		{
+			rd_counter = rd_counter + rd_status;
+
+			if(rd_counter == m_data->len)   // No more space left, report back
+			{
+				status != NULL ? *status = rd_counter : 0;
+				return MID_ERROR_SOCK_READ_BUFFER_FULL;
+			}
+
+			if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)  // Act as caller requested.
+				continue;
+			else
+			{
+				status != NULL ? *status = rd_counter : 0;
+				return MID_ERROR_SOCK_READ_RETRY;
+			}
+		}
+
+		// Else EOF reached, break.
+
+		break;
+	}
+
+	status != NULL ? *status = rd_counter : 0;
+	return MID_ERROR_SOCK_READ_NONE;
 }
 
 struct mid_data* sock_read(int sockfd,long limit)

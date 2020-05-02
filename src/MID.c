@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 	{
 		fprintf(stderr,"\nHTTP Request Message:\n\n");
 		fprintf(stderr,"->");
-		sock_write(fileno(stderr),request);
+		mid_err("%s",request->data);
 	}
 
 	struct mid_bag* net_if_bag=create_mid_bag();
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
 		{
 			fprintf(stderr,"\nHTTP Response Message:\n\n");
 			fprintf(stderr,"->");
-			sock_write(fileno(stderr),response);
+			mid_err("%s",response->data);
 		}
 
 		void* s_rqst_s_resp=follow_redirects(s_request, response, net_if[i], args->max_redirects, RETURN_S_REQUEST_S_RESPONSE);

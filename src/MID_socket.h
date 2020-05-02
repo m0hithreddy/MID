@@ -10,10 +10,29 @@
 
 #define MAX_TRANSACTION_SIZE 65536
 #define MAX_TCP_SYN_RETRANSMITS 2
+
 #define MID_DEFAULT_IO_TIMEOUT 60
+
 #define MID_CONSTANT_APPLICATION_PROTOCOL_HTTP 0
 #define MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS 1
 #define MID_CONSTANT_APPLICATION_PROTOCOL_UNKNOWN 2
+
+#define MID_MODE_SOCK_WRITE_AUTO_RETRY 0
+#define MID_MODE_SOCK_WRITE_PARTIAL_WRITE 1
+
+#define MID_ERROR_SOCK_WRITE_NONE 0
+#define MID_ERROR_SOCK_WRITE_RETRY 1
+#define MID_ERROR_SOCK_WRITE_ERROR 2
+#define MID_ERROR_SOCK_WRITE_INVAL 3
+
+#define MID_MODE_SOCK_READ_AUTO_RETRY 0
+#define MID_MODE_SOCK_READ_PARTIAL_READ 1
+
+#define MID_ERROR_SOCK_READ_NONE 0
+#define MID_ERROR_SOCK_READ_RETRY 1
+#define MID_ERROR_SOCK_READ_ERROR 2
+#define MID_ERROR_SOCK_READ_INVAL 3
+#define MID_ERROR_SOCK_READ_BUFFER_FULL 4
 
 #include"MID_structures.h"
 #include"MID_interfaces.h"
@@ -61,7 +80,9 @@ int destroy_mid_client(struct mid_client* mid_cli);
 
 void mid_protocol_quit(struct mid_client* mid_cli);
 
-long sock_write(int sockfd,struct mid_data* n_data);
+int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
+
+int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
 
 struct mid_data* sock_read(int sockfd,long limit);
 
