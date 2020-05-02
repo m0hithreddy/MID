@@ -42,6 +42,10 @@
    don't. */
 #undef HAVE_DECL_AI_ADDRCONFIG
 
+/* Define to 1 if you have the declaration of `EAGAIN', and to 0 if you don't.
+   */
+#undef HAVE_DECL_EAGAIN
+
 /* Define to 1 if you have the declaration of `EINTR', and to 0 if you don't.
    */
 #undef HAVE_DECL_EINTR

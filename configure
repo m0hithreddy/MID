@@ -4755,30 +4755,6 @@ if test $ac_have_decl = 1; then :
 else
   as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
 fi
-ac_fn_c_check_decl "$LINENO" "EINTR" "ac_cv_have_decl_EINTR" "#include<stddef.h>
-#include<limits.h>
-#include<sys/file.h>
-#include<errno.h>
-#include<netinet/in.h>
-#include<fcntl.h>
-#include<signal.h>
-#include<netdb.h>
-
-"
-if test "x$ac_cv_have_decl_EINTR" = xyes; then :
-  ac_have_decl=1
-else
-  ac_have_decl=0
-fi
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_EINTR $ac_have_decl
-_ACEOF
-if test $ac_have_decl = 1; then :
-
-else
-  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
-fi
 ac_fn_c_check_decl "$LINENO" "LONG_MAX" "ac_cv_have_decl_LONG_MAX" "#include<stddef.h>
 #include<limits.h>
 #include<sys/file.h>
@@ -5139,6 +5115,30 @@ if test $ac_have_decl = 1; then :
 else
   as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
 fi
+ac_fn_c_check_decl "$LINENO" "EAGAIN" "ac_cv_have_decl_EAGAIN" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_EAGAIN" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_EAGAIN $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
 ac_fn_c_check_decl "$LINENO" "EWOULDBLOCK" "ac_cv_have_decl_EWOULDBLOCK" "#include<stddef.h>
 #include<limits.h>
 #include<sys/file.h>
@@ -5157,6 +5157,30 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_EWOULDBLOCK $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "Symbol required but not found. Should be included in libc, check the libc variant installed in your system." "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "EINTR" "ac_cv_have_decl_EINTR" "#include<stddef.h>
+#include<limits.h>
+#include<sys/file.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<netdb.h>
+
+"
+if test "x$ac_cv_have_decl_EINTR" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_EINTR $ac_have_decl
 _ACEOF
 if test $ac_have_decl = 1; then :
 
@@ -8118,5 +8142,4 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
-
 
