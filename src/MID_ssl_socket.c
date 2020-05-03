@@ -106,31 +106,77 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 
 	long wr_status = 0, wr_counter = 0;
 
+	/* Select initializations */
+
 	fd_set wr_set, tp_set;
 	FD_ZERO(&wr_set);
 	FD_SET(mid_cli->sockfd, &wr_set);
 
-	int maxfds = mid_cli->sockfd + 1, sl_status = 0, \
-			ssl_err = 0, rel_err = 0;
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+
+	/* Timeout initializations */
+
+	struct timeval *wr_time, tp_time;
+
+	if(mid_cli->io_timeout > 0)
+	{
+		wr_time = (struct timeval*)malloc(sizeof(struct timeval));
+		wr_time->tv_sec = mid_cli->io_timeout;
+		wr_time->tv_usec  = 0;
+	}
+	else
+		wr_time = NULL;
+
+	/* Set the socket mode */
+
+	int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
+
+	if(sock_args < 0)
+		return MID_ERROR_SOCK_WRITE_ERROR;
+
+	int no_block = sock_args & O_NONBLOCK;
+
+	if(!no_block) {  /* If socket is in blocking mode, SSL_write call may get blocked.
+	So put the socket in non-blocking mode. */
+
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
+			return MID_ERROR_SOCK_WRITE_ERROR;
+	}
+
+	/* Fetch the data */
+
+	int return_status = MID_ERROR_SOCK_WRITE_NONE, ssl_err = SSL_ERROR_NONE, \
+			rel_err = 0;
 
 	for( ;  ; )
 	{
-		if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY) {  /* If mode is auto-retry and non blocking sockets are used,
-		loop may become busy wait. So use select (works with blocking as well !) */
 
-			tp_set = wr_set;
-			sl_status = select(maxfds, NULL, &tp_set, NULL, NULL);
+		tp_set = wr_set;
+		sl_status = select(maxfds, NULL, &tp_set, NULL,\
+				wr_time == NULL ? NULL : (tp_time = *wr_time, &tp_time));  // Select the descriptor or timeout.
 
-			if(sl_status == -1)
+		if(sl_status < 0)  // Error reported by select.
+		{
+			if(errno == EINTR)  // If interrupted by signal, act as caller requested.
 			{
-				if(errno == EINTR)
+				if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)
 					continue;
 				else
 				{
-					status != NULL ? *status = wr_counter : 0;
-					return MID_ERROR_SOCK_WRITE_ERROR;
+					return_status = MID_ERROR_SOCK_WRITE_RETRY;
+					goto write_return;
 				}
 			}
+			else  // Fatal error in select, report back.
+			{
+				return_status = MID_ERROR_SOCK_WRITE_ERROR;
+				goto write_return;
+			}
+		}
+		else if(sl_status == 0)  // Timeout.
+		{
+			return_status = MID_ERROR_SOCK_WRITE_TIMEOUT;
+			goto write_return;
 		}
 
 		wr_status = SSL_write(mid_cli->ssl, m_data->data + wr_counter, \
@@ -141,58 +187,74 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 			ssl_err = SSL_get_error(mid_cli->ssl, wr_status);
 
 			if(ssl_err == SSL_ERROR_WANT_WRITE || \
-					ssl_err == SSL_ERROR_WANT_READ) {  // Probable recoverable errors.
+					ssl_err == SSL_ERROR_WANT_READ) // Probable recoverable errors. Only non-block sockets.
+			{
 
 				if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)
 					continue;
+				else if(mode == MID_MODE_SOCK_WRITE_PARTIAL_WRITE && !no_block)  // Because we made it non-block, retry.
+					continue;
 				else
 				{
-					status != NULL ? *status = wr_counter : 0;
-					return MID_ERROR_SOCK_WRITE_RETRY;
+					return_status = MID_ERROR_SOCK_WRITE_RETRY;
+					goto write_return;
 				}
 			}
-			else if(ssl_err == SSL_ERROR_ZERO_RETURN)  // TLS session closed cleanly
+			else if(ssl_err == SSL_ERROR_ZERO_RETURN)  // TLS session closed cleanly. Both [non-]block sockets.
 			{
-				status != NULL ? *status = wr_counter : 0;
-				return MID_ERROR_SOCK_WRITE_NONE;
+				return_status = MID_ERROR_SOCK_WRITE_NONE;
+				goto write_return;
 			}
-			else if(ssl_err == SSL_ERROR_SYSCALL)   // Check for real error, and report status.
+			else if(ssl_err == SSL_ERROR_SYSCALL)   // Check error, and report back. Both [non-]block sockets.
 			{
-				status != NULL ? *status = wr_counter : 0;
-
 				rel_err = ERR_get_error();
+
 				if(rel_err == 0)  // No real error.
-					return MID_ERROR_SOCK_WRITE_NONE;
+					return_status = MID_ERROR_SOCK_WRITE_NONE;
 				else
-					return MID_ERROR_SOCK_WRITE_ERROR;
+					return_status = MID_ERROR_SOCK_WRITE_ERROR;
+
+				goto write_return;
 			}
-			else   // Fatal Error.
+			else  // Fatal error, report back.  Both [non-]block sockets.
 			{
-				status != NULL ? *status = wr_counter : 0;
-				return MID_ERROR_SOCK_WRITE_ERROR;
+				return_status = MID_ERROR_SOCK_WRITE_ERROR;
+				goto write_return;
 			}
 		}
 
 		wr_counter = wr_counter + wr_status;
 
-		if(wr_counter < m_data->len)  // If fewer bytes are transfered.
+		if(wr_counter < m_data->len)  // If fewer bytes are transfered. Both [non-]block sockets.
 		{
 			if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)  // Act as caller requested.
 				continue;
 			else
 			{
-				status != NULL ? *status = wr_counter : 0;
-				return MID_ERROR_SOCK_WRITE_RETRY;
+				return_status = MID_ERROR_SOCK_WRITE_RETRY;
+				goto write_return;
 			}
 		}
 
 		// Else all bytes are transfered, break.
 
-		break;
+		return_status = MID_ERROR_SOCK_WRITE_NONE;
+		goto write_return;
+	}
+
+	/* Return procedures */
+
+	write_return:
+
+	if(!no_block)  // Revert back the socket mode.
+	{
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
+			return_status = MID_ERROR_SOCK_WRITE_ERROR;
 	}
 
 	status != NULL ? *status = wr_counter : 0;
-	return MID_ERROR_SOCK_WRITE_NONE;
+
+	return return_status;
 #else
 	SSL_quit();
 #endif
@@ -210,31 +272,76 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 
 	long rd_status = 0, rd_counter = 0;
 
+	/* Select initializations */
+
 	fd_set rd_set, tp_set;
 	FD_ZERO(&rd_set);
 	FD_SET(mid_cli->sockfd, &rd_set);
 
-	int maxfds = mid_cli->sockfd + 1, sl_status = 0, \
-			ssl_err = 0, rel_err = 0;
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+
+	/* Timeout initializations */
+
+	struct timeval *rd_time, tp_time;
+
+	if(mid_cli->io_timeout > 0)
+	{
+		rd_time = (struct timeval*)malloc(sizeof(struct timeval));
+		rd_time->tv_sec = mid_cli->io_timeout;
+		rd_time->tv_usec  = 0;
+	}
+	else
+		rd_time = NULL;
+
+	/* Set the socket mode */
+
+	int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
+
+	if(sock_args < 0)
+		return MID_ERROR_SOCK_READ_ERROR;
+
+	int no_block = sock_args & O_NONBLOCK;
+
+	if(!no_block) {  /* If socket is in blocking mode, SSL_read call may get blocked
+	(select looks at encrypted buffer, not the decrypted one).So put the socket in non-blocking mode. */
+
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
+			return MID_ERROR_SOCK_READ_ERROR;
+	}
+
+	/* Fetch the data */
+
+	int return_status = MID_ERROR_SOCK_READ_NONE, ssl_err = SSL_ERROR_NONE,\
+			rel_err = 0;
 
 	for( ;  ; )
 	{
-		if(mode == MID_MODE_SOCK_READ_AUTO_RETRY) {  /* If mode is auto-retry and non blocking sockets are used,
-		loop may become busy wait. So use select (works with blocking as well !) */
+		tp_set = rd_set;
+		sl_status = select(maxfds, &tp_set, NULL, NULL,\
+				rd_time == NULL ? NULL : (tp_time = *rd_time, &tp_time));  // Select the descriptor or timeout.
 
-			tp_set = rd_set;
-			sl_status = select(maxfds, &tp_set, NULL, NULL, NULL);
-
-			if(sl_status == -1)
+		if(sl_status < 0)  // Error reported by select.
+		{
+			if(errno == EINTR)  // If interrupted by signal, act as caller requested.
 			{
-				if(errno == EINTR)
+				if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)
 					continue;
 				else
 				{
-					status != NULL ? *status = rd_counter : 0;
-					return MID_ERROR_SOCK_READ_ERROR;
+					return_status = MID_ERROR_SOCK_READ_RETRY;
+					goto read_return;
 				}
 			}
+			else  // Fatal error in select, report back.
+			{
+				return_status = MID_ERROR_SOCK_READ_ERROR;
+				goto read_return;
+			}
+		}
+		else if(sl_status == 0)  // Timeout.
+		{
+			return_status = MID_ERROR_SOCK_READ_TIMEOUT;
+			goto read_return;
 		}
 
 		rd_status = SSL_read(mid_cli->ssl, m_data->data + rd_counter, \
@@ -245,35 +352,39 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 			ssl_err = SSL_get_error(mid_cli->ssl, rd_status);
 
 			if(ssl_err == SSL_ERROR_WANT_READ || \
-					ssl_err == SSL_ERROR_WANT_WRITE) {   // A probable recoverable errors.
+					ssl_err == SSL_ERROR_WANT_WRITE) // Probable recoverable errors. Only non-block sockets.
+			{
 
 				if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)
 					continue;
+				else if(mode == MID_MODE_SOCK_READ_PARTIAL_READ && !no_block)  // Because we made it non-block, retry.
+					continue;
 				else
 				{
-					status != NULL ? *status = rd_counter : 0;
-					return MID_ERROR_SOCK_READ_RETRY;
+					return_status = MID_ERROR_SOCK_READ_RETRY;
+					goto read_return;
 				}
 			}
-			else if(ssl_err == SSL_ERROR_ZERO_RETURN)  // TLS session closed cleanly.
+			else if(ssl_err == SSL_ERROR_ZERO_RETURN)  // TLS session closed cleanly. Both [non-]block sockets.
 			{
-				status != NULL ? *status = rd_counter : 0;
-				return MID_ERROR_SOCK_READ_NONE;
+				return_status = MID_ERROR_SOCK_READ_NONE;
+				goto read_return;
 			}
-			else if(ssl_err == SSL_ERROR_SYSCALL)  // Check if error occurred, and report back.
+			else if(ssl_err == SSL_ERROR_SYSCALL)  // Check error, and report back. Both [non-]block sockets.
 			{
-				status != NULL ? *status = rd_counter : 0;
-
 				rel_err = ERR_get_error();
+
 				if(rel_err == 0)
-					return MID_ERROR_SOCK_READ_NONE;
+					return_status = MID_ERROR_SOCK_READ_NONE;
 				else
-					return MID_ERROR_SOCK_READ_ERROR;
+					return_status = MID_ERROR_SOCK_READ_ERROR;
+
+				goto read_return;
 			}
-			else  // Fatal error, report back.
+			else  // Fatal error, report back.  Both [non-]block sockets.
 			{
-				status != NULL ? *status = rd_counter : 0;
-				return MID_ERROR_SOCK_READ_ERROR;
+				return_status = MID_ERROR_SOCK_READ_ERROR;
+				goto read_return;
 			}
 		}
 
@@ -281,21 +392,32 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 
 		if(rd_counter == m_data->len)  // If buffer is full.
 		{
-			status != NULL ? *status = rd_counter : 0;
-			return MID_ERROR_SOCK_READ_BUFFER_FULL;
+			return_status = MID_ERROR_SOCK_READ_BUFFER_FULL;
+			goto read_return;
 		}
 
-		if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)  // After reading, act as user requested.
+		if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)  // After reading, act as user requested. Both [non-]block sockets.
 			continue;
 		else
 		{
-			status != NULL ? *status = rd_counter : 0;
-			return MID_ERROR_SOCK_READ_RETRY;
+			return_status = MID_ERROR_SOCK_READ_RETRY;
+			goto read_return;
 		}
 	}
 
-	status != NULL ? *status = rd_counter : 0;
-	return MID_ERROR_SOCK_READ_NONE;
+	/* Return procedures */
+
+	read_return:
+
+	if(!no_block)  // Revert back the socket mode.
+	{
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
+			return_status = MID_ERROR_SOCK_READ_ERROR;
+	}
+
+	status != NULL ? *status = rd_counter : 0;  // Update status.
+
+	return return_status;
 #else
 	SSL_quit();
 #endif

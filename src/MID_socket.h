@@ -24,6 +24,7 @@
 #define MID_ERROR_SOCK_WRITE_RETRY 1
 #define MID_ERROR_SOCK_WRITE_ERROR 2
 #define MID_ERROR_SOCK_WRITE_INVAL 3
+#define MID_ERROR_SOCK_WRITE_TIMEOUT 4
 
 #define MID_MODE_SOCK_READ_AUTO_RETRY 0
 #define MID_MODE_SOCK_READ_PARTIAL_READ 1
@@ -32,7 +33,9 @@
 #define MID_ERROR_SOCK_READ_RETRY 1
 #define MID_ERROR_SOCK_READ_ERROR 2
 #define MID_ERROR_SOCK_READ_INVAL 3
-#define MID_ERROR_SOCK_READ_BUFFER_FULL 4
+#define MID_ERROR_SOCK_READ_TIMEOUT 4
+#define MID_ERROR_SOCK_READ_BUFFER_FULL 5
+
 
 #include"MID_structures.h"
 #include"MID_interfaces.h"
@@ -61,6 +64,7 @@ struct mid_client
 	int sockfd;
 	char* hostip;
 	int mid_protocol;
+	long io_timeout;
 
 #ifdef LIBSSL_SANE
 	SSL* ssl;
