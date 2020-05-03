@@ -151,11 +151,19 @@ void* unit(void* info)
 
 		sockfd = mid_cli->sockfd;
 
-		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
-			write(sockfd, request->data, request->len); // send HTTP request
+		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)  // Send HTTP request.
+		{
+			if(mid_socket_write(mid_cli, request, MID_MODE_SOCK_WRITE_AUTO_RETRY, \
+					NULL) != MID_ERROR_SOCK_WRITE_NONE)
+				goto self_repair;
+		}
 #ifdef LIBSSL_SANE
-		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-			SSL_write(ssl,request->data,request->len); // send HTTPS request
+		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)  // Send HTTPS request
+		{
+			if(mid_ssl_socket_write(mid_cli, request, MID_MODE_SOCK_WRITE_AUTO_RETRY, \
+					NULL) != MID_ERROR_SOCK_WRITE_NONE)
+				goto self_repair;
+		}
 #endif
 		else // protocol unknown
 			goto fatal_error;
