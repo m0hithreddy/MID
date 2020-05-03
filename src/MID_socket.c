@@ -34,27 +34,42 @@ struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed
 	if(mid_cli == NULL)
 		return NULL;
 
+	/* If mid-interface is given then copy name, address, and family */
+
 	if(mid_if != NULL)
 	{
-		mid_cli->if_name = strdup(mid_if->name);
-		mid_cli->if_addr = strdup(mid_if->address);
-		mid_cli->family = mid_if->family;
+		if(mid_if->name != NULL)  // Name.
+			mid_cli->if_name = strdup(mid_if->name);
+
+		if(mid_if->address != NULL)  // Address.
+			mid_cli->if_addr = strdup(mid_if->address);
+
+		mid_cli->family = mid_if->family;  // Family.
 	}
+
+	/* If purl is given then set host-name and port */
 
 	if(purl != NULL)
 	{
-		mid_cli->hostname = strdup(purl->host);
+		if(purl->host != NULL)  // Host-Name
+			mid_cli->hostname = strdup(purl->host);
+
 		mid_cli->port= strdup(purl->port == NULL ? \
 				( strcmp(purl->scheme,"http") == 0 ?  DEFAULT_HTTP_PORT : DEFAULT_HTTPS_PORT ): \
-						purl->port);
+						purl->port);   // Port.
 	}
+
+	/* Use TCP socktes */
 
 	mid_cli->type = MID_DEFAULT_HTTP_SOCKET_TYPE;
 	mid_cli->protocol = MID_DEFAULT_HTTP_SOCKET_PROTOCOL;
+
+	/* Misc initializations */
+
 	mid_cli->sockfd = -1;
 	mid_cli->hostip = NULL;
 
-	if(!strcmp(purl->scheme,"http"))
+	if(!strcmp(purl->scheme,"http"))   // Mid protocol scheme.
 		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_HTTP;
 	else if(!strcmp(purl->scheme,"https"))
 		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS;
