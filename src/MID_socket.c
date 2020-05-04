@@ -101,21 +101,24 @@ int init_mid_client(struct mid_client* mid_cli)
 	if (s != 0)
 		goto init_error;
 
-	for (rp = result; rp != NULL; rp = rp->ai_next) {
-		mid_cli->sockfd = socket(rp->ai_family, rp->ai_socktype,rp->ai_protocol);
+	for (rp = result; rp != NULL; rp = rp->ai_next)
+	{
+		mid_cli->sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
 		if(mid_cli->sockfd == -1)
 			continue;
 
 		/* Set the socket options */
 
-		if(setsockopt(mid_cli->sockfd, IPPROTO_TCP, TCP_SYNCNT, &args->max_tcp_syn_retransmits, sizeof(int)) != 0)   // TCP SYN retransmit count
-			continue;
+		if(setsockopt(mid_cli->sockfd, IPPROTO_TCP, TCP_SYNCNT, \
+				&args->max_tcp_syn_retransmits, sizeof(int)) != 0)   // TCP SYN retransmit count
+			goto next;
 
 		if(mid_cli->if_name != NULL && mid_cli->if_addr!=NULL)
 		{
-			if(setsockopt(mid_cli->sockfd, SOL_SOCKET, SO_BINDTODEVICE, mid_cli->if_name, strlen(mid_cli->if_name)) != 0)   // Set the interface
-			continue;
+			if(setsockopt(mid_cli->sockfd, SOL_SOCKET, SO_BINDTODEVICE, \
+					mid_cli->if_name, strlen(mid_cli->if_name)) != 0)   // Set the interface
+			goto next;
 
 			/* Bind to the interface */
 
@@ -127,19 +130,104 @@ int init_mid_client(struct mid_client* mid_cli)
 			inet_pton(rp->ai_family,mid_cli->if_addr,&cli_addr.sin_addr);
 
 			if(bind(mid_cli->sockfd,(struct sockaddr*)&cli_addr,sizeof(struct sockaddr_in)) != 0)   // call the bind
-				continue;
+				goto next;
 		}
 
-		if(connect(mid_cli->sockfd, rp->ai_addr, rp->ai_addrlen) != -1)
+		/* Set the socket in non-blocking mode (for implementing connect timeout) */
+
+		int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
+
+		if(sock_args < 0)
+			goto next;
+
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
+			goto next;
+
+		/* Start the connect procedure */
+
+		if(connect(mid_cli->sockfd, rp->ai_addr, rp->ai_addrlen) == 0 )  // If connected.
+			goto success;
+
+		if(errno == EINPROGRESS || errno == EINTR)  // If connection in progress or interrupted.
 		{
-			if(rp->ai_family == AF_INET || rp->ai_family == AF_INET6)   //  If only AF_INET or AF_INET6 then copy
-			{
-				mid_cli->hostip = (char*)malloc(sizeof(char)*(rp->ai_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN));
-				inet_ntop(rp->ai_family, rp->ai_addr, mid_cli->hostip, rp->ai_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-			}
 
-			break;
+			/* Timeout initializations */
+
+			struct timeval *timeo, tp_timeo;
+
+			if(mid_cli->io_timeout > 0)
+			{
+				timeo = (struct timeval*)malloc(sizeof(struct timeval));
+				timeo->tv_sec = mid_cli->io_timeout;
+				timeo->tv_usec = 0;
+			}
+			else
+				timeo = NULL;
+
+			/* Select descriptor or timeout */
+
+			int sl_status = 0;
+
+			for( ; ; )
+			{
+				fd_set rd_set, wr_set;
+				FD_ZERO(&rd_set);
+				FD_SET(mid_cli->sockfd, &rd_set);
+				wr_set = rd_set;
+
+				sl_status = select(mid_cli->sockfd + 1, &rd_set, &wr_set, NULL, \
+						timeo == NULL ? NULL : (tp_timeo = *timeo , &tp_timeo));
+
+				if(sl_status == 0)  // Timeout
+					goto next;
+				else if(sl_status < 0)  // Error reported by select.
+				{
+					if(errno == EINTR)  // interrupted, retry select (timeout resets).
+						continue;
+					else  // Fatal error, in select.
+						goto next;
+				}
+
+				if(FD_ISSET(mid_cli->sockfd, &rd_set) || FD_ISSET(mid_cli->sockfd, &wr_set))  // connect success or fail.
+				{
+					int error, len = sizeof(int);
+
+					if(getsockopt(mid_cli->sockfd, SOL_SOCKET, SO_ERROR, &error, &len) < 0)  // Solaris way of reporting error.
+						goto next;
+
+					if(error != 0)  // Failed to connect.
+						goto next;
+
+					goto success;  // Connect success.
+				}
+				else  // just in case
+					goto next;
+			}
 		}
+		else   // Fatal error, in connect.
+			goto next;
+
+
+		success:
+
+		/* Revert back the socket mode */
+
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
+			goto next;
+
+		/*  Set the Host-IP (only if AF_INET or AF_INET6) */
+
+		if(rp->ai_family == AF_INET || rp->ai_family == AF_INET6)
+		{
+			mid_cli->hostip = (char*)malloc(sizeof(char)*(rp->ai_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN));
+			inet_ntop(rp->ai_family, rp->ai_addr, mid_cli->hostip, rp->ai_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+		}
+
+		break;
+
+		next:
+
+		/* Try the next addrinfo structure*/
 
 		close(mid_cli->sockfd);
 	}
