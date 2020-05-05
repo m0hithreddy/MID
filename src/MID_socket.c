@@ -103,10 +103,14 @@ int init_mid_client(struct mid_client* mid_cli)
 
 	for (rp = result; rp != NULL; rp = rp->ai_next)
 	{
+#ifdef LIBSSL_SANE
+		int ssl_status = 0;
+#endif
+
 		mid_cli->sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
 		if(mid_cli->sockfd == -1)
-			continue;
+			goto next;
 
 		/* Set the socket options */
 
@@ -210,6 +214,16 @@ int init_mid_client(struct mid_client* mid_cli)
 
 		success:
 
+		/* If SSL required then setup SSL session */
+
+#ifdef LIBSSL_SANE
+		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+		{
+			if((ssl_status = init_mid_ssl(mid_cli)) == 0)
+				goto next;
+		}
+#endif
+
 		/* Revert back the socket mode */
 
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
@@ -225,25 +239,24 @@ int init_mid_client(struct mid_client* mid_cli)
 
 		break;
 
-		next:
+		next:    /* Try the next addrinfo structure*/
 
-		/* Try the next addrinfo structure*/
+#ifdef LIBSSL_SANE
+		if(ssl_status == 1)
+		{
+			close_mid_ssl(mid_cli);
+			free_mid_ssl(mid_cli);
+		}
+#endif
 
-		close(mid_cli->sockfd);
+		if(mid_cli->sockfd >= 0)
+			close(mid_cli->sockfd);
 	}
 
 	freeaddrinfo(result);
 
-	if (rp == NULL)      // No address succeeded, return ;
+	if (rp == NULL)      // No address succeeded, return.
 		goto init_error;
-
-#ifdef LIBSSL_SANE
-	if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-	{
-		if(!init_mid_ssl(mid_cli))
-			goto init_error;
-	}
-#endif
 
 	return 1;
 
