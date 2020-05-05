@@ -353,6 +353,9 @@ void* unit(void* info)
 		else
 			fp=o_fp;
 
+		if(fp == NULL)
+			goto fatal_error;
+
 		char* data_buf=eat_buf;
 		memcpy(data_buf,s_response->body->data,s_response->body->len);   // over eaten data.
 		status=s_response->body->len;
