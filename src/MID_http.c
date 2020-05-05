@@ -354,9 +354,32 @@ void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,cha
 
 	if(flag == SEND_RECEIVE)
 	{
-		struct mid_data* response = sock_read(mid_cli->sockfd, LONG_MAX);
+		struct mid_bag* bag = create_mid_bag();
+		struct mid_data* data = (struct mid_data*)malloc(sizeof(struct mid_data));
+		data->data = malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
+		data->len = MAX_TRANSACTION_SIZE;
 
-		return (void*)response;
+		int rd_return;
+		long rd_status;
+
+		for( ; ; )
+		{
+			rd_return = mid_socket_read(mid_cli, data, MID_MODE_SOCK_READ_AUTO_RETRY, &rd_status);
+
+			if(rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL && rd_return != MID_ERROR_SOCK_READ_RETRY && \
+					rd_return != MID_ERROR_SOCK_READ_NONE)
+				return NULL;
+
+			if(rd_status > 0)
+			{
+				data->len = rd_status;
+				place_mid_data(bag, data);
+				data->len = MAX_TRANSACTION_SIZE;
+			}
+
+			if(rd_return == MID_ERROR_SOCK_READ_NONE)
+				return flatten_mid_bag(bag);
+		}
 	}
 
 	return NULL;
@@ -380,9 +403,34 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 		return (void*)mid_cli->ssl;
 	}
 
-	struct mid_data* response=ssl_sock_read(mid_cli->ssl);
+	struct mid_bag* bag = create_mid_bag();
+	struct mid_data* data = (struct mid_data*)malloc(sizeof(struct mid_data));
+	data->data = malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
+	data->len = MAX_TRANSACTION_SIZE;
 
-	return (void*)response;
+	int rd_return;
+	long rd_status;
+
+	for( ; ; )
+	{
+		rd_return = mid_ssl_socket_read(mid_cli, data, MID_MODE_SOCK_READ_AUTO_RETRY, &rd_status);
+
+		if(rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL && rd_return != MID_ERROR_SOCK_READ_RETRY && \
+				rd_return != MID_ERROR_SOCK_READ_NONE)
+			return NULL;
+
+		if(rd_status > 0)
+		{
+			data->len = rd_status;
+			place_mid_data(bag, data);
+			data->len = MAX_TRANSACTION_SIZE;
+		}
+
+		if(rd_return == MID_ERROR_SOCK_READ_NONE)
+			return flatten_mid_bag(bag);
+	}
+
+	return NULL;
 }
 #else
 void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag)
