@@ -545,35 +545,3 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 	SSL_quit();
 #endif
 }
-
-struct mid_data* ssl_sock_read(SSL* ssl)
-{
-#ifdef LIBSSL_SANE
-	if(ssl==NULL)
-		return NULL;
-
-	struct mid_bag *bag=create_mid_bag();
-	struct mid_data *n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
-
-	n_data->data=(char*)malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
-
-	while(1)
-	{
-		int status=SSL_read(ssl,n_data->data,MAX_TRANSACTION_SIZE);
-
-		if(status>0)
-		{
-			n_data->len=status;
-			place_mid_data(bag, n_data);
-		}
-		else
-			break;
-	}
-
-	n_data=flatten_mid_bag(bag);
-
-	return n_data;
-#else
-	SSL_quit();
-#endif
-}

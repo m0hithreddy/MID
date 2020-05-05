@@ -42,6 +42,4 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 
 int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
 
-struct mid_data* ssl_sock_read(SSL* ssl);
-
 #endif /* MID_SSL_SOCKET_H_ */
