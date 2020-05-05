@@ -88,6 +88,4 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 
 int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
 
-struct mid_data* sock_read(int sockfd,long limit);
-
 #endif /* MID_SOCKET_H_ */
