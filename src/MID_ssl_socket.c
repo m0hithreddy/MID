@@ -13,6 +13,7 @@
 #include<sys/socket.h>
 #include<sys/select.h>
 #include<sys/types.h>
+#include<sys/time.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -36,12 +37,17 @@ int init_mid_ssl(struct mid_client* mid_cli)
 	if(mid_cli == NULL)
 		return 0;
 
+	int sock_args = -1, ssl_status = 0, return_status = 0;
+
 	const SSL_METHOD* method = TLS_client_method();
 
 	SSL_CTX* ctx = SSL_CTX_new(method);
 
 	if(ctx == NULL)
-		goto init_error;
+	{
+		return_status = 0;
+		goto init_return;
+	}
 
 	mid_cli->ssl = SSL_new(ctx);
 
@@ -50,15 +56,132 @@ int init_mid_ssl(struct mid_client* mid_cli)
 	if(mid_cli->hostname != NULL)
 		SSL_set_tlsext_host_name(mid_cli->ssl, mid_cli->hostname); // Hostname used during certificate verification
 
-	if(SSL_connect(mid_cli->ssl) < 0)
-		goto init_error;
+	/* Set the socket mode to non-blocking to implement SSL_connect timeout */
 
-	return 1;
+	sock_args = fcntl(mid_cli->sockfd, F_GETFL);
 
-	init_error:
+	if(sock_args < 0)
+	{
+		return_status = 0;
+		goto init_return;
+	}
 
-	mid_cli->ssl = NULL;
-	return 0;
+	if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
+	{
+		return_status = 0;
+		goto init_return;
+	}
+
+	/* Start SSL_connect procedure */
+
+	ssl_status = SSL_connect(mid_cli->ssl);
+
+	if(ssl_status == 1)  // If success
+	{
+		return_status = 1;
+		goto init_return;
+	}
+
+	/* Timeout initializations */
+
+	struct timeval *timeo, tp_timeo;
+
+	if(mid_cli->io_timeout > 0)
+	{
+		timeo = (struct timeval*)malloc(sizeof(struct timeval));
+		timeo->tv_sec = mid_cli->io_timeout;
+		timeo->tv_usec = 0;
+	}
+	else
+		timeo = NULL;
+
+	/* Select initializations */
+
+	fd_set ms_set, tp_set;
+	FD_ZERO(&ms_set);
+	FD_SET(mid_cli->sockfd, &ms_set);
+
+	int maxfds = mid_cli->sockfd + 1;
+
+	/* Loop for non-blocking SSL_connect */
+
+	int ssl_err = 0, sl_status = 0;
+
+	for( ; ; )
+	{
+		if(ssl_status == 1)
+		{
+			return_status = 1;
+			goto init_return;
+		}
+		else if(ssl_status == 0)
+		{
+			return_status = 0;
+			goto init_return;
+		}
+
+		ssl_err = SSL_get_error(mid_cli->ssl, ssl_status);
+
+		if(ssl_err != SSL_ERROR_WANT_READ && ssl_err != SSL_ERROR_WANT_WRITE)
+		{
+			return_status = 0;
+			goto init_return;
+		}
+
+		select_procedure:
+
+		tp_set = ms_set;
+
+		sl_status = select(maxfds, ssl_err == SSL_ERROR_WANT_READ ? &tp_set : NULL, \
+				ssl_err == SSL_ERROR_WANT_WRITE ? &tp_set : NULL, NULL, \
+				timeo == NULL ? NULL : (tp_timeo = *timeo, &tp_timeo));   // Select descriptor or timeout.
+
+		if(sl_status == 0)  // Timeout.
+		{
+			return_status = 0;
+			goto init_return;
+		}
+		else if(sl_status < 0)  // Error in select.
+		{
+			if(errno == EINTR)  // retry select (timeout reset).
+				goto select_procedure;
+			else
+			{
+				return_status = 0;
+				goto init_return;
+			}
+		}
+
+		if(FD_ISSET(mid_cli->sockfd, &tp_set)) // socket descriptor ready.
+		{
+			ssl_status = SSL_connect(mid_cli->ssl);
+			continue;
+		}
+		else   // just in case.
+		{
+			return_status = 0;
+			goto init_return;
+		}
+	}
+
+	init_return:
+
+	if(sock_args >= 0)
+	{
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
+			return_status = 0;
+	}
+
+	if(return_status == 0)
+	{
+		if(ssl_status == 1)
+			close_mid_ssl(mid_cli);
+
+		if(mid_cli->ssl != NULL)
+			free_mid_ssl(mid_cli);
+	}
+
+	return return_status;
 #else
 	SSL_quit();
 #endif
@@ -68,7 +191,7 @@ int init_mid_ssl(struct mid_client* mid_cli)
 int close_mid_ssl(struct mid_client* mid_cli)
 {
 #ifdef LIBSSL_SANE
-	if(mid_cli == NULL)
+	if(mid_cli == NULL || mid_cli->ssl == NULL)
 		return 0;
 
 	int ssl_status = SSL_shutdown(mid_cli->ssl);   // May not actually shutdown for non-blocking sockets.
@@ -85,7 +208,7 @@ int close_mid_ssl(struct mid_client* mid_cli)
 void free_mid_ssl(struct mid_client* mid_cli)
 {
 #ifdef LIBSSL_SANE
-	if(mid_cli == NULL)
+	if(mid_cli == NULL || mid_cli->ssl == NULL)
 		return;
 
 	SSL_free(mid_cli->ssl);
