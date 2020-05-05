@@ -1165,7 +1165,7 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --max-redirects x                         -R x                     At max x HTTP redirects are followed. \n");
 	fprintf(stderr,"   --max-tcp-syn-retransmits x               -sr x                    At max x TCP SYNs are retransmitted. \n");
 	fprintf(stderr,"   --unit-sleep-time t                       -us t                    Download unit sleeps for t seconds before retrying. \n");
-	fprintf(stderr,"   --io-timeout t                            -io t                    Set an I/O timeout of t seconds. \n");
+	fprintf(stderr,"   --io-timeout t                            -io t                    Set connect and I/O timeout of t seconds. \n");
 	fprintf(stderr,"   --progress-update-time t                  -pu t                    Progress information updates after evert t seconds. \n");
 	fprintf(stderr,"   --detailed-progress                       -dp                      Show detailed download progress. \n");
 	fprintf(stderr,"   --force-resume                            -fr                      Skip the checks and start the download. \n");
