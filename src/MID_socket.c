@@ -126,14 +126,23 @@ int init_mid_client(struct mid_client* mid_cli)
 
 			/* Bind to the interface */
 
-			struct sockaddr_in cli_addr;
-			memset(&cli_addr,0,sizeof(struct sockaddr_in));
+			struct sockaddr_storage cli_addr;
+			memset(&cli_addr,0,sizeof(struct sockaddr_in));  // Initialize the client sockaddr structure.
 
-			cli_addr.sin_family=rp->ai_family;   // Initialize the client side sockaddr_in
-			cli_addr.sin_port=htons(0);
-			inet_pton(rp->ai_family,mid_cli->if_addr,&cli_addr.sin_addr);
+			cli_addr.ss_family = rp->ai_family;   // Set family.
 
-			if(bind(mid_cli->sockfd,(struct sockaddr*)&cli_addr,sizeof(struct sockaddr_in)) != 0)   // call the bind
+			if(rp->ai_family == AF_INET)   // Set port.
+				((struct sockaddr_in*)&cli_addr)->sin_port = htons(0);
+			else if(rp->ai_family == AF_INET6)
+				((struct sockaddr_in6*)&cli_addr)->sin6_port = htons(0);
+			else
+				goto next;
+
+			inet_pton(rp->ai_family, mid_cli->if_addr, rp->ai_family == AF_INET ? \
+					(void*)(&((struct sockaddr_in*)&cli_addr)->sin_addr) : \
+					(void*)(&((struct sockaddr_in6*)&cli_addr)->sin6_addr));  // Set IPv{4, 6} address.
+
+			if(bind(mid_cli->sockfd, (struct sockaddr*)&cli_addr, sizeof(struct sockaddr_storage)) != 0)   // call the bind
 				goto next;
 		}
 

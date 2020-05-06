@@ -182,6 +182,8 @@ void* memndup(void* src,long n_bytes)
 }
 #endif
 
+/* FIX ME :( */
+
 hashmap* init_hashmap()
 {
 	return (hashmap*)create_mid_bag();
@@ -212,10 +214,12 @@ int insert_pair(hashmap* map,struct hash_token* key,struct hash_token* value)
 	}
 
 	append_mid_pocket(map,key->len);
-	memcpy(map->end,key->token,key->len);
+	memcpy(map->end->data,key->token,key->len);
+	map->end->len = key->len;
 
 	append_mid_pocket(map,value->len);
-	memcpy(map->end,value->token,value->len);
+	memcpy(map->end->data,value->token,value->len);
+	map->end->len = value->len;
 
 	return 1;
 }

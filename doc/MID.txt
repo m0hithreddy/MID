@@ -29,7 +29,9 @@ OPTIONS
    --max-redirects x                      -R x                  At max x HTTP redirects are followed.
    --max-tcp-syn-retransmits x            -sr x                 At max x TCP SYNs are retransmitted, when intiating a TCP connection.
    --unit-sleep-time t                    -us t                 Download unit sleeps for t seconds before retrying.
-   --io-timeout t                         -io t                 Set connect and I/O timeout of t seconds
+   --io-timeout t                         -io t                 Set connect and I/O timeout of t seconds.
+   --ipv4                                 -4                    Use IPv4 address scheme.
+   --ip6                                  -6                    Use IPv6 address scheme.
    --progress-update-time t               -pu t                 Progress information updates after evert t seconds.
    --detailed-progress                    -dp                   Show detailed download progress.
    --force-resume                         -fr                   Skip the checks and start the download.

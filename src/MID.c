@@ -183,12 +183,23 @@ int main(int argc, char **argv)
 	// For each network interface check whether server is accessible
 
 	long content_length=-1;
+	hashmap* ifs_used = init_hashmap();
+	struct hash_token if_token;
 
 	for (int i = 0; net_if[i]!=NULL ; i++)
 	{
 		s_request->hostip=NULL;
 
-		if(net_if[i]->family!=AF_INET)
+		if((net_if[i]->family != AF_INET && net_if[i]->family != AF_INET6) || \
+				(net_if[i]->family == AF_INET && args->ipv4 != 1) || \
+				(net_if[i]->family == AF_INET6 && args->ipv6 != 1))
+			continue;
+
+		if_token.token = net_if[i]->name;
+		if_token.len  = strlen(net_if[i]->name);
+
+		if(get_value(ifs_used, &if_token) != NULL)   /* Interface already passed the test,\
+		 include only once (IPv4 or IPv6). */
 			continue;
 
 		/* Initiate struct mid_client */
@@ -273,6 +284,11 @@ int main(int argc, char **argv)
 		net_if_data->len=sizeof(struct mid_interface);
 
 		place_mid_data(net_if_bag,net_if_data);
+
+		if_token.token = net_if[i]->name;
+		if_token.len = strlen(net_if[i]->name);
+
+		insert_pair(ifs_used, &if_token, &if_token);
 	}
 
 	if(gl_s_response==NULL)

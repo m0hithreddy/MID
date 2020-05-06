@@ -57,6 +57,8 @@ struct mid_args
 	int verbose_flag;
 	int vverbose_flag ;
 	int surpass_root_check;
+	int ipv4;
+	int ipv6;
 };
 
 void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag);

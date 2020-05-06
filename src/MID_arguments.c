@@ -252,6 +252,30 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 		args->io_timeout=atol(value);
 	}
 
+	else if(!strcmp(key, "ipv4"))
+	{
+		if(atol(value) <= 0)
+		{
+			args->ipv4 = 0;
+		}
+		else
+		{
+			args->ipv4 = 1;
+		}
+	}
+
+	else if(!strcmp(key, "ipv6"))
+	{
+		if(atol(value) <= 0)
+		{
+			args->ipv6 = 0;
+		}
+		else
+		{
+			args->ipv6 = 1;
+		}
+	}
+
 	else if(!strcmp(key,"progress-update-time"))
 	{
 		args->progress_update_time=atol(value);
@@ -872,6 +896,20 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 			counter++;
 		}
 
+		else if(!strcmp(argv[counter], "--ipv4") || !strcmp(argv[counter], "-4")) // --ipv4 || -4
+		{
+			args->ipv4 = 1;
+
+			counter++;
+		}
+
+		else if(!strcmp(argv[counter], "--ipv6") || !strcmp(argv[counter], "-6")) // --ipv6 || -6
+		{
+			args->ipv6 = 1;
+
+			counter++;
+		}
+
 		else if(!strcmp(argv[counter],"--progress-update-time") || !strcmp(argv[counter],"-pu")) // --progress-update-time || -pu
 		{
 			char* value=NULL;
@@ -1138,6 +1176,14 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 		args->custom_headers=custom_headers;
 	}
 
+	// IPv4 and IPV6 flags check
+
+	if(args->ipv4 == 0 && args->ipv6 == 0)
+	{
+		args->ipv4 = MID_DEFAULT_IPV4_SCHEME;
+		args->ipv6 = MID_DEFAULT_IPV6_SCHEME;
+	}
+
 	return args;
 }
 
@@ -1166,6 +1212,8 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"   --max-tcp-syn-retransmits x               -sr x                    At max x TCP SYNs are retransmitted. \n");
 	fprintf(stderr,"   --unit-sleep-time t                       -us t                    Download unit sleeps for t seconds before retrying. \n");
 	fprintf(stderr,"   --io-timeout t                            -io t                    Set connect and I/O timeout of t seconds. \n");
+	fprintf(stderr,"   --ipv4                                    -4                       Use IPv4 address scheme. \n");
+	fprintf(stderr,"   --ipv6                                    -6                       Use IPv6 address scheme. \n");
 	fprintf(stderr,"   --progress-update-time t                  -pu t                    Progress information updates after evert t seconds. \n");
 	fprintf(stderr,"   --detailed-progress                       -dp                      Show detailed download progress. \n");
 	fprintf(stderr,"   --force-resume                            -fr                      Skip the checks and start the download. \n");
