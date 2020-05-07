@@ -4,8 +4,6 @@
  
 -> Support for option -n taking per interface connections limit. 
 
--> IPV6 support
-
 -> Continue Download if some interfaces fail
 
 -> Creating GUI
