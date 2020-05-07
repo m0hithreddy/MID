@@ -192,7 +192,9 @@ void* unit(void* info)
 
 		int maxfds=sigfd > sockfd ? sigfd+1 : sockfd+1,s_ret;
 
-		while(1)
+		int rd_return;
+		long rd_status;
+		for( ; ; )
 		{
 			t_set=m_set;
 			t_time=m_time;
@@ -211,65 +213,48 @@ void* unit(void* info)
 				read(sigfd,sigbuf,sizeof(struct signalfd_siginfo));
 				break;
 			}
-
-			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)  // if non encrypted socket.
+			else if(FD_ISSET(sockfd, &t_set))
 			{
-				status=read(sockfd,eat_buf,MAX_TRANSACTION_SIZE);
+				n_eat_buf->data = eat_buf;
+				n_eat_buf->len = MAX_TRANSACTION_SIZE;
 
-				if(status<0)
-				{
-					if(errno==EWOULDBLOCK)
-						continue;
-				}
-			}
+				if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
+					rd_return = mid_socket_read(mid_cli, n_eat_buf, \
+							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);
 #ifdef LIBSSL_SANE
-			else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS) // encrypted socket.
-			{
-				status=SSL_read(ssl,eat_buf,MAX_TRANSACTION_SIZE);
-
-				if(status<0)
-				{
-					int ssl_err=SSL_get_error(ssl,status);
-
-					if(ssl_err==SSL_ERROR_WANT_READ || SSL_ERROR_WANT_WRITE)  // retry the call.
-						continue;
-					else if(ssl_err==SSL_ERROR_SYSCALL) // EOF occured.
-					{
-						int rel_err=ERR_get_error();  // check if any real error occured.
-
-						if(rel_err==0)
-							status=0;
-						else
-							status=-1;
-					}
-					else if(ssl_err==SSL_ERROR_ZERO_RETURN)  // TLS connection closed, may be transport is still up.
-						status=0;
-					else
-						status=-1;
-				}
-			}
+				else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+					rd_return = mid_ssl_socket_read(mid_cli, n_eat_buf, \
+							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);
 #endif
-			else    // protocol unknown
+				else
+					mid_protocol_quit(mid_cli);
+
+				if(rd_return != MID_ERROR_SOCK_READ_NONE && rd_return != MID_ERROR_SOCK_READ_RETRY && \
+						rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL)
+					goto self_repair;
+
+				if(rd_status > 0)
+				{
+					n_eat_buf->data = eat_buf;
+					n_eat_buf->len = rd_status;
+
+					place_mid_data(eat_bag, n_eat_buf);
+
+					struct mid_data* tmp_n_data=flatten_mid_bag(eat_bag);
+
+					if(strlocate(tmp_n_data->data, "\r\n\r\n", 0, \
+							tmp_n_data->len-1) != NULL) // read until crlfcrlf is encountered.
+						break;
+				}
+
+				if(rd_return == MID_ERROR_SOCK_READ_NONE)
+					break;
+			}
+			else
 				goto fatal_error;
-
-			if(status<=0)
-				break;
-
-			n_eat_buf->data=eat_buf;
-			n_eat_buf->len=status;
-
-			place_mid_data(eat_bag,n_eat_buf);
-
-			struct mid_data* tmp_n_data=flatten_mid_bag(eat_bag);
-
-			if(strlocate(tmp_n_data->data,"\r\n\r\n",0,tmp_n_data->len-1)!=NULL) // read until crlfcrlf is encountered.
-				break;
 		}
 
 		unit_quit();
-
-		if(status<0)
-			goto self_repair;
 
 		n_eat_buf=flatten_mid_bag(eat_bag);
 
@@ -356,6 +341,7 @@ void* unit(void* info)
 		if(fp == NULL)
 			goto fatal_error;
 
+		struct mid_data* n_data_buf = n_eat_buf;
 		char* data_buf=eat_buf;
 		memcpy(data_buf,s_response->body->data,s_response->body->len);   // over eaten data.
 		status=s_response->body->len;
@@ -377,7 +363,9 @@ void* unit(void* info)
 		int en_status=EN_OK,f_error=0;
 		long rem_download=0,wr_status=0;
 
-		while(1) // download data...
+		rd_return = MID_ERROR_SOCK_READ_RETRY;
+
+		for( ; ; ) // download data...
 		{
 
 			pthread_mutex_lock(&unit_info->lock);
@@ -428,6 +416,9 @@ void* unit(void* info)
 
 			read_socket:
 
+			if(rd_return == MID_ERROR_SOCK_READ_NONE)
+				break;
+
 			t_set=m_set;
 			t_time=m_time;
 			s_ret=select(maxfds,&t_set,NULL,NULL,&t_time);  // continue when fd ready or timeout
@@ -445,53 +436,39 @@ void* unit(void* info)
 				read(sigfd,sigbuf,sizeof(struct signalfd_siginfo));
 				break;
 			}
-
-			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
+			else if(FD_ISSET(sockfd, &t_set))
 			{
-				status=read(sockfd,data_buf,MAX_TRANSACTION_SIZE);
+				n_data_buf->data = data_buf;
+				n_data_buf->len =  MAX_TRANSACTION_SIZE;
 
-				if(status<0)
-				{
-					if(errno==EWOULDBLOCK)
-						goto read_socket;
-				}
-			}
+				if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
+					rd_return = mid_socket_read(mid_cli, n_data_buf, \
+							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);
 #ifdef LIBSSL_SANE
-			else if(mid_cli->mid_protocol  == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-			{
-				status=SSL_read(ssl,data_buf,MAX_TRANSACTION_SIZE);
-
-				if(status<0)
-				{
-					int ssl_err=SSL_get_error(ssl,status);
-
-					if(ssl_err==SSL_ERROR_WANT_READ || SSL_ERROR_WANT_WRITE)
-						goto read_socket;
-					else if(ssl_err==SSL_ERROR_SYSCALL)
-					{
-						int rel_err=ERR_get_error();
-
-						if(rel_err==0)
-							status=0;
-						else
-							status=-1;
-					}
-					else if(ssl_err==SSL_ERROR_ZERO_RETURN)
-						status=0;
-					else
-						status=-1;
-				}
-			}
+				else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+					rd_return = mid_ssl_socket_read(mid_cli, n_data_buf, \
+							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);
 #endif
-			else    // protocol unknown
+				else
+					mid_protocol_quit(mid_cli);
+
+				if(rd_return != MID_ERROR_SOCK_READ_NONE && rd_return != MID_ERROR_SOCK_READ_RETRY && \
+						rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL)
+					break;
+
+				if(rd_status > 0)
+				{
+					status = rd_status;
+					data_buf = n_eat_buf->data;
+				}
+				else
+					goto read_socket;
+			}
+			else
 			{
 				f_error = 1;
 				break;
 			}
-
-			if(status<=0)
-				break;
-
 		}
 
 		/* End of the download make unit ready for handling next download or exit */
