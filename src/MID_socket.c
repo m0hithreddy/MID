@@ -127,7 +127,7 @@ int init_mid_client(struct mid_client* mid_cli)
 			/* Bind to the interface */
 
 			struct sockaddr_storage cli_addr;
-			memset(&cli_addr,0,sizeof(struct sockaddr_in));  // Initialize the client sockaddr structure.
+			memset(&cli_addr, 0, sizeof(struct sockaddr_storage));  // Initialize the client sockaddr structure.
 
 			cli_addr.ss_family = rp->ai_family;   // Set family.
 
