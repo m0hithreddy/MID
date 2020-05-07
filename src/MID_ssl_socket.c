@@ -268,14 +268,15 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 
 	/* Fetch the data */
 
-	int return_status = MID_ERROR_SOCK_WRITE_NONE, ssl_err = SSL_ERROR_NONE, \
+	int return_status = MID_ERROR_SOCK_WRITE_NONE, ssl_err = SSL_ERROR_WANT_WRITE, \
 			rel_err = 0;
 
 	for( ;  ; )
 	{
 
 		tp_set = wr_set;
-		sl_status = select(maxfds, NULL, &tp_set, NULL,\
+		sl_status = select(maxfds, ssl_err == SSL_ERROR_WANT_READ ? &tp_set : NULL, \
+				ssl_err == SSL_ERROR_WANT_WRITE ? &tp_set : NULL, NULL,\
 				wr_time == NULL ? NULL : (tp_time = *wr_time, &tp_time));  // Select the descriptor or timeout.
 
 		if(sl_status < 0)  // Error reported by select.
@@ -351,7 +352,7 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 		if(wr_counter < m_data->len)  // If fewer bytes are transfered. Both [non-]block sockets.
 		{
 			if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)  // Act as caller requested.
-				continue;
+				goto auto_retry;
 			else
 			{
 				return_status = MID_ERROR_SOCK_WRITE_RETRY;
@@ -363,6 +364,10 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 
 		return_status = MID_ERROR_SOCK_WRITE_NONE;
 		goto write_return;
+
+		auto_retry:
+
+		ssl_err = SSL_ERROR_WANT_WRITE;
 	}
 
 	/* Return procedures */
@@ -434,13 +439,14 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 
 	/* Fetch the data */
 
-	int return_status = MID_ERROR_SOCK_READ_NONE, ssl_err = SSL_ERROR_NONE,\
+	int return_status = MID_ERROR_SOCK_READ_NONE, ssl_err = SSL_ERROR_WANT_READ,\
 			rel_err = 0;
 
 	for( ;  ; )
 	{
 		tp_set = rd_set;
-		sl_status = select(maxfds, &tp_set, NULL, NULL,\
+		sl_status = select(maxfds, ssl_err == SSL_ERROR_WANT_READ ? &tp_set : NULL, \
+				ssl_err == SSL_ERROR_WANT_WRITE ? &tp_set : NULL, NULL,\
 				rd_time == NULL ? NULL : (tp_time = *rd_time, &tp_time));  // Select the descriptor or timeout.
 
 		if(sl_status < 0)  // Error reported by select.
@@ -520,12 +526,16 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 		}
 
 		if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)  // After reading, act as user requested. Both [non-]block sockets.
-			continue;
+			goto auto_retry;
 		else
 		{
 			return_status = MID_ERROR_SOCK_READ_RETRY;
 			goto read_return;
 		}
+
+		auto_retry:
+
+		ssl_err = SSL_ERROR_WANT_READ;
 	}
 
 	/* Return procedures */
