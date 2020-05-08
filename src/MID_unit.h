@@ -39,13 +39,11 @@
 	{\
 		if(unit_info->quit)\
 		{\
-			if(sockfd>=0)\
-			{\
-				close(sockfd);\
-			}\
-			if(sigfd>=0)\
+			free_mid_client(&mid_cli);\
+			if(sigfd >= 0)\
 			{\
 				close(sigfd);\
+				sigfd = -1;\
 			}\
 			return NULL;\
 		}\

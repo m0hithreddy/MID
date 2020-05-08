@@ -34,11 +34,11 @@ void* unit(void* info)
 
 	struct unit_info* unit_info = (struct unit_info*)info;
 
+	int signo;
+
 	long retries_count = 0;
-	int signo, sockfd;
-#ifdef LIBSSL_SANE
-	SSL* ssl;
-#endif
+
+	struct mid_client* mid_cli;
 
 	struct timespec sleep_time;
 	sleep_time.tv_nsec = 0;
@@ -137,7 +137,6 @@ void* unit(void* info)
 
 		/* Setup socket [and ssl] */
 
-		struct mid_client* mid_cli;
 		struct parsed_url* purl = parse_url(unit_info->s_request->url);
 
 		mid_cli = sig_create_mid_client(unit_info->mid_if, purl, &unit_info->sync_mask);
@@ -148,16 +147,12 @@ void* unit(void* info)
 
 		unit_quit();
 
-		if(mid_cli->sockfd < 0)  // socket checks
+		if(mid_cli->sockfd < 0)  // Socket check
 			goto self_repair;
-
-		sockfd = mid_cli->sockfd;
 
 #ifdef LIBSSL_SANE
-		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS && mid_cli->ssl == NULL)  // ssl checks
+		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS && mid_cli->ssl == NULL)  // SSL check
 			goto self_repair;
-
-		ssl = mid_cli->ssl;
 #endif
 
 		/* Send HTTP[S] request */
@@ -185,12 +180,12 @@ void* unit(void* info)
 
 			/* Make socket non-blocking */
 
-		int sock_flags = fcntl(sockfd, F_GETFL);
+		int sock_flags = fcntl(mid_cli->sockfd, F_GETFL);
 
 		if(sock_flags < 0)
 			goto self_repair;
 
-		if(fcntl(sockfd, F_SETFL, sock_flags | O_NONBLOCK) < 0)
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_flags | O_NONBLOCK) < 0)
 			goto self_repair;
 
 			/* Select variables initializations */
@@ -199,9 +194,9 @@ void* unit(void* info)
 
 		FD_ZERO(&m_set);
 		FD_SET(sigfd, &m_set);
-		FD_SET(sockfd, &m_set);
+		FD_SET(mid_cli->sockfd, &m_set);
 
-		int maxfds=sigfd > sockfd ? sigfd+1 : sockfd+1,s_ret;
+		int maxfds=sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1, s_ret;
 
 			/* Timeout variables initializations */
 
@@ -238,7 +233,7 @@ void* unit(void* info)
 
 				break;
 			}
-			else if(FD_ISSET(sockfd, &t_set))  // If socket is set.
+			else if(FD_ISSET(mid_cli->sockfd, &t_set))  // If socket is set.
 			{
 
 				rsp_data.len = MAX_TRANSACTION_SIZE;
@@ -345,11 +340,7 @@ void* unit(void* info)
 				}
 			}
 
-			if(sockfd > 0)
-			{
-				close(sockfd);
-				sockfd = -1;
-			}
+			free_mid_client(&mid_cli);
 
 			unit_info->s_request = tmp_s_request;   // Assign new s_request structure and retry the HTTP procedures.
 
@@ -506,7 +497,7 @@ void* unit(void* info)
 
 				break;
 			}
-			else if(FD_ISSET(sockfd, &t_set))  // If socket read.
+			else if(FD_ISSET(mid_cli->sockfd, &t_set))  // If socket read.
 			{
 				rsp_data.len =  MAX_TRANSACTION_SIZE;
 
@@ -581,11 +572,7 @@ void* unit(void* info)
 
 		signal_parent:
 
-		if(sockfd >= 0)
-		{
-			close(sockfd);
-			sockfd = -1;
-		}
+		free_mid_client(&mid_cli);
 
 		pthread_kill(unit_info->p_tid, SIGRTMIN);
 	}
@@ -594,11 +581,7 @@ void* unit(void* info)
 
 	self_repair:
 
-	if(sockfd >= 0)
-	{
-		close(sockfd);
-		sockfd = -1;
-	}
+	free_mid_client(&mid_cli);
 
 	pthread_mutex_lock(&unit_info->lock);
 
