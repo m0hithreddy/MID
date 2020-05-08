@@ -27,6 +27,7 @@
 #define MID_ERROR_SOCK_WRITE_ERROR 2
 #define MID_ERROR_SOCK_WRITE_INVAL 3
 #define MID_ERROR_SOCK_WRITE_TIMEOUT 4
+#define MID_ERROR_SOCK_WRITE_SIGRCVD 5
 
 #define MID_MODE_SOCK_READ_AUTO_RETRY 0
 #define MID_MODE_SOCK_READ_PARTIAL_READ 1
@@ -36,7 +37,8 @@
 #define MID_ERROR_SOCK_READ_ERROR 2
 #define MID_ERROR_SOCK_READ_INVAL 3
 #define MID_ERROR_SOCK_READ_TIMEOUT 4
-#define MID_ERROR_SOCK_READ_BUFFER_FULL 5
+#define MID_ERROR_SOCK_READ_SIGRCVD 5
+#define MID_ERROR_SOCK_READ_BUFFER_FULL 6
 
 
 #include"MID_structures.h"
@@ -44,6 +46,7 @@
 #include"url_parser.h"
 #include<netinet/in.h>
 #include<sys/socket.h>
+#include<signal.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -67,6 +70,7 @@ struct mid_client
 	char* hostip;
 	int mid_protocol;
 	long io_timeout;
+	sigset_t* sigmask;
 
 #ifdef LIBSSL_SANE
 	SSL* ssl;
@@ -74,7 +78,7 @@ struct mid_client
 
 };
 
-struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl);
+struct mid_client* sig_create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl, sigset_t* sigmask);
 
 int init_mid_client(struct mid_client* mid_cli);
 
@@ -89,5 +93,7 @@ void mid_protocol_quit(struct mid_client* mid_cli);
 int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
 
 int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mode, long* status);
+
+#define create_mid_client(var0, var1) sig_create_mid_client(var0, var1, NULL)
 
 #endif /* MID_SOCKET_H_ */

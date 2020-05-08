@@ -172,7 +172,10 @@ void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,cha
 
 void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag);
 
-void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct mid_interface* mid_if,long max_redirects,int flag);
+/* Follow HTTP redirects and return (even when incomplete) when signal pointed by sigmask is received */
+
+void* sig_follow_redirects(struct http_request* c_s_request, struct mid_data* response, struct mid_interface* mid_if, \
+		long max_redirects, int flag, sigset_t* sigmask);
 
 char* determine_filename(char* path,FILE** fp_ptr);
 
@@ -195,5 +198,7 @@ struct encoding_info* determine_encodings(char* encoding_str);
 #ifndef LIBSSL_SANE
 void https_quit();
 #endif
+
+#define follow_redirects(var0, var1, var2, var3, var4) sig_follow_redirects(var0, var1, var2, var3, var4, NULL)
 
 #endif /* MID_HTTP_H_ */

@@ -440,7 +440,8 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 }
 #endif
 
-void* follow_redirects(struct http_request* c_s_request,struct mid_data* response,struct mid_interface* mid_if,long max_redirects,int flag)
+void* sig_follow_redirects(struct http_request* c_s_request, struct mid_data* response, struct mid_interface* mid_if, \
+		long max_redirects, int flag, sigset_t* sigmask)
 {
 
 	if(response==NULL || response->data==NULL || response->len==0 || c_s_request==NULL)
@@ -468,7 +469,7 @@ void* follow_redirects(struct http_request* c_s_request,struct mid_data* respons
 		if(purl==NULL || !(!strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http")))  // If the redirection led to different scheme than HTTP[S]
 			return NULL;
 
-		struct mid_client* mid_cli=create_mid_client(mid_if,purl);
+		struct mid_client* mid_cli = sig_create_mid_client(mid_if, purl, sigmask);
 
 		if(!init_mid_client(mid_cli))
 			return NULL;

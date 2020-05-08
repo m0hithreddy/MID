@@ -14,6 +14,8 @@
 #include<sys/select.h>
 #include<sys/types.h>
 #include<sys/time.h>
+#include<sys/signalfd.h>
+#include<unistd.h>
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -227,28 +229,6 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 		return MID_ERROR_SOCK_WRITE_INVAL;
 	}
 
-	long wr_status = 0, wr_counter = 0;
-
-	/* Select initializations */
-
-	fd_set wr_set, tp_set;
-	FD_ZERO(&wr_set);
-	FD_SET(mid_cli->sockfd, &wr_set);
-
-	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
-
-	/* Timeout initializations */
-
-	struct timeval *wr_time, tp_time;
-
-	if(mid_cli->io_timeout > 0)
-	{
-		wr_time = (struct timeval*)malloc(sizeof(struct timeval));
-		wr_time->tv_sec = mid_cli->io_timeout;
-		wr_time->tv_usec  = 0;
-	}
-	else
-		wr_time = NULL;
 
 	/* Set the socket mode */
 
@@ -266,17 +246,68 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 			return MID_ERROR_SOCK_WRITE_ERROR;
 	}
 
+
+	/* Timeout initializations */
+
+	struct timeval *wr_time, tp_time;
+
+	if(mid_cli->io_timeout > 0)
+	{
+		wr_time = (struct timeval*)malloc(sizeof(struct timeval));
+		wr_time->tv_sec = mid_cli->io_timeout;
+		wr_time->tv_usec  = 0;
+	}
+	else
+		wr_time = NULL;
+
+
+	/* Select initializations */
+
+	fd_set wr_set, tw_set;
+	FD_ZERO(&wr_set);
+	FD_SET(mid_cli->sockfd, &wr_set);
+
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+
+	/* Signal mask initializations */
+
+	int sigfd = -1;
+	struct signalfd_siginfo sigbuf;
+
+	fd_set rd_set, tr_set;
+	FD_ZERO(&rd_set);
+
+	if(mid_cli->sigmask != NULL)
+	{
+		sigfd = signalfd(-1, mid_cli->sigmask, 0);
+
+		if(sigfd < 0)
+		{
+			status != NULL ? *status = 0 : 0;
+			return MID_ERROR_SOCK_WRITE_INVAL;
+		}
+
+		FD_SET(sigfd, &rd_set);
+
+		maxfds = sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1;
+	}
+
 	/* Fetch the data */
+
+	long wr_status = 0, wr_counter = 0;
 
 	int return_status = MID_ERROR_SOCK_WRITE_NONE, ssl_err = SSL_ERROR_WANT_WRITE, \
 			rel_err = 0;
 
 	for( ;  ; )
 	{
+		tr_set = rd_set;
 
-		tp_set = wr_set;
-		sl_status = select(maxfds, ssl_err == SSL_ERROR_WANT_READ ? &tp_set : NULL, \
-				ssl_err == SSL_ERROR_WANT_WRITE ? &tp_set : NULL, NULL,\
+		if(ssl_err == SSL_ERROR_WANT_READ)
+			FD_SET(mid_cli->sockfd, &tr_set);
+
+		sl_status = select(maxfds, (mid_cli->sigmask != NULL || ssl_err == SSL_ERROR_WANT_READ) ? &tr_set : NULL, \
+				ssl_err == SSL_ERROR_WANT_WRITE ? (tw_set = wr_set, &tw_set) : NULL, NULL,\
 				wr_time == NULL ? NULL : (tp_time = *wr_time, &tp_time));  // Select the descriptor or timeout.
 
 		if(sl_status < 0)  // Error reported by select.
@@ -300,6 +331,24 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 		else if(sl_status == 0)  // Timeout.
 		{
 			return_status = MID_ERROR_SOCK_WRITE_TIMEOUT;
+			goto write_return;
+		}
+
+		if(mid_cli->sigmask != NULL)
+		{
+			if(FD_ISSET(sigfd, &tr_set))  // Signal received.
+			{
+				read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
+
+				return_status = MID_ERROR_SOCK_WRITE_SIGRCVD;
+				goto write_return;
+			}
+		}
+
+		if(ssl_err == SSL_ERROR_WANT_READ ? !FD_ISSET(mid_cli->sockfd, &tr_set) : \
+				!FD_ISSET(mid_cli->sockfd, &tw_set))  // If socket is not set.
+		{
+			return_status = MID_ERROR_SOCK_WRITE_ERROR;
 			goto write_return;
 		}
 
@@ -380,6 +429,9 @@ int mid_ssl_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, in
 			return_status = MID_ERROR_SOCK_WRITE_ERROR;
 	}
 
+	if(mid_cli->sigmask != NULL && sigfd >= 0)  // If signal_fd opened then close.
+		close(sigfd);
+
 	status != NULL ? *status = wr_counter : 0;
 
 	return return_status;
@@ -398,29 +450,6 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 		return MID_ERROR_SOCK_READ_INVAL;
 	}
 
-	long rd_status = 0, rd_counter = 0;
-
-	/* Select initializations */
-
-	fd_set rd_set, tp_set;
-	FD_ZERO(&rd_set);
-	FD_SET(mid_cli->sockfd, &rd_set);
-
-	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
-
-	/* Timeout initializations */
-
-	struct timeval *rd_time, tp_time;
-
-	if(mid_cli->io_timeout > 0)
-	{
-		rd_time = (struct timeval*)malloc(sizeof(struct timeval));
-		rd_time->tv_sec = mid_cli->io_timeout;
-		rd_time->tv_usec  = 0;
-	}
-	else
-		rd_time = NULL;
-
 	/* Set the socket mode */
 
 	int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
@@ -437,16 +466,66 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 			return MID_ERROR_SOCK_READ_ERROR;
 	}
 
+	/* Timeout initializations */
+
+	struct timeval *rd_time, tp_time;
+
+	if(mid_cli->io_timeout > 0)
+	{
+		rd_time = (struct timeval*)malloc(sizeof(struct timeval));
+		rd_time->tv_sec = mid_cli->io_timeout;
+		rd_time->tv_usec  = 0;
+	}
+	else
+		rd_time = NULL;
+
+	/* Select initializations */
+
+	fd_set wr_set, tw_set;
+	FD_ZERO(&wr_set);
+	FD_SET(mid_cli->sockfd, &wr_set);
+
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+
+	/* Signal mask initializations */
+
+	int sigfd = -1;
+	struct signalfd_siginfo sigbuf;
+
+	fd_set rd_set, tr_set;
+	FD_ZERO(&rd_set);
+
+	if(mid_cli->sigmask != NULL)
+	{
+		sigfd = signalfd(-1, mid_cli->sigmask, 0);
+
+		if(sigfd < 0)
+		{
+			status != NULL ? *status = 0 : 0;
+			return MID_ERROR_SOCK_READ_INVAL;
+		}
+
+		FD_SET(sigfd, &rd_set);
+
+		maxfds = sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1;
+	}
+
 	/* Fetch the data */
+
+	long rd_status = 0, rd_counter = 0;
 
 	int return_status = MID_ERROR_SOCK_READ_NONE, ssl_err = SSL_ERROR_WANT_READ,\
 			rel_err = 0;
 
 	for( ;  ; )
 	{
-		tp_set = rd_set;
-		sl_status = select(maxfds, ssl_err == SSL_ERROR_WANT_READ ? &tp_set : NULL, \
-				ssl_err == SSL_ERROR_WANT_WRITE ? &tp_set : NULL, NULL,\
+		tr_set = rd_set;
+
+		if(ssl_err == SSL_ERROR_WANT_READ)
+			FD_SET(mid_cli->sockfd, &tr_set);
+
+		sl_status = select(maxfds, (ssl_err == SSL_ERROR_WANT_READ || mid_cli->sigmask != NULL) ? &tr_set : NULL, \
+				ssl_err == SSL_ERROR_WANT_WRITE ? (tw_set = wr_set, &tw_set) : NULL, NULL,\
 				rd_time == NULL ? NULL : (tp_time = *rd_time, &tp_time));  // Select the descriptor or timeout.
 
 		if(sl_status < 0)  // Error reported by select.
@@ -470,6 +549,24 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 		else if(sl_status == 0)  // Timeout.
 		{
 			return_status = MID_ERROR_SOCK_READ_TIMEOUT;
+			goto read_return;
+		}
+
+		if(mid_cli->sigmask != NULL)
+		{
+			if(FD_ISSET(sigfd, &tr_set))  // Signal received.
+			{
+				read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
+
+				return_status = MID_ERROR_SOCK_READ_SIGRCVD;
+				goto read_return;
+			}
+		}
+
+		if(ssl_err == SSL_ERROR_WANT_READ ? !FD_ISSET(mid_cli->sockfd, &tr_set) : \
+				!FD_ISSET(mid_cli->sockfd, &tw_set))  // If socket is not set.
+		{
+			return_status = MID_ERROR_SOCK_WRITE_ERROR;
 			goto read_return;
 		}
 
@@ -547,6 +644,9 @@ int mid_ssl_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
 			return_status = MID_ERROR_SOCK_READ_ERROR;
 	}
+
+	if(mid_cli->sigmask != NULL && sigfd >= 0)  // If signal_fd opened then close.
+		close(sigfd);
 
 	status != NULL ? *status = rd_counter : 0;  // Update status.
 

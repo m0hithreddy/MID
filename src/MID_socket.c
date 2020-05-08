@@ -26,8 +26,9 @@
 #include<sys/types.h>
 #include<sys/select.h>
 #include<sys/time.h>
+#include<sys/signalfd.h>
 
-struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl)
+struct mid_client* sig_create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl, sigset_t* sigmask)
 {
 	struct mid_client* mid_cli=calloc(1,sizeof(struct mid_client));
 
@@ -69,6 +70,7 @@ struct mid_client* create_mid_client(struct mid_interface* mid_if, struct parsed
 	mid_cli->sockfd = -1;
 	mid_cli->hostip = NULL;
 	mid_cli->io_timeout = args->io_timeout;
+	mid_cli->sigmask = sigmask;
 
 	if(!strcmp(purl->scheme,"http"))   // Mid protocol scheme.
 		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_HTTP;
@@ -357,21 +359,33 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 {
 
 	if(mid_cli == NULL || mid_cli->sockfd < 0 || m_data == NULL || \
-			m_data->data == NULL || m_data->len <=0 ) { // Invalid input.
+			m_data->data == NULL || m_data->len <=0 ) {  // Invalid input.
 
 		status != NULL ? *status = 0 : 0;
 		return MID_ERROR_SOCK_WRITE_INVAL;
 	}
 
-	long wr_status = 0, wr_counter = 0;
+	/* Set the socket mode */
 
-	/* Select initializations */
+	int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
 
-	fd_set wr_set, tp_set;
-	FD_ZERO(&wr_set);
-	FD_SET(mid_cli->sockfd, &wr_set);
+	if(sock_args < 0)
+	{
+		status != NULL ? *status = 0 : 0;
+		return MID_ERROR_SOCK_WRITE_INVAL;
+	}
 
-	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+	int no_block = sock_args & O_NONBLOCK;
+
+	if(!no_block) {  /* If socket is in blocking mode, in the worst situations the write call may get
+	blocked. So put the socket in non-blocking mode. */
+
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
+		{
+			status != NULL ? *status = 0 : 0;
+			return MID_ERROR_SOCK_WRITE_INVAL;
+		}
+	}
 
 	/* Timeout initializations */
 
@@ -386,31 +400,48 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 	else
 		wr_time = NULL;
 
-	/* Set the socket mode */
+	/* Select initializations */
 
-	int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
+	fd_set wr_set, tw_set;
+	FD_ZERO(&wr_set);
+	FD_SET(mid_cli->sockfd, &wr_set);
 
-	if(sock_args < 0)
-		return MID_ERROR_SOCK_WRITE_ERROR;
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
 
-	int no_block = sock_args & O_NONBLOCK;
+	/* Signal mask initializations */
 
-	if(!no_block) {  /* If socket is in blocking mode, in the worst situations the write call may get
-	blocked. So put the socket in non-blocking mode. */
+	int sigfd = -1;
+	struct signalfd_siginfo sigbuf;
+	fd_set rd_set, tr_set;
+	FD_ZERO(&rd_set);
 
-		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
-			return MID_ERROR_SOCK_WRITE_ERROR;
+	if(mid_cli->sigmask != NULL)
+	{
+		sigfd = signalfd(-1, mid_cli->sigmask, 0);
+
+		if(sigfd < 0)
+		{
+			status != NULL ? *status = 0 : 0;
+			return MID_ERROR_SOCK_WRITE_INVAL;
+		}
+
+		FD_SET(sigfd, &rd_set);
+
+		maxfds = sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1;
 	}
 
 	/* Fetch the data */
+
+	long wr_status = 0, wr_counter = 0;
 
 	int return_status = MID_ERROR_SOCK_WRITE_NONE;
 
 	for( ;  ; )
 	{
 
-		tp_set = wr_set;
-		sl_status = select(maxfds, NULL, &tp_set, NULL,\
+		tw_set = wr_set;
+
+		sl_status = select(maxfds, mid_cli->sigmask == NULL ? NULL : (tr_set = rd_set, &tr_set), &tw_set, NULL,\
 				wr_time == NULL ? NULL : (tp_time = *wr_time, &tp_time));  // Select the descriptor or timeout.
 
 		if(sl_status < 0)  // Error reported by select.
@@ -434,6 +465,23 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 		else if(sl_status == 0)  // Timeout.
 		{
 			return_status = MID_ERROR_SOCK_WRITE_TIMEOUT;
+			goto write_return;
+		}
+
+		if(mid_cli->sigmask != NULL)
+		{
+			if(FD_ISSET(sigfd, &tr_set))  // Signal received.
+			{
+				read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
+
+				return_status = MID_ERROR_SOCK_WRITE_SIGRCVD;
+				goto write_return;
+			}
+		}
+
+		if(!FD_ISSET(mid_cli->sockfd, &tw_set))  // If socket is not set.
+		{
+			return_status = MID_ERROR_SOCK_WRITE_ERROR;
 			goto write_return;
 		}
 
@@ -501,6 +549,9 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 			return_status = MID_ERROR_SOCK_WRITE_ERROR;
 	}
 
+	if(mid_cli->sigmask != NULL && sigfd >= 0)  // If signal_fd opened then close.
+		close(sigfd);
+
 	status != NULL ? *status = wr_counter : 0;
 
 	return return_status;
@@ -515,15 +566,27 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 		return MID_ERROR_SOCK_READ_INVAL;
 	}
 
-	long rd_status = 0, rd_counter = 0;
+	/* Set the socket mode */
 
-	/* Select initializations */
+	int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
 
-	fd_set rd_set, tp_set;
-	FD_ZERO(&rd_set);
-	FD_SET(mid_cli->sockfd, &rd_set);
+	if(sock_args < 0)
+	{
+		status != NULL ? *status = 0 : 0;
+		return MID_ERROR_SOCK_READ_INVAL;
+	}
 
-	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+	int no_block = sock_args & O_NONBLOCK;
+
+	if(!no_block) {  /* If socket is in blocking mode, in the worst situations the read call may get
+	blocked (Packets being dropped after select returns). So put the socket in non-blocking mode. */
+
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
+		{
+			status != NULL ? *status = 0 : 0;
+			return MID_ERROR_SOCK_READ_INVAL;
+		}
+	}
 
 	/* Timeout initializations */
 
@@ -538,30 +601,45 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 	else
 		rd_time = NULL;
 
-	/* Set the socket mode */
+	/* Select initializations */
 
-	int sock_args = fcntl(mid_cli->sockfd, F_GETFL);
+	fd_set rd_set, tr_set;
+	FD_ZERO(&rd_set);
+	FD_SET(mid_cli->sockfd, &rd_set);
 
-	if(sock_args < 0)
-		return MID_ERROR_SOCK_READ_ERROR;
+	int maxfds = mid_cli->sockfd + 1, sl_status = 0;
 
-	int no_block = sock_args & O_NONBLOCK;
+	/* Signal mask initializations */
 
-	if(!no_block) {  /* If socket is in blocking mode, in the worst situations the read call may get
-	blocked (Packets being dropped after select returns). So put the socket in non-blocking mode. */
+	int sigfd = -1;
+	struct signalfd_siginfo sigbuf;
 
-		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
-			return MID_ERROR_SOCK_READ_ERROR;
+	if(mid_cli->sigmask != NULL)
+	{
+		sigfd = signalfd(-1, mid_cli->sigmask, 0);
+
+		if(sigfd < 0)
+		{
+			status != NULL ? *status = 0 : 0;
+			return MID_ERROR_SOCK_READ_INVAL;
+		}
+
+		FD_SET(sigfd, &rd_set);
+
+		maxfds = sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1;
 	}
 
 	/* Fetch the data */
+
+	long rd_status = 0, rd_counter = 0;
 
 	int return_status = MID_ERROR_SOCK_READ_NONE;
 
 	for( ;  ; )
 	{
-		tp_set = rd_set;
-		sl_status = select(maxfds, &tp_set, NULL, NULL,\
+		tr_set = rd_set;
+
+		sl_status = select(maxfds, &tr_set, NULL, NULL,\
 				rd_time == NULL ? NULL : (tp_time = *rd_time, &tp_time));  // Select the descriptor or timeout.
 
 		if(sl_status < 0)  // Error reported by select.
@@ -585,6 +663,23 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 		else if(sl_status == 0)  // Timeout.
 		{
 			return_status = MID_ERROR_SOCK_READ_TIMEOUT;
+			goto read_return;
+		}
+
+		if(mid_cli->sigmask != NULL)
+		{
+			if(FD_ISSET(sigfd, &tr_set))  // Signal received.
+			{
+				read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
+
+				return_status = MID_ERROR_SOCK_READ_SIGRCVD;
+				goto read_return;
+			}
+		}
+
+		if(!FD_ISSET(mid_cli->sockfd, &tr_set))  // If socket is not set.
+		{
+			return_status = MID_ERROR_SOCK_READ_ERROR;
 			goto read_return;
 		}
 
@@ -660,6 +755,9 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
 			return_status = MID_ERROR_SOCK_READ_ERROR;
 	}
+
+	if(mid_cli->sigmask != NULL && sigfd >= 0)  // If signal_fd opened then close.
+		close(sigfd);
 
 	status != NULL ? *status = rd_counter : 0;  // Update status.
 
