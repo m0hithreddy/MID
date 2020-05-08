@@ -303,26 +303,27 @@ int close_mid_client(struct mid_client* mid_cli)
 	return return_status;
 }
 
-int free_mid_client(struct mid_client* mid_cli)
+int free_mid_client(struct mid_client** mid_cli)
 {
-	if(mid_cli == NULL)
+	if(mid_cli == NULL || *mid_cli == NULL)
 		return 0;
 
 	/* Close the connections and Free SSL structure (If set) */
 
-	int return_status = close_mid_client(mid_cli);
+	int return_status = close_mid_client(*mid_cli);
 
 	/* Free the pointers */
 
-	free(mid_cli->if_name);
-	free(mid_cli->if_addr);
-	free(mid_cli->hostname);
-	free(mid_cli->port);
-	free(mid_cli->hostip);
+	free((*mid_cli)->if_name);
+	free((*mid_cli)->if_addr);
+	free((*mid_cli)->hostname);
+	free((*mid_cli)->port);
+	free((*mid_cli)->hostip);
 
 	/* Free the struct */
 
-	free(mid_cli);
+	free(*mid_cli);
+	*mid_cli = NULL;
 
 	return return_status;
 }
