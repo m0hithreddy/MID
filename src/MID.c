@@ -206,7 +206,7 @@ int main(int argc, char **argv)
 
 		struct mid_client* mid_cli = create_mid_client(net_if[i], purl);
 
-		if(!init_mid_client(mid_cli))
+		if(init_mid_client(mid_cli) != MID_ERROR_NONE)
 			continue;
 
 		s_request->hostip=mid_cli->hostip;

@@ -471,7 +471,7 @@ void* sig_follow_redirects(struct http_request* c_s_request, struct mid_data* re
 
 		struct mid_client* mid_cli = sig_create_mid_client(mid_if, purl, sigmask);
 
-		if(!init_mid_client(mid_cli))
+		if(init_mid_client(mid_cli) != MID_ERROR_NONE)
 			return NULL;
 
 		s_request->host=purl->host;    // Set the new s_request fields

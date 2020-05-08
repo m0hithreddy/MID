@@ -143,17 +143,12 @@ void* unit(void* info)
 
 		unit_quit();
 
-		init_mid_client(mid_cli); // initialize socket [and ssl].
+		int init_status = init_mid_client(mid_cli); // initialize socket [and ssl].
 
 		unit_quit();
 
-		if(mid_cli->sockfd < 0)  // Socket check
+		if(init_status != MID_ERROR_NONE)
 			goto self_repair;
-
-#ifdef LIBSSL_SANE
-		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS && mid_cli->ssl == NULL)  // SSL check
-			goto self_repair;
-#endif
 
 		/* Send HTTP[S] request */
 

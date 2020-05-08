@@ -88,12 +88,17 @@ struct mid_client* sig_create_mid_client(struct mid_interface* mid_if, struct pa
 
 int init_mid_client(struct mid_client* mid_cli)
 {
+	int return_status = MID_ERROR_NONE, sigfd = -1;  // Variables used by init_error.
+
 	if(mid_cli == NULL)
-		return 0;
+	{
+		return_status = MID_ERROR_INVAL;
+		goto init_error;
+	}
 
-	struct addrinfo hints,*result,*rp;
+	struct addrinfo hints, *result, *rp;
 
-	memset(&hints,0,sizeof(struct addrinfo));   // Set the hints as caller requested
+	memset(&hints, 0, sizeof(struct addrinfo));   // Set the hints as caller requested
 	hints.ai_family = mid_cli->family;
 	hints.ai_socktype = mid_cli->type;
 	hints.ai_flags = AI_ADDRCONFIG;
@@ -101,14 +106,13 @@ int init_mid_client(struct mid_client* mid_cli)
 
 	int s = getaddrinfo(mid_cli->hostname, mid_cli->port, &hints, &result);   // Call getaddrinfo
 	if (s != 0)
+	{
+		return_status = MID_ERROR_DNS;
 		goto init_error;
+	}
 
 	for (rp = result; rp != NULL; rp = rp->ai_next)
 	{
-#ifdef LIBSSL_SANE
-		int ssl_status = 0;
-#endif
-
 		mid_cli->sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
 		if(mid_cli->sockfd == -1)
@@ -179,18 +183,39 @@ int init_mid_client(struct mid_client* mid_cli)
 			else
 				timeo = NULL;
 
-			/* Select descriptor or timeout */
+			/* Select variables initializations */
 
-			int sl_status = 0;
+			fd_set rd_set, wr_set, tr_set, tw_set;
+
+			FD_ZERO(&rd_set);
+			FD_SET(mid_cli->sockfd, &rd_set);
+			wr_set = rd_set;
+
+			int maxfds = mid_cli->sockfd + 1, sl_status = 0;
+
+			/* Signal mask initializations */
+
+			struct signalfd_siginfo sigbuf;
+
+			if(mid_cli->sigmask != NULL)
+			{
+				sigfd = signalfd(-1, mid_cli->sigmask, 0);
+
+				if(sigfd < 0)
+					goto next;
+
+				FD_SET(sigfd, &rd_set);
+				maxfds = sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1;
+			}
+
+			/* Select descriptor or timeout */
 
 			for( ; ; )
 			{
-				fd_set rd_set, wr_set;
-				FD_ZERO(&rd_set);
-				FD_SET(mid_cli->sockfd, &rd_set);
-				wr_set = rd_set;
+				tr_set = rd_set;
+				tw_set = wr_set;
 
-				sl_status = select(mid_cli->sockfd + 1, &rd_set, &wr_set, NULL, \
+				sl_status = select(maxfds, &tr_set, &tw_set, NULL, \
 						timeo == NULL ? NULL : (tp_timeo = *timeo , &tp_timeo));
 
 				if(sl_status == 0)  // Timeout
@@ -199,8 +224,19 @@ int init_mid_client(struct mid_client* mid_cli)
 				{
 					if(errno == EINTR)  // interrupted, retry select (timeout resets).
 						continue;
-					else  // Fatal error, in select.
+					else  // Fatal error in select.
 						goto next;
+				}
+
+				if(mid_cli->sigmask != NULL)
+				{
+					if(FD_ISSET(sigfd, &tr_set))   // If signal pointed by sigmask rcvd;
+					{
+						read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
+
+						return_status = MID_ERROR_SIGRCVD;
+						goto init_error;
+					}
 				}
 
 				if(FD_ISSET(mid_cli->sockfd, &rd_set) || FD_ISSET(mid_cli->sockfd, &wr_set))  // connect success or fail.
@@ -215,7 +251,7 @@ int init_mid_client(struct mid_client* mid_cli)
 
 					goto success;  // Connect success.
 				}
-				else  // just in case
+				else  // If no descriptor is set (just in case).
 					goto next;
 			}
 		}
@@ -230,7 +266,7 @@ int init_mid_client(struct mid_client* mid_cli)
 #ifdef LIBSSL_SANE
 		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 		{
-			if((ssl_status = init_mid_ssl(mid_cli)) == 0)
+			if(init_mid_ssl(mid_cli) == 0)
 				goto next;
 		}
 #endif
@@ -248,27 +284,48 @@ int init_mid_client(struct mid_client* mid_cli)
 			inet_ntop(rp->ai_family, rp->ai_addr, mid_cli->hostip, rp->ai_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
 		}
 
+		if(sigfd >= 0)  // Close sigfd if set.
+		{
+			close(sigfd);
+			sigfd = -1;
+		}
+
 		break;
 
 		next:    /* Try the next addrinfo structure*/
 
 		close_mid_client(mid_cli);
+
+		if(sigfd >= 0)  // Close sigfd if set.
+		{
+			close(sigfd);
+			sigfd = -1;
+		}
 	}
 
 	freeaddrinfo(result);
 
 	if (rp == NULL)      // No address succeeded, return.
+	{
+		return_status = MID_ERROR_FATAL;
 		goto init_error;
+	}
 
-	return 1;
+	return MID_ERROR_NONE;
 
 	init_error:
+
+	if(sigfd >= 0) // If signal fd is set close it.
+	{
+		close(sigfd);
+		sigfd = -1;
+	}
 
 	close_mid_client(mid_cli);
 
 	mid_cli->hostip = NULL;
 
-	return 0;
+	return return_status;
 }
 
 int close_mid_client(struct mid_client* mid_cli)
