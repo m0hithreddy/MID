@@ -342,8 +342,8 @@ void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,cha
 
 	if(flag == JUST_SEND || flag == SEND_RECEIVE)
 	{
-		if(mid_socket_write(mid_cli, request, MID_MODE_SOCK_WRITE_AUTO_RETRY, \
-				status) != MID_ERROR_SOCK_WRITE_NONE)
+		if(mid_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
+				status) != MID_ERROR_NONE)
 			return (void*) status;
 	}
 
@@ -364,10 +364,10 @@ void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,cha
 
 		for( ; ; )
 		{
-			rd_return = mid_socket_read(mid_cli, data, MID_MODE_SOCK_READ_AUTO_RETRY, &rd_status);
+			rd_return = mid_socket_read(mid_cli, data, MID_MODE_AUTO_RETRY, &rd_status);
 
-			if(rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL && rd_return != MID_ERROR_SOCK_READ_RETRY && \
-					rd_return != MID_ERROR_SOCK_READ_NONE)
+			if(rd_return != MID_ERROR_BUFFER_FULL && rd_return != MID_ERROR_RETRY && \
+					rd_return != MID_ERROR_NONE)
 				return NULL;
 
 			if(rd_status > 0)
@@ -377,7 +377,7 @@ void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,cha
 				data->len = MAX_TRANSACTION_SIZE;
 			}
 
-			if(rd_return == MID_ERROR_SOCK_READ_NONE)
+			if(rd_return == MID_ERROR_NONE)
 				return flatten_mid_bag(bag);
 		}
 	}
@@ -393,7 +393,7 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 		return NULL;
 
 	if(mid_ssl_socket_write(mid_cli, request, \
-			MID_MODE_SOCK_WRITE_AUTO_RETRY, NULL) != MID_ERROR_SOCK_WRITE_NONE) {
+			MID_MODE_AUTO_RETRY, NULL) != MID_ERROR_NONE) {
 
 		return NULL;
 	}
@@ -413,10 +413,10 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 
 	for( ; ; )
 	{
-		rd_return = mid_ssl_socket_read(mid_cli, data, MID_MODE_SOCK_READ_AUTO_RETRY, &rd_status);
+		rd_return = mid_ssl_socket_read(mid_cli, data, MID_MODE_AUTO_RETRY, &rd_status);
 
-		if(rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL && rd_return != MID_ERROR_SOCK_READ_RETRY && \
-				rd_return != MID_ERROR_SOCK_READ_NONE)
+		if(rd_return != MID_ERROR_BUFFER_FULL && rd_return != MID_ERROR_RETRY && \
+				rd_return != MID_ERROR_NONE)
 			return NULL;
 
 		if(rd_status > 0)
@@ -426,7 +426,7 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 			data->len = MAX_TRANSACTION_SIZE;
 		}
 
-		if(rd_return == MID_ERROR_SOCK_READ_NONE)
+		if(rd_return == MID_ERROR_NONE)
 			return flatten_mid_bag(bag);
 	}
 

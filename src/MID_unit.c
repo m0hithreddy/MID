@@ -159,15 +159,15 @@ void* unit(void* info)
 
 		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 		{
-			if(mid_socket_write(mid_cli, request, MID_MODE_SOCK_WRITE_AUTO_RETRY, \
-					NULL) != MID_ERROR_SOCK_WRITE_NONE)
+			if(mid_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
+					NULL) != MID_ERROR_NONE)
 				goto self_repair;
 		}
 #ifdef LIBSSL_SANE
 		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 		{
-			if(mid_ssl_socket_write(mid_cli, request, MID_MODE_SOCK_WRITE_AUTO_RETRY, \
-					NULL) != MID_ERROR_SOCK_WRITE_NONE)
+			if(mid_ssl_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
+					NULL) != MID_ERROR_NONE)
 				goto self_repair;
 		}
 #endif
@@ -241,20 +241,20 @@ void* unit(void* info)
 				if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 				{
 					rd_return = mid_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);   // read the socket in partial_read mode.
+							MID_MODE_PARTIAL, &rd_status);   // read the socket in partial_read mode.
 				}
 #ifdef LIBSSL_SANE
 				else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 				{
 					rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);  // read the ssl socket in partial_read mode.
+							MID_MODE_PARTIAL, &rd_status);  // read the ssl socket in partial_read mode.
 				}
 #endif
 				else  // Unknown protocol quit.
 					mid_protocol_quit(mid_cli);
 
-				if(rd_return != MID_ERROR_SOCK_READ_NONE && rd_return != MID_ERROR_SOCK_READ_RETRY && \
-						rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL) { // If error encountered.
+				if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
+						rd_return != MID_ERROR_BUFFER_FULL) { // If error encountered.
 
 					goto self_repair;
 				}
@@ -272,7 +272,7 @@ void* unit(void* info)
 						break;
 				}
 
-				if(rd_return == MID_ERROR_SOCK_READ_NONE)
+				if(rd_return == MID_ERROR_NONE)
 					break;
 			}
 			else  // just in case.
@@ -405,7 +405,7 @@ void* unit(void* info)
 
 		long rem_download = 0, wr_status = 0;
 
-		rd_return = MID_ERROR_SOCK_READ_RETRY;
+		rd_return = MID_ERROR_RETRY;
 
 		for( ; ; )
 		{
@@ -481,7 +481,7 @@ void* unit(void* info)
 
 			read_socket:
 
-			if(rd_return == MID_ERROR_SOCK_READ_NONE)
+			if(rd_return == MID_ERROR_NONE)
 				break;
 
 			t_set = m_set;
@@ -504,20 +504,20 @@ void* unit(void* info)
 				if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 				{
 					rd_return = mid_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);  // Do a partial read on socket.
+							MID_MODE_PARTIAL, &rd_status);  // Do a partial read on socket.
 				}
 #ifdef LIBSSL_SANE
 				else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 				{
 					rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_SOCK_READ_PARTIAL_READ, &rd_status);  // Do a partial read on ssl socket.
+							MID_MODE_PARTIAL, &rd_status);  // Do a partial read on ssl socket.
 				}
 #endif
 				else
 					mid_protocol_quit(mid_cli);
 
-				if(rd_return != MID_ERROR_SOCK_READ_NONE && rd_return != MID_ERROR_SOCK_READ_RETRY && \
-						rd_return != MID_ERROR_SOCK_READ_BUFFER_FULL)  // If read reported an error.
+				if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
+						rd_return != MID_ERROR_BUFFER_FULL)  // If read reported an error.
 				{
 					break;
 				}

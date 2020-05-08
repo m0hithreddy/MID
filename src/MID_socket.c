@@ -353,7 +353,7 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 			m_data->data == NULL || m_data->len <=0 ) {  // Invalid input.
 
 		status != NULL ? *status = 0 : 0;
-		return MID_ERROR_SOCK_WRITE_INVAL;
+		return MID_ERROR_INVAL;
 	}
 
 	/* Set the socket mode */
@@ -363,7 +363,7 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 	if(sock_args < 0)
 	{
 		status != NULL ? *status = 0 : 0;
-		return MID_ERROR_SOCK_WRITE_INVAL;
+		return MID_ERROR_INVAL;
 	}
 
 	int no_block = sock_args & O_NONBLOCK;
@@ -374,7 +374,7 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
 		{
 			status != NULL ? *status = 0 : 0;
-			return MID_ERROR_SOCK_WRITE_INVAL;
+			return MID_ERROR_INVAL;
 		}
 	}
 
@@ -413,7 +413,7 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 		if(sigfd < 0)
 		{
 			status != NULL ? *status = 0 : 0;
-			return MID_ERROR_SOCK_WRITE_INVAL;
+			return MID_ERROR_INVAL;
 		}
 
 		FD_SET(sigfd, &rd_set);
@@ -425,7 +425,7 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 
 	long wr_status = 0, wr_counter = 0;
 
-	int return_status = MID_ERROR_SOCK_WRITE_NONE;
+	int return_status = MID_ERROR_NONE;
 
 	for( ;  ; )
 	{
@@ -439,23 +439,23 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 		{
 			if(errno == EINTR)  // If interrupted by signal, act as caller requested.
 			{
-				if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)
+				if(mode == MID_MODE_AUTO_RETRY)
 					continue;
 				else
 				{
-					return_status = MID_ERROR_SOCK_WRITE_RETRY;
+					return_status = MID_ERROR_RETRY;
 					goto write_return;
 				}
 			}
 			else  // Fatal error in select, report back.
 			{
-				return_status = MID_ERROR_SOCK_WRITE_ERROR;
+				return_status = MID_ERROR_FATAL;
 				goto write_return;
 			}
 		}
 		else if(sl_status == 0)  // Timeout.
 		{
-			return_status = MID_ERROR_SOCK_WRITE_TIMEOUT;
+			return_status = MID_ERROR_TIMEOUT;
 			goto write_return;
 		}
 
@@ -465,14 +465,14 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 			{
 				read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
 
-				return_status = MID_ERROR_SOCK_WRITE_SIGRCVD;
+				return_status = MID_ERROR_SIGRCVD;
 				goto write_return;
 			}
 		}
 
 		if(!FD_ISSET(mid_cli->sockfd, &tw_set))  // If socket is not set.
 		{
-			return_status = MID_ERROR_SOCK_WRITE_ERROR;
+			return_status = MID_ERROR_FATAL;
 			goto write_return;
 		}
 
@@ -483,29 +483,29 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 		{
 			if(errno == EINTR) //Signal interrupt. Both [non-]block sockets, act as user requested.
 			{
-				if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)
+				if(mode == MID_MODE_AUTO_RETRY)
 					continue;
 				else
 				{
-					return_status = MID_ERROR_SOCK_WRITE_RETRY;
+					return_status = MID_ERROR_RETRY;
 					goto write_return;
 				}
 			}
 			else if(errno == EWOULDBLOCK || errno == EAGAIN) // Retry again. non-block sockets only
 			{
-				if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)
+				if(mode == MID_MODE_AUTO_RETRY)
 					continue;
-				else if(mode == MID_MODE_SOCK_WRITE_PARTIAL_WRITE && !no_block)  // We made it non-blocking, retry.
+				else if(mode == MID_MODE_PARTIAL && !no_block)  // We made it non-blocking, retry.
 					continue;
 				else
 				{
-					return_status = MID_ERROR_SOCK_WRITE_RETRY;
+					return_status = MID_ERROR_RETRY;
 					goto write_return;
 				}
 			}
 			else   // Fatal Error, report back. Both [non-]block sockets.
 			{
-				return_status = MID_ERROR_SOCK_WRITE_ERROR;
+				return_status = MID_ERROR_FATAL;
 				goto write_return;
 			}
 		}
@@ -515,18 +515,18 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 
 		if(wr_counter < m_data->len)   // If fewer bytes transfered. Both [non-]block sockets.
 		{
-			if(mode == MID_MODE_SOCK_WRITE_AUTO_RETRY)   // Act as user requested.
+			if(mode == MID_MODE_AUTO_RETRY)   // Act as user requested.
 				continue;
 			else
 			{
-				return_status = MID_ERROR_SOCK_WRITE_RETRY;
+				return_status = MID_ERROR_RETRY;
 				goto write_return;
 			}
 		}
 
 		// Else all bytes are transferred, break;
 
-		return_status = MID_ERROR_SOCK_WRITE_NONE;
+		return_status = MID_ERROR_NONE;
 		goto write_return;
 	}
 
@@ -537,7 +537,7 @@ int mid_socket_write(struct mid_client* mid_cli, struct mid_data* m_data, int mo
 	if(!no_block)  // Revert back the socket mode.
 	{
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
-			return_status = MID_ERROR_SOCK_WRITE_ERROR;
+			return_status = MID_ERROR_FATAL;
 	}
 
 	if(mid_cli->sigmask != NULL && sigfd >= 0)  // If signal_fd opened then close.
@@ -554,7 +554,7 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 			m_data->data == NULL || m_data->len <= 0) {  // Invalid input.
 
 		status != NULL ? *status = 0 : 0;
-		return MID_ERROR_SOCK_READ_INVAL;
+		return MID_ERROR_INVAL;
 	}
 
 	/* Set the socket mode */
@@ -564,7 +564,7 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 	if(sock_args < 0)
 	{
 		status != NULL ? *status = 0 : 0;
-		return MID_ERROR_SOCK_READ_INVAL;
+		return MID_ERROR_INVAL;
 	}
 
 	int no_block = sock_args & O_NONBLOCK;
@@ -575,7 +575,7 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
 		{
 			status != NULL ? *status = 0 : 0;
-			return MID_ERROR_SOCK_READ_INVAL;
+			return MID_ERROR_INVAL;
 		}
 	}
 
@@ -612,7 +612,7 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 		if(sigfd < 0)
 		{
 			status != NULL ? *status = 0 : 0;
-			return MID_ERROR_SOCK_READ_INVAL;
+			return MID_ERROR_INVAL;
 		}
 
 		FD_SET(sigfd, &rd_set);
@@ -624,7 +624,7 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 
 	long rd_status = 0, rd_counter = 0;
 
-	int return_status = MID_ERROR_SOCK_READ_NONE;
+	int return_status = MID_ERROR_NONE;
 
 	for( ;  ; )
 	{
@@ -637,23 +637,23 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 		{
 			if(errno == EINTR)  // If interrupted by signal, act as caller requested.
 			{
-				if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)
+				if(mode == MID_MODE_AUTO_RETRY)
 					continue;
 				else
 				{
-					return_status = MID_ERROR_SOCK_READ_RETRY;
+					return_status = MID_ERROR_RETRY;
 					goto read_return;
 				}
 			}
 			else  // Fatal error in select, report back.
 			{
-				return_status = MID_ERROR_SOCK_READ_ERROR;
+				return_status = MID_ERROR_FATAL;
 				goto read_return;
 			}
 		}
 		else if(sl_status == 0)  // Timeout.
 		{
-			return_status = MID_ERROR_SOCK_READ_TIMEOUT;
+			return_status = MID_ERROR_TIMEOUT;
 			goto read_return;
 		}
 
@@ -663,14 +663,14 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 			{
 				read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
 
-				return_status = MID_ERROR_SOCK_READ_SIGRCVD;
+				return_status = MID_ERROR_SIGRCVD;
 				goto read_return;
 			}
 		}
 
 		if(!FD_ISSET(mid_cli->sockfd, &tr_set))  // If socket is not set.
 		{
-			return_status = MID_ERROR_SOCK_READ_ERROR;
+			return_status = MID_ERROR_FATAL;
 			goto read_return;
 		}
 
@@ -681,34 +681,34 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 		{
 			if(errno == EINTR) //Signal interrupt. Both [non-]block sockets, act as user requested.
 			{
-				if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)
+				if(mode == MID_MODE_AUTO_RETRY)
 					continue;
 				else
 				{
-					return_status = MID_ERROR_SOCK_READ_RETRY;
+					return_status = MID_ERROR_RETRY;
 					goto read_return;
 				}
 			}
 			else if(errno == EWOULDBLOCK || errno == EAGAIN) // Retry again. non-block sockets only
 			{
-				if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)
+				if(mode == MID_MODE_AUTO_RETRY)
 					continue;
-				else if(mode == MID_MODE_SOCK_READ_PARTIAL_READ && !no_block)  // We made it non-blocking, retry.
+				else if(mode == MID_MODE_PARTIAL && !no_block)  // We made it non-blocking, retry.
 					continue;
 				else
 				{
-					return_status = MID_ERROR_SOCK_READ_RETRY;
+					return_status = MID_ERROR_RETRY;
 					goto read_return;
 				}
 			}
 			else if(errno == EFAULT)  // Faulty buffer. Both [non-]block sockets.
 			{
-				return_status = MID_ERROR_SOCK_READ_BUFFER_FULL;
+				return_status = MID_ERROR_BUFFER_FULL;
 				goto read_return;
 			}
 			else  // Fatal Error, report back. Both [non-]block sockets.
 			{
-				return_status = MID_ERROR_SOCK_READ_ERROR;
+				return_status = MID_ERROR_FATAL;
 				goto read_return;
 			}
 		}
@@ -718,22 +718,22 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 
 			if(rd_counter == m_data->len)   // No more space left, report back
 			{
-				return_status = MID_ERROR_SOCK_READ_BUFFER_FULL;
+				return_status = MID_ERROR_BUFFER_FULL;
 				goto read_return;
 			}
 
-			if(mode == MID_MODE_SOCK_READ_AUTO_RETRY)  // Act as caller requested.
+			if(mode == MID_MODE_AUTO_RETRY)  // Act as caller requested.
 				continue;
 			else
 			{
-				return_status = MID_ERROR_SOCK_READ_RETRY;
+				return_status = MID_ERROR_RETRY;
 				goto read_return;
 			}
 		}
 
 		// Else EOF reached, break.
 
-		return_status = MID_ERROR_SOCK_READ_NONE;
+		return_status = MID_ERROR_NONE;
 		goto read_return;
 	}
 
@@ -744,7 +744,7 @@ int mid_socket_read(struct mid_client* mid_cli, struct mid_data* m_data, int mod
 	if(!no_block)  // Revert back the socket mode.
 	{
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
-			return_status = MID_ERROR_SOCK_READ_ERROR;
+			return_status = MID_ERROR_FATAL;
 	}
 
 	if(mid_cli->sigmask != NULL && sigfd >= 0)  // If signal_fd opened then close.
