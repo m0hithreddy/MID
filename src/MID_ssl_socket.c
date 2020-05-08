@@ -178,9 +178,6 @@ int init_mid_ssl(struct mid_client* mid_cli)
 	{
 		if(ssl_status == 1)
 			close_mid_ssl(mid_cli);
-
-		if(mid_cli->ssl != NULL)
-			free_mid_ssl(mid_cli);
 	}
 
 	return return_status;
@@ -198,22 +195,14 @@ int close_mid_ssl(struct mid_client* mid_cli)
 
 	int ssl_status = SSL_shutdown(mid_cli->ssl);   // May not actually shutdown for non-blocking sockets.
 
+	SSL_free(mid_cli->ssl);  // Free the SSL structure.
+
+	mid_cli->ssl = NULL;
+
 	if(ssl_status == 0 || ssl_status == 1)  // Return success when uni-directional or bi-directional shutdown happens.
 		return 1;
 
 	return 0;
-#else
-	SSL_quit();
-#endif
-}
-
-void free_mid_ssl(struct mid_client* mid_cli)
-{
-#ifdef LIBSSL_SANE
-	if(mid_cli == NULL || mid_cli->ssl == NULL)
-		return;
-
-	SSL_free(mid_cli->ssl);
 #else
 	SSL_quit();
 #endif

@@ -82,11 +82,9 @@ struct mid_client* sig_create_mid_client(struct mid_interface* mid_if, struct pa
 
 int init_mid_client(struct mid_client* mid_cli);
 
-void free_mid_client(struct mid_client* mid_cli);
-
 int close_mid_client(struct mid_client* mid_cli);
 
-int destroy_mid_client(struct mid_client* mid_cli);
+int free_mid_client(struct mid_client* mid_cli);
 
 void mid_protocol_quit(struct mid_client* mid_cli);
 

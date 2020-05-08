@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 		else
 			mid_protocol_quit(mid_cli);
 
-		destroy_mid_client(mid_cli);
+		free_mid_client(mid_cli);
 
 		if(response==NULL)
 			continue;

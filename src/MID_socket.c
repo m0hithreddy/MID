@@ -252,16 +252,7 @@ int init_mid_client(struct mid_client* mid_cli)
 
 		next:    /* Try the next addrinfo structure*/
 
-#ifdef LIBSSL_SANE
-		if(ssl_status == 1)
-		{
-			close_mid_ssl(mid_cli);
-			free_mid_ssl(mid_cli);
-		}
-#endif
-
-		if(mid_cli->sockfd >= 0)
-			close(mid_cli->sockfd);
+		close_mid_client(mid_cli);
 	}
 
 	freeaddrinfo(result);
@@ -273,10 +264,8 @@ int init_mid_client(struct mid_client* mid_cli)
 
 	init_error:
 
-	mid_cli->sockfd = -1;
-#ifdef LIBSSL_SANE
-	mid_cli->ssl = NULL;
-#endif
+	close_mid_client(mid_cli);
+
 	mid_cli->hostip = NULL;
 
 	return 0;
@@ -287,33 +276,41 @@ int close_mid_client(struct mid_client* mid_cli)
 	if(mid_cli == NULL)
 		return 0;
 
-	int return_code = 1;
+	int return_status = 1;
+
+	/* Close SSL connection */
 
 #ifdef LIBSSL_SANE
-	if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS && mid_cli->ssl != NULL) {
+	if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+	{
 		if(close_mid_ssl(mid_cli) != 1)
-			return_code = 0;
+			return_status = 0;
 	}
 #endif
 
-	if(mid_cli->sockfd >=0 ) {
-		if(close(mid_cli->sockfd) != 0)
-			return_code = 0;
-	}
+	/* Close socket connection */
 
-	return return_code;
+	if(mid_cli->sockfd >= 0)
+	{
+		if(close(mid_cli->sockfd) != 0)
+			return_status = 0;
+
+		mid_cli->sockfd = -1;
+	}
+	else
+		return_status = 0;
+
+	return return_status;
 }
 
-void free_mid_client(struct mid_client* mid_cli)
+int free_mid_client(struct mid_client* mid_cli)
 {
 	if(mid_cli == NULL)
-		return;
+		return 0;
 
-	/* Free the SSL pointer*/
+	/* Close the connections and Free SSL structure (If set) */
 
-#ifdef LIBSSL_SANE
-	free_mid_ssl(mid_cli);
-#endif
+	int return_status = close_mid_client(mid_cli);
 
 	/* Free the pointers */
 
@@ -327,14 +324,7 @@ void free_mid_client(struct mid_client* mid_cli)
 
 	free(mid_cli);
 
-}
-
-int destroy_mid_client(struct mid_client* mid_cli)
-{
-	int close_status = close_mid_client(mid_cli);
-	free_mid_client(mid_cli);
-
-	return close_status;
+	return return_status;
 }
 
 void mid_protocol_quit(struct mid_client* mid_cli)

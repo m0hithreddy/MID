@@ -499,7 +499,7 @@ void* sig_follow_redirects(struct http_request* c_s_request, struct mid_data* re
 		else
 			response=(struct mid_data*)send_https_request(mid_cli, request,purl->host,SEND_RECEIVE);
 
-		destroy_mid_client(mid_cli);
+		free_mid_client(mid_cli);
 
 		if(response==NULL)
 			return NULL;
