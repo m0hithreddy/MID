@@ -36,41 +36,43 @@ void setup_ssl()
 int init_mid_ssl(struct mid_client* mid_cli)
 {
 #ifdef LIBSSL_SANE
-	if(mid_cli == NULL)
-		return 0;
 
-	int sock_args = -1, ssl_status = 0, return_status = 0;
+	if(mid_cli == NULL || mid_cli->sockfd < 0)
+		return MID_ERROR_INVAL;
+
+	int sock_args = -1, ssl_status = 0, \
+			return_status = MID_ERROR_NONE, sigfd = -1;   // Variables used by init_return. (so declare at beginning).
 
 	const SSL_METHOD* method = TLS_client_method();
 
-	SSL_CTX* ctx = SSL_CTX_new(method);
+	SSL_CTX* ctx = SSL_CTX_new(method);  // SSL Context.
 
 	if(ctx == NULL)
 	{
-		return_status = 0;
+		return_status = MID_ERROR_FATAL;
 		goto init_return;
 	}
 
-	mid_cli->ssl = SSL_new(ctx);
+	mid_cli->ssl = SSL_new(ctx);  // New SSL object.
 
-	SSL_set_fd(mid_cli->ssl, mid_cli->sockfd);
+	SSL_set_fd(mid_cli->ssl, mid_cli->sockfd);  // Link socket fd and SSL.
 
 	if(mid_cli->hostname != NULL)
-		SSL_set_tlsext_host_name(mid_cli->ssl, mid_cli->hostname); // Hostname used during certificate verification
+		SSL_set_tlsext_host_name(mid_cli->ssl, mid_cli->hostname); // Host-Name used during certificate verification
 
 	/* Set the socket mode to non-blocking to implement SSL_connect timeout */
 
-	sock_args = fcntl(mid_cli->sockfd, F_GETFL);
+	sock_args = fcntl(mid_cli->sockfd, F_GETFL);  // get flags
 
 	if(sock_args < 0)
 	{
-		return_status = 0;
+		return_status = MID_ERROR_FATAL;
 		goto init_return;
 	}
 
-	if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)
+	if(fcntl(mid_cli->sockfd, F_SETFL, sock_args | O_NONBLOCK) < 0)  // set flags
 	{
-		return_status = 0;
+		return_status = MID_ERROR_FATAL;
 		goto init_return;
 	}
 
@@ -80,7 +82,7 @@ int init_mid_ssl(struct mid_client* mid_cli)
 
 	if(ssl_status == 1)  // If success
 	{
-		return_status = 1;
+		return_status = MID_ERROR_NONE;
 		goto init_return;
 	}
 
@@ -97,13 +99,35 @@ int init_mid_ssl(struct mid_client* mid_cli)
 	else
 		timeo = NULL;
 
-	/* Select initializations */
+	/* Select variables initializations */
 
-	fd_set ms_set, tp_set;
-	FD_ZERO(&ms_set);
-	FD_SET(mid_cli->sockfd, &ms_set);
+	fd_set wr_set, tw_set;
+	FD_ZERO(&wr_set);
+	FD_SET(mid_cli->sockfd, &wr_set);
 
 	int maxfds = mid_cli->sockfd + 1;
+
+	/* Sigmask initializations */
+
+	sigfd = -1;
+	struct signalfd_siginfo sigbuf;
+
+	fd_set rd_set, tr_set;
+	FD_ZERO(&rd_set);
+
+	if(mid_cli->sigmask != NULL)
+	{
+		sigfd = signalfd(-1, mid_cli->sigmask, 0);
+
+		if(sigfd < 0)
+		{
+			return_status = MID_ERROR_FATAL;
+			goto init_return;
+		}
+
+		FD_SET(sigfd, &rd_set);
+		maxfds = sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1;
+	}
 
 	/* Loop for non-blocking SSL_connect */
 
@@ -111,36 +135,39 @@ int init_mid_ssl(struct mid_client* mid_cli)
 
 	for( ; ; )
 	{
-		if(ssl_status == 1)
+		if(ssl_status == 1)  // If SSL_connect succeeded.
 		{
-			return_status = 1;
+			return_status = MID_ERROR_NONE;
 			goto init_return;
 		}
-		else if(ssl_status == 0)
+		else if(ssl_status == 0)  // If SSL shutdown
 		{
-			return_status = 0;
+			return_status = MID_ERROR_FATAL;
 			goto init_return;
 		}
 
-		ssl_err = SSL_get_error(mid_cli->ssl, ssl_status);
+		ssl_err = SSL_get_error(mid_cli->ssl, ssl_status);   // get SSL errors.
 
-		if(ssl_err != SSL_ERROR_WANT_READ && ssl_err != SSL_ERROR_WANT_WRITE)
+		if(ssl_err != SSL_ERROR_WANT_READ && ssl_err != SSL_ERROR_WANT_WRITE) // If SSL fatal errors.
 		{
-			return_status = 0;
+			return_status = MID_ERROR_FATAL;
 			goto init_return;
 		}
 
 		select_procedure:
 
-		tp_set = ms_set;
+		tr_set = rd_set;
 
-		sl_status = select(maxfds, ssl_err == SSL_ERROR_WANT_READ ? &tp_set : NULL, \
-				ssl_err == SSL_ERROR_WANT_WRITE ? &tp_set : NULL, NULL, \
+		if(ssl_err == SSL_ERROR_WANT_READ)
+			FD_SET(mid_cli->sockfd, &tr_set);
+
+		sl_status = select(maxfds, (mid_cli->sigmask != NULL || ssl_err == SSL_ERROR_WANT_READ) ? &tr_set : NULL, \
+				ssl_err == SSL_ERROR_WANT_WRITE ? (tw_set = wr_set, &tw_set) : NULL, NULL, \
 				timeo == NULL ? NULL : (tp_timeo = *timeo, &tp_timeo));   // Select descriptor or timeout.
 
 		if(sl_status == 0)  // Timeout.
 		{
-			return_status = 0;
+			return_status = MID_ERROR_TIMEOUT;
 			goto init_return;
 		}
 		else if(sl_status < 0)  // Error in select.
@@ -149,42 +176,56 @@ int init_mid_ssl(struct mid_client* mid_cli)
 				goto select_procedure;
 			else
 			{
-				return_status = 0;
+				return_status = MID_ERROR_FATAL;
 				goto init_return;
 			}
 		}
 
-		if(FD_ISSET(mid_cli->sockfd, &tp_set)) // socket descriptor ready.
+		if(mid_cli->sigmask != NULL)
+		{
+			if(FD_ISSET(sigfd, &tr_set))  // If signals pointed by mid_cli->sigmask rcvd.
+			{
+				read(sigfd, &sigbuf, sizeof(struct signalfd_siginfo));
+
+				return_status = MID_ERROR_SIGRCVD;
+				goto init_return;
+			}
+		}
+
+		if(ssl_err == SSL_ERROR_WANT_READ ? FD_ISSET(mid_cli->sockfd, &tr_set) : \
+				FD_ISSET(mid_cli->sockfd, &tw_set)) // If socket descriptor ready.
 		{
 			ssl_status = SSL_connect(mid_cli->ssl);
 			continue;
 		}
-		else   // just in case.
+		else  // No descriptor is set (just in case).
 		{
-			return_status = 0;
+			return_status = MID_ERROR_FATAL;
 			goto init_return;
 		}
 	}
 
 	init_return:
 
-	if(sock_args >= 0)
+	if(sigfd >= 0)  // If sigfd is set close sigfd.
 	{
-		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
-			return_status = 0;
+		close(sigfd);
+		sigfd = -1;
 	}
 
-	if(return_status == 0)
+	if(sock_args >= 0)  // Revert back the socket mode.
 	{
-		if(ssl_status == 1)
-			close_mid_ssl(mid_cli);
+		if(fcntl(mid_cli->sockfd, F_SETFL, sock_args) < 0)
+			return_status = MID_ERROR_FATAL;
 	}
+
+	if(return_status != MID_ERROR_NONE)
+		close_mid_ssl(mid_cli);
 
 	return return_status;
 #else
 	SSL_quit();
 #endif
-
 }
 
 int close_mid_ssl(struct mid_client* mid_cli)

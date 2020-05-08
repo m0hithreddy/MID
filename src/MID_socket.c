@@ -124,7 +124,7 @@ int init_mid_client(struct mid_client* mid_cli)
 				&args->max_tcp_syn_retransmits, sizeof(int)) != 0)   // TCP SYN retransmit count
 			goto next;
 
-		if(mid_cli->if_name != NULL && mid_cli->if_addr!=NULL)
+		if(mid_cli->if_name != NULL && mid_cli->if_addr != NULL)
 		{
 			if(setsockopt(mid_cli->sockfd, SOL_SOCKET, SO_BINDTODEVICE, \
 					mid_cli->if_name, strlen(mid_cli->if_name)) != 0)   // Set the interface
@@ -164,7 +164,7 @@ int init_mid_client(struct mid_client* mid_cli)
 
 		/* Start the connect procedure */
 
-		if(connect(mid_cli->sockfd, rp->ai_addr, rp->ai_addrlen) == 0 )  // If connected.
+		if(connect(mid_cli->sockfd, rp->ai_addr, rp->ai_addrlen) == 0)  // If connected.
 			goto success;
 
 		if(errno == EINPROGRESS || errno == EINTR)  // If connection in progress or interrupted.
@@ -258,7 +258,6 @@ int init_mid_client(struct mid_client* mid_cli)
 		else   // Fatal error, in connect.
 			goto next;
 
-
 		success:
 
 		/* If SSL required then setup SSL session */
@@ -266,7 +265,14 @@ int init_mid_client(struct mid_client* mid_cli)
 #ifdef LIBSSL_SANE
 		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 		{
-			if(init_mid_ssl(mid_cli) == 0)
+			int ssl_status = init_mid_ssl(mid_cli);
+
+			if(ssl_status == MID_ERROR_SIGRCVD)
+			{
+				return_status = MID_ERROR_SIGRCVD;
+				goto init_error;
+			}
+			else if(ssl_status != MID_ERROR_NONE)
 				goto next;
 		}
 #endif
