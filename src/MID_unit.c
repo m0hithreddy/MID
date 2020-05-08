@@ -139,7 +139,7 @@ void* unit(void* info)
 
 		struct parsed_url* purl = parse_url(unit_info->s_request->url);
 
-		mid_cli = sig_create_mid_client(unit_info->mid_if, purl, &unit_info->sync_mask);
+		mid_cli = create_mid_client(unit_info->mid_if, purl);
 
 		unit_quit();
 
@@ -306,8 +306,8 @@ void* unit(void* info)
 			unit_info->s_request->method = "HEAD";
 			unit_info->s_request->range = NULL;
 
-			void* tmp_s_request_s_response = sig_follow_redirects(unit_info->s_request, hdr_data, unit_info->mid_if, \
-					args->max_redirects, RETURN_S_REQUEST_S_RESPONSE, &unit_info->sync_mask);   // Follow redirects.
+			void* tmp_s_request_s_response = follow_redirects(unit_info->s_request, hdr_data, unit_info->mid_if, \
+					args->max_redirects, RETURN_S_REQUEST_S_RESPONSE);   // Follow redirects.
 
 			if(tmp_s_request_s_response == NULL)
 				goto self_repair;
