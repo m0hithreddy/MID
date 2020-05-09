@@ -35,7 +35,7 @@ void* unit(void* info)
 	struct unit_info* unit_info = (struct unit_info*)info;
 
 	int signo, in_return = MID_ERROR_NONE, wr_return = MID_ERROR_NONE, \
-			rd_return = MID_ERROR_NONE;
+			rd_return = MID_ERROR_NONE, fr_return = MID_ERROR_NONE;
 
 	long retries_count = 0, rd_status = 0;
 
@@ -256,15 +256,20 @@ void* unit(void* info)
 			unit_info->s_request->method = "HEAD";
 			unit_info->s_request->range = NULL;
 
-			void* tmp_s_request_s_response = follow_redirects(unit_info->s_request, hdr_data, unit_info->mid_if, \
-					args->max_redirects, RETURN_S_REQUEST_S_RESPONSE);   // Follow redirects.
+			struct mid_bag* rd_result = create_mid_bag();
 
-			if(tmp_s_request_s_response == NULL)
+			fr_return = follow_redirects(unit_info->s_request, hdr_data, unit_info->mid_if, args->max_redirects, \
+					MID_RETURN_S_REQUEST | MID_RETURN_RESPONSE, rd_result); // Follow redirects.
+
+			if(fr_return == MID_ERROR_SIGRCVD)
+				unit_quit();
+
+			if(fr_return != MID_ERROR_NONE)
 				goto self_repair;
 
-			struct http_request* tmp_s_request = (struct http_request*)tmp_s_request_s_response;
+			struct http_request* tmp_s_request = (struct http_request*) rd_result->first->data;
 
-			struct http_response* tmp_s_response = (struct http_response*)(tmp_s_request_s_response + sizeof(struct http_request));
+			struct http_response* tmp_s_response = (struct http_response*) rd_result->end->data;
 
 			if(!unit_info->pc_flag)  // If Non-PC download.
 			{

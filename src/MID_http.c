@@ -440,101 +440,179 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 }
 #endif
 
-void* sig_follow_redirects(struct http_request* c_s_request, struct mid_data* response, struct mid_interface* mid_if, \
-		long max_redirects, int flag, sigset_t* sigmask)
-{
+int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_response, struct mid_interface* mid_if, \
+		long max_redirects, int rs_flag, struct mid_bag* rd_result, sigset_t* sigmask)  {
 
-	if(response==NULL || response->data==NULL || response->len==0 || c_s_request==NULL)
-		return NULL;
+	if (c_s_request == NULL || c_response == NULL || c_response->data == NULL || \
+			c_response->len <= 0 || rd_result == NULL) {  // Invalid input.
 
-	struct http_response* s_response;
-	struct parsed_url* purl;
-	struct mid_data* request=create_http_request(c_s_request);
-	struct http_request* s_request=(struct http_request*)memndup(c_s_request,sizeof(struct http_request));
+		return MID_ERROR_INVAL;
+	}
 
-	long redirect_count=0;
+	/* Request variables initializations */
 
-	while(redirect_count<max_redirects)
+	struct mid_data* request = NULL;
+	struct http_request* s_request = (struct http_request*) memndup(c_s_request, sizeof(struct http_request));
+
+	/* Response variables initializations */
+
+	struct mid_data* response = (struct mid_data*) memndup(c_response, sizeof(struct mid_data));
+	struct http_response* s_response = NULL;
+
+	/* Follow redirects */
+
+	struct parsed_url* purl = NULL;
+	int in_return = MID_ERROR_NONE;
+	long redirect_count = 0;
+
+	for ( ; redirect_count < max_redirects; redirect_count++)
 	{
-		s_response=parse_http_response(response);
+		/* Parse the URL and check whether redirection can be followed */
 
-		if(s_response==NULL)
-			return NULL;
+		s_response = parse_http_response(response);
 
-		if(s_response->status_code[0]!='3' || s_response->location==NULL)   // If status_code is anything than 3xx then break
+		if (s_response == NULL)  // Failed to parse HTTP response.
+		{
+			return MID_ERROR_FATAL;
+		}
+
+		if (s_response->status_code[0] != '3' || s_response->location == NULL)  {  /* If status_code is not 3xx ||
+		location is not set then break */
+
 			break;
+		}
 
-		purl=parse_url(s_response->location); // Parse the URL
+		purl = parse_url(s_response->location); // Parse the new file location (new URL).
 
-		if(purl==NULL || !(!strcmp(purl->scheme,"https") || !strcmp(purl->scheme,"http")))  // If the redirection led to different scheme than HTTP[S]
-			return NULL;
+		if (purl == NULL || (strcmp(purl->scheme,"http") != 0 && \
+				strcmp(purl->scheme, "https") != 0)) {  /* If the redirection led to different scheme than HTTP[S] */
+
+			return MID_ERROR_FATAL;
+		}
+
+		/* Setup sockets [and SSL] */
 
 		struct mid_client* mid_cli = sig_create_mid_client(mid_if, purl, sigmask);
 
-		if(init_mid_client(mid_cli) != MID_ERROR_NONE)
-			return NULL;
+		in_return = init_mid_client(mid_cli);
 
-		s_request->host=purl->host;    // Set the new s_request fields
-		if(purl->path!=NULL)
+		if (in_return == MID_ERROR_SIGRCVD)
+			return MID_ERROR_SIGRCVD;
+
+		if (in_return != MID_ERROR_NONE)
+			return MID_ERROR_FATAL;
+
+		/* Update s_request{} fields */
+
+		s_request->host = purl->host;  // Host-Name
+
+		if (purl->path != NULL)  // Set path and query
 		{
-			char* tmp_path=(char*)malloc(sizeof(char)*HTTP_REQUEST_HEADERS_MAX_LEN);
-			strcpy(tmp_path,purl->path);
-			if(purl->query!=NULL)
+			struct mid_bag* pq_bag = create_mid_bag();
+			struct mid_data pq_data;
+
+			/* Append Path */
+
+			pq_data.data = purl->path;
+			pq_data.len = strlen(purl->path);
+			place_mid_data(pq_bag, &pq_data);
+
+			if (purl->query != NULL)  // If query is set.
 			{
-				strcat(tmp_path,"?");
-				strcat(tmp_path,purl->query);
+				/* Append "?" */
+
+				pq_data.data = "?";
+				pq_data.len = 1;
+				place_mid_data(pq_bag, &pq_data);
+
+				/* Append query */
+
+				pq_data.data = purl->query;
+				pq_data.len = strlen(purl->query);
+				place_mid_data(pq_bag, &pq_data);
 			}
-			s_request->path=tmp_path;
+
+			/* Append "\0" */
+
+			pq_data.data = "\0";
+			pq_data.len = 1;
+			place_mid_data(pq_bag, &pq_data);
+
+			s_request->path = (char*) (flatten_mid_bag(pq_bag)->data);
 		}
 		else
-			s_request->path=NULL;
-		s_request->url=s_response->location;
-		s_request->scheme=purl->scheme;
-		s_request->hostip=mid_cli->hostip;
+			s_request->path = NULL;
 
-		request=create_http_request(s_request); // Create HTTP Request
+		/* Update Misc entries of s_request{} */
 
-		if(!strcmp(purl->scheme,"http"))   // send and receive response as per the scheme.
-			response=(struct mid_data*)send_http_request(mid_cli ,request,NULL,SEND_RECEIVE);
+		s_request->url = s_response->location;
+		s_request->scheme = purl->scheme;
+		s_request->hostip = mid_cli->hostip;
+
+		/* Create and Send HTTP[S] Request */
+
+		request = create_http_request(s_request);
+
+		if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
+			response = (struct mid_data*) send_http_request(mid_cli, request, NULL, SEND_RECEIVE);
+#ifdef LIBSSL_SANE
+		else if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+			response = (struct mid_data*) send_https_request(mid_cli, request, purl->host, SEND_RECEIVE);
+#endif
 		else
-			response=(struct mid_data*)send_https_request(mid_cli, request,purl->host,SEND_RECEIVE);
+			return MID_ERROR_PROTOCOL_UNKOWN;
 
 		free_mid_client(&mid_cli);
 
-		if(response==NULL)
-			return NULL;
-
-		redirect_count++;
+		if (response == NULL)
+			return MID_ERROR_FATAL;
 	}
 
-	/* Return values as caller requested */
+	/* Compute Final results */
 
-	if(flag==RETURN_RESPONSE)
-		return (void*)response;
+	request = create_http_request(s_request);
+	s_response = parse_http_response(response);
 
-	if(flag==RETURN_S_RESPONSE)
-		return (void*)parse_http_response(response);
+	if (request == NULL || s_request == NULL || response == NULL || s_response == NULL) // Just in case.
+		return MID_ERROR_FATAL;
 
-	if(flag==RETURN_REQUEST)
-		return (void*)request;
+	/* Set results */
 
-	if(flag==RETURN_S_REQUEST)
-		return (void*)s_request;
+	struct mid_data rs_data;
 
-	if(flag==RETURN_S_REQUEST_S_RESPONSE)
+	if (rs_flag & MID_RETURN_REQUEST)   // If requested for HTTP Request.
 	{
-		s_response=parse_http_response(response);
+		rs_data.data = request;
+		rs_data.len = sizeof(struct mid_data);
 
-		if(s_response==NULL)
-			return NULL;
-
-		void* s_rqst_s_resp=(void*)malloc(sizeof(struct http_request)+sizeof(struct http_response));
-		memcpy(s_rqst_s_resp,s_request,sizeof(struct http_request));
-		memcpy(s_rqst_s_resp+sizeof(struct http_request),s_response,sizeof(struct http_response));
-		return s_rqst_s_resp;
+		place_mid_data(rd_result, &rs_data);
 	}
 
-	return NULL;
+	if (rs_flag & MID_RETURN_S_REQUEST)  // If requested for s_request{}.
+	{
+		rs_data.data = s_request;
+		rs_data.len = sizeof(struct http_request);
+
+		place_mid_data(rd_result, &rs_data);
+	}
+
+	if (rs_flag & MID_RETURN_RESPONSE)  // If requested for HTTP response.
+	{
+		rs_data.data = response;
+		rs_data.len = sizeof(struct mid_data);
+
+		place_mid_data(rd_result, &rs_data);
+	}
+
+	if (rs_flag & MID_RETURN_S_RESPONSE) // If requested for s_response{}.
+	{
+		rs_data.data = s_response;
+		rs_data.len = sizeof(struct http_response);
+
+		place_mid_data(rd_result, &rs_data);
+	}
+
+	return MID_ERROR_NONE;
 }
 
 char* determine_filename(char* pre_name,FILE** fp_ptr)

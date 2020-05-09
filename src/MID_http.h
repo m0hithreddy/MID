@@ -24,11 +24,16 @@
 #define MAX_URL_SIZE 2000
 #define SEND_RECEIVE 11
 #define JUST_SEND 10
-#define RETURN_RESPONSE 000
-#define RETURN_S_RESPONSE 001
-#define RETURN_REQUEST 010
-#define RETURN_S_REQUEST 011
-#define RETURN_S_REQUEST_S_RESPONSE 100
+
+/* start sig_follow_redirects() return flags */
+
+#define MID_RETURN_REQUEST 0b0001
+#define MID_RETURN_S_REQUEST 0b0010
+#define MID_RETURN_RESPONSE 0b0100
+#define MID_RETURN_S_RESPONSE 0b1000
+
+/* end */
+
 #define IDENTITY_ENCODING 00
 #define CHUNKED_ENCODING 01
 #define GZIPPED_ENCODING 10
@@ -174,8 +179,8 @@ void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,ch
 
 /* Follow HTTP redirects and return (even when incomplete) when signal pointed by sigmask is received */
 
-void* sig_follow_redirects(struct http_request* c_s_request, struct mid_data* response, struct mid_interface* mid_if, \
-		long max_redirects, int flag, sigset_t* sigmask);
+int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_response, struct mid_interface* mid_if, \
+		long max_redirects, int rs_flag, struct mid_bag* rd_result, sigset_t* sigmask);
 
 char* determine_filename(char* path,FILE** fp_ptr);
 
@@ -199,6 +204,7 @@ struct encoding_info* determine_encodings(char* encoding_str);
 void https_quit();
 #endif
 
-#define follow_redirects(var0, var1, var2, var3, var4) sig_follow_redirects(var0, var1, var2, var3, var4, NULL)
+#define follow_redirects(var0, var1, var2, var3, var4, var5) \
+	sig_follow_redirects(var0, var1, var2, var3, var4, var5, NULL)
 
 #endif /* MID_HTTP_H_ */

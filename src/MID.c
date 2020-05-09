@@ -232,14 +232,17 @@ int main(int argc, char **argv)
 			mid_err("%s",response->data);
 		}
 
-		void* s_rqst_s_resp=follow_redirects(s_request, response, net_if[i], args->max_redirects, RETURN_S_REQUEST_S_RESPONSE);
+		struct mid_bag* rd_result = create_mid_bag();
 
-		if(s_rqst_s_resp==NULL)
+		if (follow_redirects(s_request, response, net_if[i], args->max_redirects, \
+				MID_RETURN_S_REQUEST | MID_RETURN_S_RESPONSE, rd_result) != MID_ERROR_NONE)  { /* If error encountered when following
+				redirects */
 			continue;
+		}
 
-		struct http_request* tmp_s_request=(struct http_request*)s_rqst_s_resp;
+		struct http_request* tmp_s_request = (struct http_request*) rd_result->first->data;
 
-		struct http_response* tmp_s_response=(struct http_response*)(s_rqst_s_resp+sizeof(struct http_request));
+		struct http_response* tmp_s_response = (struct http_response*) rd_result->end->data;
 
 		if(gl_s_response==NULL)
 		{
