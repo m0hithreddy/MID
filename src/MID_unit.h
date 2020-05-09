@@ -40,11 +40,6 @@
 		if(unit_info->quit)\
 		{\
 			free_mid_client(&mid_cli);\
-			if(sigfd >= 0)\
-			{\
-				close(sigfd);\
-				sigfd = -1;\
-			}\
 			return NULL;\
 		}\
 	}while(0)

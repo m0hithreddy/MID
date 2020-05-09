@@ -34,21 +34,15 @@ void* unit(void* info)
 
 	struct unit_info* unit_info = (struct unit_info*)info;
 
-	int signo;
+	int signo, in_return = MID_ERROR_NONE, wr_return = MID_ERROR_NONE, \
+			rd_return = MID_ERROR_NONE;
 
-	long retries_count = 0;
+	long retries_count = 0, rd_status = 0;
 
 	struct mid_client* mid_cli;
 
 	struct timespec sleep_time;
 	sleep_time.tv_nsec = 0;
-
-	int sigfd=signalfd(-1, &unit_info->sync_mask, 0);
-
-	if(sigfd < 0)
-		goto fatal_error;
-
-	char sigbuf[sizeof(struct signalfd_siginfo)];
 
 	for( ; ; )
 	{
@@ -139,41 +133,42 @@ void* unit(void* info)
 
 		struct parsed_url* purl = parse_url(unit_info->s_request->url);
 
-		mid_cli = create_mid_client(unit_info->mid_if, purl);
+		mid_cli = sig_create_mid_client(unit_info->mid_if, purl, &unit_info->sync_mask);
 
-		unit_quit();
+		in_return = init_mid_client(mid_cli); // initialize socket [and ssl].
 
-		int init_status = init_mid_client(mid_cli); // initialize socket [and ssl].
+		if(in_return == MID_ERROR_SIGRCVD)
+			unit_quit();
 
-		unit_quit();
-
-		if(init_status != MID_ERROR_NONE)
+		if(in_return != MID_ERROR_NONE)
 			goto self_repair;
 
 		/* Send HTTP[S] request */
 
 		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 		{
-			if(mid_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
-					NULL) != MID_ERROR_NONE)
-				goto self_repair;
+			wr_return = mid_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
+					NULL);
 		}
 #ifdef LIBSSL_SANE
 		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 		{
-			if(mid_ssl_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
-					NULL) != MID_ERROR_NONE)
-				goto self_repair;
+			wr_return = mid_ssl_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
+					NULL);
 		}
 #endif
 		else // protocol unknown
 			goto fatal_error;
 
-		unit_quit();
+		if(wr_return == MID_ERROR_SIGRCVD)
+			unit_quit();
 
-		/* Read Headers (some part of body may also be included) */
+		if(wr_return != MID_ERROR_NONE)
+			goto self_repair;
 
-			/* Make socket non-blocking */
+		/* Read Response Headers (some part of body may also be read) */
+
+		/* Make socket non-blocking */
 
 		int sock_flags = fcntl(mid_cli->sockfd, F_GETFL);
 
@@ -183,98 +178,58 @@ void* unit(void* info)
 		if(fcntl(mid_cli->sockfd, F_SETFL, sock_flags | O_NONBLOCK) < 0)
 			goto self_repair;
 
-			/* Select variables initializations */
-
-		fd_set m_set, t_set;
-
-		FD_ZERO(&m_set);
-		FD_SET(sigfd, &m_set);
-		FD_SET(mid_cli->sockfd, &m_set);
-
-		int maxfds=sigfd > mid_cli->sockfd ? sigfd + 1 : mid_cli->sockfd + 1, s_ret;
-
-			/* Timeout variables initializations */
-
-		struct timeval m_time, t_time;
-
-		m_time.tv_sec = args->io_timeout;
-		m_time.tv_usec = 0;
-
-
-			/* Read the response */
+		/* Read the response */
 
 		struct mid_bag* hdr_bag = create_mid_bag();
-
 		struct mid_data rsp_data;
 
 		rsp_data.data = malloc(MAX_TRANSACTION_SIZE);
 		rsp_data.len = MAX_TRANSACTION_SIZE;
 
-		int rd_return;
-		long rd_status;
-
 		for( ; ; )
 		{
-			t_set = m_set;
-			t_time = m_time;
-			s_ret = select(maxfds, &t_set, NULL, NULL, &t_time);  // select descriptor or timeout.
+			rsp_data.len = MAX_TRANSACTION_SIZE;
 
-			if(s_ret <= 0)  // If timeout or error in select.
-				goto self_repair;
-
-			if(FD_ISSET(sigfd, &t_set))  // User interrupt, break.
+			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 			{
-				read(sigfd, sigbuf, sizeof(struct signalfd_siginfo));
-
-				break;
+				rd_return = mid_socket_read(mid_cli, &rsp_data, \
+						MID_MODE_PARTIAL, &rd_status);   // read the socket in partial_read mode.
 			}
-			else if(FD_ISSET(mid_cli->sockfd, &t_set))  // If socket is set.
-			{
-
-				rsp_data.len = MAX_TRANSACTION_SIZE;
-
-				if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
-				{
-					rd_return = mid_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_PARTIAL, &rd_status);   // read the socket in partial_read mode.
-				}
 #ifdef LIBSSL_SANE
-				else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-				{
-					rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_PARTIAL, &rd_status);  // read the ssl socket in partial_read mode.
-				}
+			else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+			{
+				rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
+						MID_MODE_PARTIAL, &rd_status);  // read the ssl socket in partial_read mode.
+			}
 #endif
-				else  // Unknown protocol quit.
-					mid_protocol_quit(mid_cli);
+			else  // Unknown protocol quit.
+				goto fatal_error;
 
-				if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
-						rd_return != MID_ERROR_BUFFER_FULL) { // If error encountered.
+			if(rd_return == MID_ERROR_SIGRCVD)
+				unit_quit();
 
-					goto self_repair;
-				}
+			if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
+					rd_return != MID_ERROR_BUFFER_FULL) { // If error encountered.
 
-				if(rd_status > 0)
-				{
-					rsp_data.len = rd_status;
+				goto self_repair;
+			}
 
-					place_mid_data(hdr_bag, &rsp_data);
+			if(rd_status > 0)
+			{
+				rsp_data.len = rd_status;
 
-					struct mid_data* tmp_hdr_data=flatten_mid_bag(hdr_bag);
+				place_mid_data(hdr_bag, &rsp_data);
 
-					if(strlocate(tmp_hdr_data->data, "\r\n\r\n", 0, \
-							tmp_hdr_data->len - 1) != NULL) // read until crlfcrlf is encountered.
-						break;
-				}
+				struct mid_data* tmp_hdr_data=flatten_mid_bag(hdr_bag);
 
-				if(rd_return == MID_ERROR_NONE)
+				if(strlocate(tmp_hdr_data->data, "\r\n\r\n", 0, \
+						tmp_hdr_data->len - 1) != NULL) // read until crlfcrlf is encountered.
 					break;
 			}
-			else  // just in case.
-				goto self_repair;
-		}
 
-		unit_quit();
+			if(rd_return == MID_ERROR_NONE)
+				break;
+		}
 
 		/* Parse the Headers and Act */
 
@@ -479,55 +434,36 @@ void* unit(void* info)
 			if(rd_return == MID_ERROR_NONE)
 				break;
 
-			t_set = m_set;
-			t_time = m_time;
-			s_ret = select(maxfds, &t_set, NULL, NULL, &t_time);  // continue when fd ready or timeout
+			rsp_data.len =  MAX_TRANSACTION_SIZE;
 
-			if(s_ret <= 0)  // Timeout or Error in select.
-				break;
-
-			if(FD_ISSET(sigfd, &t_set))  // User interrupt.
+			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 			{
-				read(sigfd, sigbuf, sizeof(struct signalfd_siginfo));
-
-				break;
+				rd_return = mid_socket_read(mid_cli, &rsp_data, \
+						MID_MODE_PARTIAL, &rd_status);  // Do a partial read on socket.
 			}
-			else if(FD_ISSET(mid_cli->sockfd, &t_set))  // If socket read.
-			{
-				rsp_data.len =  MAX_TRANSACTION_SIZE;
-
-				if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
-				{
-					rd_return = mid_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_PARTIAL, &rd_status);  // Do a partial read on socket.
-				}
 #ifdef LIBSSL_SANE
-				else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-				{
-					rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
-							MID_MODE_PARTIAL, &rd_status);  // Do a partial read on ssl socket.
-				}
-#endif
-				else
-					mid_protocol_quit(mid_cli);
-
-				if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
-						rd_return != MID_ERROR_BUFFER_FULL)  // If read reported an error.
-				{
-					break;
-				}
-
-				if(rd_status > 0)
-					rsp_data.len = rd_status;
-				else
-					goto read_socket;
-			}
-			else
+			else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 			{
-				f_error = 1;
+				rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
+						MID_MODE_PARTIAL, &rd_status);  // Do a partial read on ssl socket.
+			}
+#endif
+			else
+				mid_protocol_quit(mid_cli);
 
+			if(rd_return == MID_ERROR_SIGRCVD)
+				break;
+
+			if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
+					rd_return != MID_ERROR_BUFFER_FULL)  // If read reported an error.
+			{
 				break;
 			}
+
+			if(rd_status > 0)
+				rsp_data.len = rd_status;
+			else
+				goto read_socket;
 		}
 
 		/* End of the download make unit ready for handling next download or exit */
@@ -599,20 +535,16 @@ void* unit(void* info)
 	fatal_error:
 
 	pthread_mutex_lock(&unit_info->lock);
-
 	unit_info->err_flag = 2;
-	unit_info->quit = 1;
-
 	pthread_mutex_unlock(&unit_info->lock);
 
 	pthread_mutex_lock(&err_lock);
 	fatal_error = fatal_error + 1;
 	pthread_mutex_unlock(&err_lock);
 
+	free_mid_client(&mid_cli);
+
 	pthread_kill(unit_info->p_tid, SIGRTMIN);
-
-	unit_quit();
-
 	return NULL;
 }
 
