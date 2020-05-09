@@ -30,7 +30,7 @@
 
 struct mid_client* sig_create_mid_client(struct mid_interface* mid_if, struct parsed_url* purl, sigset_t* sigmask)
 {
-	struct mid_client* mid_cli=calloc(1,sizeof(struct mid_client));
+	struct mid_client* mid_cli = calloc(1, sizeof(struct mid_client));
 
 	if(mid_cli == NULL)
 		return NULL;
@@ -70,14 +70,22 @@ struct mid_client* sig_create_mid_client(struct mid_interface* mid_if, struct pa
 	mid_cli->sockfd = -1;
 	mid_cli->hostip = NULL;
 	mid_cli->io_timeout = args->io_timeout;
-	mid_cli->sigmask = sigmask;
 
-	if(!strcmp(purl->scheme,"http"))   // Mid protocol scheme.
+	if(sigmask != NULL)
+		mid_cli->sigmask = (sigset_t*)memndup(sigmask, sizeof(sigset_t));
+	else
+		mid_cli->sigmask = NULL;
+
+	/* MID application protocol scheme */
+
+	if(!strcmp(purl->scheme, "http"))
 		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_HTTP;
-	else if(!strcmp(purl->scheme,"https"))
+	else if(!strcmp(purl->scheme, "https"))
 		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS;
 	else
 		mid_cli->mid_protocol = MID_CONSTANT_APPLICATION_PROTOCOL_UNKNOWN;
+
+	/* SSL initializations */
 
 #ifdef LIBSSL_SANE
 	mid_cli->ssl = NULL;
@@ -382,6 +390,7 @@ int free_mid_client(struct mid_client** mid_cli)
 	free((*mid_cli)->hostname);
 	free((*mid_cli)->port);
 	free((*mid_cli)->hostip);
+	free((*mid_cli)->sigmask);
 
 	/* Free the struct */
 
