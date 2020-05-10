@@ -137,7 +137,7 @@ int main(int argc, char **argv)
 
 	struct http_request* s_request=(struct http_request*)calloc(1,sizeof(struct http_request));
 
-	s_request->method="HEAD";
+	s_request->method = "GET";
 
 	if(purl->path!=NULL)
 	{
@@ -211,38 +211,36 @@ int main(int argc, char **argv)
 
 		s_request->hostip=mid_cli->hostip;
 
-		struct mid_data *response;
+		struct mid_bag* http_result = create_mid_bag();
 
-		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
-			response=send_http_request(mid_cli,request,NULL,0);
-		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-			response=send_https_request(mid_cli,request,purl->host,0);
-		else
-			mid_protocol_quit(mid_cli);
+		int http_return = mid_http(mid_cli, request, MID_MODE_SEND_REQUEST | MID_MODE_READ_HEADERS, http_result);
 
 		free_mid_client(&mid_cli);
 
-		if(response==NULL)
+		if(http_return != MID_ERROR_NONE)
 			continue;
+
+		struct mid_data* hdr_data = (struct mid_data*) http_result->end->data;
 
 		if(args->vverbose_flag && !args->quiet_flag)
 		{
 			fprintf(stderr,"\nHTTP Response Message:\n\n");
 			fprintf(stderr,"->");
-			mid_err("%s",response->data);
+			mid_err("%s", (char*) hdr_data->data);
 		}
 
-		struct mid_bag* rd_result = create_mid_bag();
+		struct mid_bag* fr_result = create_mid_bag();
 
-		if (follow_redirects(s_request, response, net_if[i], args->max_redirects, \
-				MID_RETURN_S_REQUEST | MID_RETURN_S_RESPONSE, rd_result) != MID_ERROR_NONE)  { /* If error encountered when following
+		if (follow_redirects(s_request, hdr_data, net_if[i], args->max_redirects, MID_MODE_RETURN_S_REQUEST | \
+				MID_MODE_RETURN_S_RESPONSE | MID_MODE_FOLLOW_HEADERS, fr_result) != MID_ERROR_NONE)  { /* If error encountered when following
 				redirects */
+
 			continue;
 		}
 
-		struct http_request* tmp_s_request = (struct http_request*) rd_result->first->data;
+		struct http_request* tmp_s_request = (struct http_request*) fr_result->first->data;
 
-		struct http_response* tmp_s_response = (struct http_response*) rd_result->end->data;
+		struct http_response* tmp_s_response = (struct http_response*) fr_result->end->data;
 
 		if(gl_s_response==NULL)
 		{

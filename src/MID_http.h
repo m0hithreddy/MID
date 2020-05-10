@@ -25,12 +25,22 @@
 #define SEND_RECEIVE 11
 #define JUST_SEND 10
 
-/* start sig_follow_redirects() return flags */
+/* mid_http() operation flags */
 
-#define MID_RETURN_REQUEST 0b0001
-#define MID_RETURN_S_REQUEST 0b0010
-#define MID_RETURN_RESPONSE 0b0100
-#define MID_RETURN_S_RESPONSE 0b1000
+#define MID_MODE_SEND_REQUEST 0b001
+#define MID_MODE_READ_HEADERS 0b010
+#define MID_MODE_READ_RESPONSE 0b100
+
+/* end */
+
+/* sig_follow_redirects() flags */
+
+#define MID_MODE_RETURN_REQUEST 0b00001
+#define MID_MODE_RETURN_S_REQUEST 0b00010
+#define MID_MODE_RETURN_RESPONSE 0b00100
+#define MID_MODE_RETURN_S_RESPONSE 0b01000
+
+#define MID_MODE_FOLLOW_HEADERS 0b10000
 
 /* end */
 
@@ -173,14 +183,16 @@ struct mid_data* create_http_request(struct http_request* s_request);
 
 struct http_response* parse_http_response(struct mid_data *response);
 
-void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag);
+/* Perform HTTP socket operations */
 
-void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag);
+int mid_http(struct mid_client* mid_cli, struct mid_data* request, \
+		int http_flag, struct mid_bag* http_result);
 
-/* Follow HTTP redirects and return (even when incomplete) when signal pointed by sigmask is received */
+/* Follow HTTP redirects and return (even when incomplete) when
+ * signal pointed by sigmask is received */
 
 int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_response, struct mid_interface* mid_if, \
-		long max_redirects, int rs_flag, struct mid_bag* rd_result, sigset_t* sigmask);
+		long max_redirects, int fr_flag, struct mid_bag* fr_result, sigset_t* sigmask);
 
 char* determine_filename(char* path,FILE** fp_ptr);
 

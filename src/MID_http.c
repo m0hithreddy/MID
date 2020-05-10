@@ -327,124 +327,187 @@ struct http_response* parse_http_response(struct mid_data *response)
 	return s_response;
 }
 
-void* send_http_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag)
+int mid_http(struct mid_client* mid_cli, struct mid_data* http_request, int http_flag, struct mid_bag* http_result)
 {
-	if(request == NULL || mid_cli == NULL || mid_cli->sockfd < 0)
-		return NULL;
+	if (mid_cli == NULL || mid_cli->sockfd < 0
+#ifdef LIBSSL_SANE
+			|| (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS && mid_cli->ssl == NULL)
+#endif
+			|| ((http_flag & (MID_MODE_READ_RESPONSE | MID_MODE_READ_HEADERS)) && http_result == NULL) || \
+			((http_flag & MID_MODE_SEND_REQUEST) && (http_request == NULL || \
+					http_request->data == NULL || http_request->len <= 0)))  {   // Invalid Input
 
-	if(mid_cli->sockfd < 0)
-		return NULL;
-
-	if(flag==0)
-		flag=SEND_RECEIVE;
-
-	long* status=(long*)malloc(sizeof(long));
-
-	if(flag == JUST_SEND || flag == SEND_RECEIVE)
-	{
-		if(mid_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
-				status) != MID_ERROR_NONE)
-			return (void*) status;
+		return MID_ERROR_INVAL;
 	}
 
-	if(flag == JUST_SEND)
-	{
-		return (void*)status;
+	/* Check if MID application protocol is  HTTP or HTTPS */
+
+	if (mid_cli->mid_protocol != MID_CONSTANT_APPLICATION_PROTOCOL_HTTP
+#ifdef LIBSSL_SANE
+			 && mid_cli->mid_protocol != MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS
+#endif
+			 )  {
+
+		return MID_ERROR_PROTOCOL_UNKOWN;
 	}
 
-	if(flag == SEND_RECEIVE)
+	/* HTTP Request send procedure */
+
+	if (http_flag & MID_MODE_SEND_REQUEST)
 	{
-		struct mid_bag* bag = create_mid_bag();
-		struct mid_data* data = (struct mid_data*)malloc(sizeof(struct mid_data));
-		data->data = malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
-		data->len = MAX_TRANSACTION_SIZE;
+		int wr_return;
 
-		int rd_return;
-		long rd_status;
+		if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)  // For HTTP
+			wr_return = mid_socket_write(mid_cli, http_request, MID_MODE_AUTO_RETRY, NULL);
+#ifdef LIBSSL_SANE
+		else if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)  // For HTTPS.
+			wr_return = mid_ssl_socket_write(mid_cli, http_request, MID_MODE_AUTO_RETRY, NULL);
+#endif
+		else   // just in case.
+			return MID_ERROR_PROTOCOL_UNKOWN;
 
-		for( ; ; )
+		if (wr_return != MID_ERROR_NONE)
+			return wr_return;
+	}
+
+	/* HTTP Response Headers read procedure */
+
+	if (http_flag & MID_MODE_READ_HEADERS)
+	{
+		struct mid_bag* hdr_bag = create_mid_bag();
+
+		struct mid_data hdr_data;
+		hdr_data.data = malloc(1);
+		hdr_data.len = 1;
+
+		int rd_return = MID_ERROR_NONE, term_seq = 0b0000;
+		long rd_status = 0;
+
+		/* Read one bit at a time. FIX ME :( */
+
+		for ( ; ; )
 		{
-			rd_return = mid_socket_read(mid_cli, data, MID_MODE_AUTO_RETRY, &rd_status);
+			rd_status = 0;
 
-			if(rd_return != MID_ERROR_BUFFER_FULL && rd_return != MID_ERROR_RETRY && \
-					rd_return != MID_ERROR_NONE)
-				return NULL;
+			if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)   // For HTTP case
+				rd_return = mid_socket_read(mid_cli, &hdr_data, MID_MODE_AUTO_RETRY, &rd_status);
+#ifdef LIBSSL_SANE
+			else if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)  // For HTTPS case
+				rd_return = mid_ssl_socket_read(mid_cli, &hdr_data, MID_MODE_AUTO_RETRY, &rd_status);
+#endif
+			else  // Just in case.
+				return MID_ERROR_PROTOCOL_UNKOWN;
 
-			if(rd_status > 0)
-			{
-				data->len = rd_status;
-				place_mid_data(bag, data);
-				data->len = MAX_TRANSACTION_SIZE;
+			if (rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
+					rd_return != MID_ERROR_BUFFER_FULL)  {  // If fatal error reported by read procedure.
+
+				return rd_return;
 			}
 
-			if(rd_return == MID_ERROR_NONE)
-				return flatten_mid_bag(bag);
+			/* Search for HTTP headers terminating sequence "\r\n\r\n" . term_seq => 0b0000 => \n2\r2\n1\r1 */
+
+			if (rd_status > 0)
+			{
+				place_mid_data(hdr_bag, &hdr_data);
+
+				if (term_seq & 0b0001)
+				{
+					if (term_seq & 0b0010)
+					{
+						if (term_seq & 0b0100)
+						{
+							if (((char*) hdr_data.data)[0] == '\n')   // If terminating sequence found.
+								break;
+							else
+								term_seq = 0b0000;
+						}
+						else if (((char*) hdr_data.data)[0] == '\r')
+							term_seq |= 0b0100;
+						else
+							term_seq = 0b0000;
+					}
+					else if (((char*) hdr_data.data)[0] == '\n')
+						term_seq |= 0b0010;
+					else
+						term_seq = 0b0000;
+				}
+				else if (((char*) hdr_data.data)[0] == '\r')
+					term_seq |= 0b0001;
+			}
+
+			if (rd_return == MID_ERROR_NONE)
+				break;
 		}
+
+		/* Append response headers to http_result */
+
+		hdr_data.data = (void*) flatten_mid_bag(hdr_bag);
+		hdr_data.len = sizeof(struct mid_data);
+
+		place_mid_data(http_result, &hdr_data);
 	}
 
-	return NULL;
-}
+	/* HTTP Response read procedure */
 
-#ifdef LIBSSL_SANE
-void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag)
-{
-
-	if(request == NULL || mid_cli == NULL || mid_cli->ssl == NULL)
-		return NULL;
-
-	if(mid_ssl_socket_write(mid_cli, request, \
-			MID_MODE_AUTO_RETRY, NULL) != MID_ERROR_NONE) {
-
-		return NULL;
-	}
-
-	if(flag==JUST_SEND)
+	if (http_flag & MID_MODE_READ_RESPONSE)
 	{
-		return (void*)mid_cli->ssl;
-	}
+		struct mid_bag* rsp_bag = create_mid_bag();
 
-	struct mid_bag* bag = create_mid_bag();
-	struct mid_data* data = (struct mid_data*)malloc(sizeof(struct mid_data));
-	data->data = malloc(sizeof(char)*MAX_TRANSACTION_SIZE);
-	data->len = MAX_TRANSACTION_SIZE;
+		struct mid_data rsp_data;
+		rsp_data.data = malloc(MAX_TRANSACTION_SIZE);
+		rsp_data.len = MAX_TRANSACTION_SIZE;
 
-	int rd_return;
-	long rd_status;
+		int rd_return = MID_ERROR_NONE;
+		long rd_status = 0;
 
-	for( ; ; )
-	{
-		rd_return = mid_ssl_socket_read(mid_cli, data, MID_MODE_AUTO_RETRY, &rd_status);
+		/* Read till server terminates connection */
 
-		if(rd_return != MID_ERROR_BUFFER_FULL && rd_return != MID_ERROR_RETRY && \
-				rd_return != MID_ERROR_NONE)
-			return NULL;
-
-		if(rd_status > 0)
+		for ( ; ; )
 		{
-			data->len = rd_status;
-			place_mid_data(bag, data);
-			data->len = MAX_TRANSACTION_SIZE;
+			rd_status = 0;
+			rsp_data.len = MAX_TRANSACTION_SIZE;
+
+			if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)  // For HTTP
+				rd_return = mid_socket_read(mid_cli, &rsp_data, MID_MODE_AUTO_RETRY, &rd_status);
+#ifdef LIBSSL_SANE
+			else if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)  // For HTTPS
+				rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, MID_MODE_AUTO_RETRY, &rd_status);
+#endif
+			else  // Just in case.
+				return MID_ERROR_PROTOCOL_UNKOWN;
+
+			if (rd_return != MID_ERROR_NONE || rd_return != MID_ERROR_RETRY || \
+					rd_return != MID_ERROR_BUFFER_FULL)  {  // Fatal error reported by read operation.
+
+				return rd_return;
+			}
+
+			if (rd_status > 0)
+			{
+				rsp_data.len = rd_status;
+				place_mid_data(rsp_bag, &rsp_data);
+			}
+
+			if (rd_return == MID_ERROR_NONE)
+				break;
 		}
 
-		if(rd_return == MID_ERROR_NONE)
-			return flatten_mid_bag(bag);
+		/* Append Response data to http_result */
+
+		rsp_data.data = (void*) flatten_mid_bag(rsp_bag);
+		rsp_data.len = sizeof(struct mid_data);
+
+		place_mid_data(http_result, &rsp_data);
 	}
 
-	return NULL;
+	return MID_ERROR_NONE;
 }
-#else
-void* send_https_request(struct mid_client* mid_cli, struct mid_data* request,char* hostname,int flag)
-{
-	https_quit();
-	return NULL;
-}
-#endif
 
 int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_response, struct mid_interface* mid_if, \
-		long max_redirects, int rs_flag, struct mid_bag* rd_result, sigset_t* sigmask)  {
+		long max_redirects, int fr_flag, struct mid_bag* fr_result, sigset_t* sigmask)  {
 
 	if (c_s_request == NULL || c_response == NULL || c_response->data == NULL || \
-			c_response->len <= 0 || rd_result == NULL) {  // Invalid input.
+			c_response->len <= 0 || fr_result == NULL) {  // Invalid input.
 
 		return MID_ERROR_INVAL;
 	}
@@ -462,7 +525,7 @@ int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_re
 	/* Follow redirects */
 
 	struct parsed_url* purl = NULL;
-	int in_return = MID_ERROR_NONE;
+	int in_return = MID_ERROR_NONE, http_return = MID_ERROR_NONE;
 	long redirect_count = 0;
 
 	for ( ; redirect_count < max_redirects; redirect_count++)
@@ -496,11 +559,8 @@ int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_re
 
 		in_return = init_mid_client(mid_cli);
 
-		if (in_return == MID_ERROR_SIGRCVD)
-			return MID_ERROR_SIGRCVD;
-
 		if (in_return != MID_ERROR_NONE)
-			return MID_ERROR_FATAL;
+			return in_return;
 
 		/* Update s_request{} fields */
 
@@ -553,19 +613,19 @@ int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_re
 
 		request = create_http_request(s_request);
 
-		if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
-			response = (struct mid_data*) send_http_request(mid_cli, request, NULL, SEND_RECEIVE);
-#ifdef LIBSSL_SANE
-		else if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-			response = (struct mid_data*) send_https_request(mid_cli, request, purl->host, SEND_RECEIVE);
-#endif
-		else
-			return MID_ERROR_PROTOCOL_UNKOWN;
+		struct mid_bag* http_result = create_mid_bag();
+
+			/* If asked to follow headers then just read headers, else read whole response */
+
+		http_return = mid_http(mid_cli, request, MID_MODE_SEND_REQUEST | ((fr_flag & MID_MODE_FOLLOW_HEADERS) ? \
+				MID_MODE_READ_HEADERS : MID_MODE_READ_RESPONSE), http_result);
 
 		free_mid_client(&mid_cli);
 
-		if (response == NULL)
-			return MID_ERROR_FATAL;
+		if(http_return != MID_ERROR_NONE)
+			return http_return;
+
+		response = (struct mid_data*) http_result->end->data;
 	}
 
 	/* Compute Final results */
@@ -580,36 +640,36 @@ int sig_follow_redirects(struct http_request* c_s_request, struct mid_data* c_re
 
 	struct mid_data rs_data;
 
-	if (rs_flag & MID_RETURN_REQUEST)   // If requested for HTTP Request.
+	if (fr_flag & MID_MODE_RETURN_REQUEST)   // If requested for HTTP Request.
 	{
-		rs_data.data = request;
+		rs_data.data = (void*) request;
 		rs_data.len = sizeof(struct mid_data);
 
-		place_mid_data(rd_result, &rs_data);
+		place_mid_data(fr_result, &rs_data);
 	}
 
-	if (rs_flag & MID_RETURN_S_REQUEST)  // If requested for s_request{}.
+	if (fr_flag & MID_MODE_RETURN_S_REQUEST)  // If requested for s_request{}.
 	{
-		rs_data.data = s_request;
+		rs_data.data = (void*) s_request;
 		rs_data.len = sizeof(struct http_request);
 
-		place_mid_data(rd_result, &rs_data);
+		place_mid_data(fr_result, &rs_data);
 	}
 
-	if (rs_flag & MID_RETURN_RESPONSE)  // If requested for HTTP response.
+	if (fr_flag & MID_MODE_RETURN_RESPONSE)  // If requested for HTTP response.
 	{
-		rs_data.data = response;
+		rs_data.data = (void*) response;
 		rs_data.len = sizeof(struct mid_data);
 
-		place_mid_data(rd_result, &rs_data);
+		place_mid_data(fr_result, &rs_data);
 	}
 
-	if (rs_flag & MID_RETURN_S_RESPONSE) // If requested for s_response{}.
+	if (fr_flag & MID_MODE_RETURN_S_RESPONSE) // If requested for s_response{}.
 	{
-		rs_data.data = s_response;
+		rs_data.data = (void*) s_response;
 		rs_data.len = sizeof(struct http_response);
 
-		place_mid_data(rd_result, &rs_data);
+		place_mid_data(fr_result, &rs_data);
 	}
 
 	return MID_ERROR_NONE;
@@ -982,12 +1042,3 @@ struct encoding_info* determine_encodings(char* encoding_str)
 
 	return NULL; // Encoding not known or not handled
 }
-
-#ifndef LIBSSL_SANE
-void https_quit()
-{
-	fprintf(stderr,"\nMID: HTTPS URL encountered! MID is not built with the SSL support. Please recompile MID with the SSL support. Exiting...\n\n");
-	exit(3);
-}
-#endif
-
