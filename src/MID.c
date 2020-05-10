@@ -95,6 +95,16 @@ int main(int argc, char **argv)
 		fprintf(stderr,"->Query: %s\n",purl->query);
 	}
 
+	/* Handle SIGPIPE signal by blocking it (EPIPE error is received instead) */
+
+	sigset_t sigpipemask;
+
+	sigemptyset(&sigpipemask);
+	sigaddset(&sigpipemask, SIGPIPE);
+
+	if(sigprocmask(SIG_BLOCK, &sigpipemask, NULL) != 0)
+		mid_flag_exit1(1, "Error blocking SIGPIPE signal. Exiting...\n\n");
+
 	// If SSL enabled then initialize SSL.
 
 #ifdef LIBSSL_SANE
