@@ -34,29 +34,28 @@ void* unit(void* info)
 
 	struct unit_info* unit_info = (struct unit_info*)info;
 
-	int signo, in_return = MID_ERROR_NONE, wr_return = MID_ERROR_NONE, \
-			rd_return = MID_ERROR_NONE;
+	int signo;
 
-	long retries_count = 0, rd_status = 0;
+	long retries_count = 0;
 
 	struct mid_client* mid_cli;
 
 	struct timespec sleep_time;
 	sleep_time.tv_nsec = 0;
 
-	for( ; ; )
+	for ( ; ; )
 	{
 		/* Sync and retry mechanisms */
 
 		init:
 
-		if(unit_info->quit == 1 || (unit_info->resume == 4 && unit_info->pc_flag ==0 )) // Initial checks
+		if (unit_info->quit == 1 || (unit_info->resume == 4 && unit_info->pc_flag ==0)) // Initial checks
 		{
 			unit_info->quit = 1;
 			unit_quit();
 		}
 
-		if(unit_info->err_flag != 0) // If an probably recoverable error encountered.
+		if (unit_info->err_flag != 0) // If an probably recoverable error encountered.
 		{
 			sigwait(&unit_info->sync_mask, &signo);
 			unit_quit();
@@ -66,7 +65,7 @@ void* unit(void* info)
 			pthread_mutex_unlock(&unit_info->lock);
 		}
 
-		if(unit_info->self_repair == 1) // Self repair.
+		if (unit_info->self_repair == 1) // Self repair.
 		{
 			sleep_time.tv_sec = unit_info->healing_time;
 
@@ -81,7 +80,7 @@ void* unit(void* info)
 			pthread_mutex_unlock(&unit_info->lock);
 		}
 
-		if(unit_info->resume > 2) // Unit is idle, wait for work or termination
+		if (unit_info->resume > 2) // Unit is idle, wait for work or termination
 		{
 			retries_count = 0;
 
@@ -104,21 +103,21 @@ void* unit(void* info)
 
 		pthread_mutex_lock(&unit_info->lock);  // Set unit_info->s_request fields.
 
-		if(unit_info->pc_flag)
+		if (unit_info->pc_flag)
 		{
-			if(unit_info->range->start >=0 && unit_info->range->end >=0 && \
-					unit_info->range->start <= unit_info->range->end)  // If range is valid.
-			{
-				char range[HTTP_REQUEST_HEADERS_MAX_LEN];
+			if (unit_info->range->start >=0 && unit_info->range->end >=0 && \
+					unit_info->range->start <= unit_info->range->end) {  // If range is valid.
 
+				char range[HTTP_REQUEST_HEADERS_MAX_LEN];
 				sprintf(range, "bytes=%ld-%ld", unit_info->range->start, unit_info->range->end);
+
 				unit_info->s_request->range = range;
 			}
 			else
 			{
 				unit_info->resume = 4;
-
 				pthread_mutex_unlock(&unit_info->lock);
+
 				goto signal_parent;
 			}
 		}
@@ -133,121 +132,59 @@ void* unit(void* info)
 
 		mid_cli = sig_create_mid_client(unit_info->mid_if, purl, &unit_info->sync_mask);
 
-		in_return = init_mid_client(mid_cli); // initialize socket [and ssl].
+		int in_return = init_mid_client(mid_cli); // initialize socket [and ssl].
 
-		if(in_return == MID_ERROR_SIGRCVD)
+		if (in_return == MID_ERROR_SIGRCVD)
 			unit_quit();
 
-		if(in_return != MID_ERROR_NONE)
+		if (in_return != MID_ERROR_NONE)
 			goto self_repair;
-
-		/* Send HTTP[S] request */
-
-		if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
-		{
-			wr_return = mid_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
-					NULL);
-		}
-#ifdef LIBSSL_SANE
-		else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-		{
-			wr_return = mid_ssl_socket_write(mid_cli, request, MID_MODE_AUTO_RETRY, \
-					NULL);
-		}
-#endif
-		else // protocol unknown
-			goto fatal_error;
-
-		if(wr_return == MID_ERROR_SIGRCVD)
-			unit_quit();
-
-		if(wr_return != MID_ERROR_NONE)
-			goto self_repair;
-
-		/* Read Response Headers (some part of body may also be read) */
 
 		/* Make socket non-blocking */
 
 		int sock_flags = fcntl(mid_cli->sockfd, F_GETFL);
 
-		if(sock_flags < 0)
+		if (sock_flags < 0)
 			goto self_repair;
 
-		if(fcntl(mid_cli->sockfd, F_SETFL, sock_flags | O_NONBLOCK) < 0)
+		if (fcntl(mid_cli->sockfd, F_SETFL, sock_flags | O_NONBLOCK) < 0)
 			goto self_repair;
 
-		/* Read the response */
+		/* Send HTTP[S] request and Read HTTP response headers */
 
-		struct mid_bag* hdr_bag = create_mid_bag();
-		struct mid_data rsp_data;
+		struct mid_bag* http_result = create_mid_bag();
 
-		rsp_data.data = malloc(MAX_TRANSACTION_SIZE);
-		rsp_data.len = MAX_TRANSACTION_SIZE;
+		int http_return = mid_http(mid_cli, request, MID_MODE_SEND_REQUEST | MID_MODE_READ_HEADERS, http_result);
 
-		for( ; ; )
-		{
-			rsp_data.len = MAX_TRANSACTION_SIZE;
+		if (http_return == MID_ERROR_SIGRCVD)
+			unit_quit();
+		else if (http_return == MID_ERROR_PROTOCOL_UNKOWN)
+			goto fatal_error;
 
-			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
-			{
-				rd_return = mid_socket_read(mid_cli, &rsp_data, \
-						MID_MODE_PARTIAL, &rd_status);   // read the socket in partial_read mode.
-			}
-#ifdef LIBSSL_SANE
-			else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
-			{
-				rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
-						MID_MODE_PARTIAL, &rd_status);  // read the ssl socket in partial_read mode.
-			}
-#endif
-			else  // Unknown protocol quit.
-				goto fatal_error;
-
-			if(rd_return == MID_ERROR_SIGRCVD)
-				unit_quit();
-
-			if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
-					rd_return != MID_ERROR_BUFFER_FULL) { // If error encountered.
-
-				goto self_repair;
-			}
-
-			if(rd_status > 0)
-			{
-				rsp_data.len = rd_status;
-
-				place_mid_data(hdr_bag, &rsp_data);
-
-				struct mid_data* tmp_hdr_data=flatten_mid_bag(hdr_bag);
-
-				if(strlocate(tmp_hdr_data->data, "\r\n\r\n", 0, \
-						tmp_hdr_data->len - 1) != NULL) // read until crlfcrlf is encountered.
-					break;
-			}
-
-			if(rd_return == MID_ERROR_NONE)
-				break;
-		}
-
-		/* Parse the Headers and Act */
-
-		struct mid_data* hdr_data = flatten_mid_bag(hdr_bag);
-
-		struct http_response* s_response = parse_http_response(hdr_data); // Parse the response headers.
-		if(s_response == NULL)
+		if (http_return != MID_ERROR_NONE)
 			goto self_repair;
 
-		pthread_mutex_lock(&unit_info->lock);    // Act based on HTTP response status code.
+		/* Parse the Headers */
+
+		struct mid_data* hdr_data = (struct mid_data*) http_result->end->data;
+
+		struct http_response* s_response = parse_http_response(hdr_data);
+
+		if (s_response == NULL)
+			goto self_repair;
+
+		/* Act based on HTTP response status code */
+
+		pthread_mutex_lock(&unit_info->lock);
 
 		unit_info->status_code = atoi(s_response->status_code);
 
-		if((unit_info->pc_flag && !strcmp(s_response->status_code, "206")) || \
-				(!unit_info->pc_flag && s_response->status_code[0] == '2'))   // If (PC && range satisfied) || (Non-PC && 2xx)
-		{
+		if ((unit_info->pc_flag && !strcmp(s_response->status_code, "206")) || \
+				(!unit_info->pc_flag && s_response->status_code[0] == '2')) {  // If (PC && range satisfied) || (Non-PC && 2xx)
 
 			unit_info->resume = unit_info->resume-1;
 		}
-		else if(s_response->status_code[0] == '3')  // If the response header is 3xx
+		else if (s_response->status_code[0] == '3')  // If the response header is 3xx
 		{
 			pthread_mutex_unlock(&unit_info->lock);
 
@@ -258,19 +195,21 @@ void* unit(void* info)
 			int fr_return = follow_redirects(unit_info->s_request, hdr_data, unit_info->mid_if, args->max_redirects, \
 					MID_MODE_RETURN_S_REQUEST | MID_MODE_RETURN_S_RESPONSE | MID_MODE_FOLLOW_HEADERS, fr_result); // Follow redirects.
 
-			if(fr_return == MID_ERROR_SIGRCVD)
+			if (fr_return == MID_ERROR_SIGRCVD)
 				unit_quit();
+			else if (fr_return == MID_ERROR_PROTOCOL_UNKOWN)
+				goto fatal_error;
 
-			if(fr_return != MID_ERROR_NONE)
+			if (fr_return != MID_ERROR_NONE)
 				goto self_repair;
 
 			struct http_request* tmp_s_request = (struct http_request*) fr_result->first->data;
 
 			struct http_response* tmp_s_response = (struct http_response*) fr_result->end->data;
 
-			if(!unit_info->pc_flag)  // If Non-PC download.
+			if (!unit_info->pc_flag)  // If Non-PC download.
 			{
-				if(tmp_s_response->status_code[0] != '2') // If not 2xx
+				if (tmp_s_response->status_code[0] != '2') // If not 2xx
 				{
 					pthread_mutex_lock(&unit_info->lock);
 					goto unknown_status_code;
@@ -278,15 +217,14 @@ void* unit(void* info)
 			}
 			else  // If PC download.
 			{
-				if(strcmp(tmp_s_response->status_code, "200"))
+				if (strcmp(tmp_s_response->status_code, "200"))
 				{
 					pthread_mutex_lock(&unit_info->lock);
 					goto unknown_status_code;
 				}
 
-				if(tmp_s_response->accept_ranges == NULL || strcmp(tmp_s_response->accept_ranges, "bytes") != 0 ||\
-						tmp_s_response->content_length == NULL || atol(tmp_s_response->content_length) != unit_info->content_length) // Server is insane!
-				{
+				if (tmp_s_response->accept_ranges == NULL || strcmp(tmp_s_response->accept_ranges, "bytes") != 0 ||\
+						tmp_s_response->content_length == NULL || atol(tmp_s_response->content_length) != unit_info->content_length) { // Server is insane!
 
 					goto fatal_error;
 				}
@@ -315,20 +253,17 @@ void* unit(void* info)
 
 		pthread_mutex_unlock(&unit_info->lock);
 
-		/* Get the file and, copy over eaten data */
+		/* Get the file */
 
-		FILE* fp;
+		FILE* fp = NULL;
 
-		if(s_response->content_encoding != NULL)
-			fp=u_fp;
+		if (s_response->content_encoding != NULL)
+			fp = u_fp;
 		else
-			fp=o_fp;
+			fp = o_fp;
 
-		if(fp == NULL)  // If file is NULL => not opened by main(), different server responses.
+		if (fp == NULL)  // If fp is NULL => not opened by main(), different server responses.
 			goto fatal_error;
-
-		memcpy(rsp_data.data, s_response->body->data, s_response->body->len);   // Copy over eaten data.
-		rsp_data.len = s_response->body->len;
 
 		/* Initialize Fetched Unit Range entries */
 
@@ -346,126 +281,120 @@ void* unit(void* info)
 
 		pthread_mutex_unlock(&unit_info->lock);
 
-		/* Start the download */
+		/* Determine Transfer Encodings used by server */
 
-		struct encoding_info* en_info = determine_encodings(s_response->transfer_encoding); // Transfer encoding used by server.
+		struct encoding_info* en_info = determine_encodings(s_response->transfer_encoding);
 
-		if(en_info == NULL)  // Transfer encoding not implemented.
+		if (en_info == NULL)
 			goto fatal_error;
 
-		int en_status = EN_OK, f_error = 0;
+		/* Read the response and Decode */
 
-		long rem_download = 0, wr_status = 0;
+		int en_status = EN_OK, f_error = 0, rd_return = MID_ERROR_NONE;
+		long rem_download = 0, wr_status = 0, rd_status = 0;
 
-		rd_return = MID_ERROR_RETRY;
+		struct mid_data rsp_data;
 
-		for( ; ; )
+		rsp_data.data = malloc(MAX_TRANSACTION_SIZE);
+		rsp_data.len = MAX_TRANSACTION_SIZE;
+
+		for ( ; ; )
 		{
-
-			pthread_mutex_lock(&unit_info->lock);
-
-			unit_info->report_size[unit_info->if_id] = unit_info->report_size[unit_info->if_id] + \
-					rsp_data.len;   // Data utilization per interface (Headers are excluded).
-
-			pthread_mutex_unlock(&unit_info->lock);
-
-			/* Decode the response data */
-
-			en_info->in = rsp_data.data;
-			en_info->in_len = 0;
-			en_info->in_max = rsp_data.len;
-
-			while(en_info->in_len != en_info->in_max)
-			{
-
-				if(en_status == EN_END) // If encode_handler ended but still more data is given.
-				{
-					f_error = 1;
-					break;
-				}
-
-				en_status = handle_encodings(en_info);
-
-				if(en_status != EN_OK && en_status != EN_END) // Error reported by encode_handler.
-				{
-					f_error = 1;
-					break;
-				}
-
-				/* Write data to file */
-
-				pthread_mutex_lock(&unit_info->lock);
-
-				rem_download = unit_info->range->end-unit_info->range->start + 1 - \
-						unit_info->current_size;  // Remaining chunk to be downloaded.
-
-				pthread_mutex_lock(&write_lock);
-
-				wr_status = pwrite(fileno(fp), en_info->out, (rem_download < en_info->out_len && unit_info->pc_flag) ? \
-						rem_download : en_info->out_len, unit_info->range->start + unit_info->current_size);  // Seek to the position and write.
-
-				pthread_mutex_unlock(&write_lock);
-
-				/* Update download progress variables */
-
-				unit_info->current_size = unit_info->current_size + wr_status;
-
-				*((long*) unit_info->unit_ranges->end->data) = *((long*) unit_info->unit_ranges->end->data) + \
-						wr_status;  // fetched range.
-
-				/* If requested range downloaded */
-
-				if(unit_info->pc_flag)
-				{
-					if(unit_info->current_size == unit_info->range->end - \
-							unit_info->range->start + 1)
-					{
-						pthread_mutex_unlock(&unit_info->lock);
-
-						goto end_download;
-					}
-				}
-
-				pthread_mutex_unlock(&unit_info->lock);
-			}
-
-			/* Read the Response */
-
-			read_socket:
-
-			if(rd_return == MID_ERROR_NONE)
-				break;
-
 			rsp_data.len =  MAX_TRANSACTION_SIZE;
 
-			if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
+			if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTP)
 			{
 				rd_return = mid_socket_read(mid_cli, &rsp_data, \
 						MID_MODE_PARTIAL, &rd_status);  // Do a partial read on socket.
 			}
 #ifdef LIBSSL_SANE
-			else if(mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
+			else if (mid_cli->mid_protocol == MID_CONSTANT_APPLICATION_PROTOCOL_HTTPS)
 			{
 				rd_return = mid_ssl_socket_read(mid_cli, &rsp_data, \
 						MID_MODE_PARTIAL, &rd_status);  // Do a partial read on ssl socket.
 			}
 #endif
 			else
-				mid_protocol_quit(mid_cli);
+				goto fatal_error;
 
-			if(rd_return == MID_ERROR_SIGRCVD)
-				break;
+			if (rd_return != MID_ERROR_RETRY && rd_return != MID_ERROR_BUFFER_FULL && \
+					rd_return != MID_ERROR_NONE)  {  // If read reported an error.
 
-			if(rd_return != MID_ERROR_NONE && rd_return != MID_ERROR_RETRY && \
-					rd_return != MID_ERROR_BUFFER_FULL)  // If read reported an error.
-			{
-				break;
+				goto end_download;
 			}
 
-			if(rd_status > 0)
+			if (rd_status > 0)
+			{
 				rsp_data.len = rd_status;
-			else
-				goto read_socket;
+
+				pthread_mutex_lock(&unit_info->lock);
+
+				unit_info->report_size[unit_info->if_id] = unit_info->report_size[unit_info->if_id] + \
+						rsp_data.len;   // Data utilization per interface (Headers are excluded).
+
+				pthread_mutex_unlock(&unit_info->lock);
+
+				/* Decode the response data */
+
+				en_info->in = rsp_data.data;
+				en_info->in_len = 0;
+				en_info->in_max = rsp_data.len;
+
+				for ( ; en_info->in_len != en_info->in_max; )
+				{
+
+					if (en_status == EN_END) // If encode_handler ended but still more data is given.
+					{
+						f_error = 1;
+						goto end_download;
+					}
+
+					en_status = handle_encodings(en_info);
+
+					if (en_status != EN_OK && en_status != EN_END) // Error reported by encode_handler.
+					{
+						f_error = 1;
+						goto end_download;
+					}
+
+					/* Write data to file */
+
+					pthread_mutex_lock(&unit_info->lock);
+
+					rem_download = unit_info->range->end-unit_info->range->start + 1 - \
+							unit_info->current_size;  // Remaining chunk to be downloaded.
+
+					pthread_mutex_lock(&write_lock);
+
+					wr_status = pwrite(fileno(fp), en_info->out, (rem_download < en_info->out_len && unit_info->pc_flag) ? \
+							rem_download : en_info->out_len, unit_info->range->start + unit_info->current_size);  // Seek to the position and write.
+
+					pthread_mutex_unlock(&write_lock);
+
+					/* Update download progress variables */
+
+					unit_info->current_size = unit_info->current_size + wr_status;
+
+					*((long*) unit_info->unit_ranges->end->data) = *((long*) unit_info->unit_ranges->end->data) + \
+							wr_status;  // fetched range.
+
+					/* If requested range downloaded */
+
+					if(unit_info->pc_flag)
+					{
+						if(unit_info->current_size == unit_info->range->end - unit_info->range->start + 1) {
+
+							pthread_mutex_unlock(&unit_info->lock);
+							goto end_download;
+						}
+					}
+
+					pthread_mutex_unlock(&unit_info->lock);
+				}
+			}
+
+			if (rd_return == MID_ERROR_NONE)
+				goto end_download;
 		}
 
 		/* End of the download make unit ready for handling next download or exit */
@@ -478,7 +407,7 @@ void* unit(void* info)
 		unit_info->range->start = *((long*) unit_info->unit_ranges->end->data) + 1; // Update left over range entries.
 		unit_info->current_size = 0;
 
-		if(f_error)  // If a fatal error occurred with in the loop
+		if (f_error)  // If a fatal error occurred with in the loop
 		{
 			pthread_mutex_unlock(&unit_info->lock);
 
@@ -486,15 +415,15 @@ void* unit(void* info)
 			goto fatal_error;
 		}
 
-		if(unit_info->quit) // if requested to quit.
+		if (unit_info->quit) // if requested to quit.
 		{
 			pthread_mutex_unlock(&unit_info->lock);
 			unit_quit();
 		}
 
-		if(unit_info->current_size < unit_info->range->end - \
-				unit_info->range->start + 1) // check for incomplete download.
-		{
+		if (unit_info->current_size < unit_info->range->end - \
+				unit_info->range->start + 1) {  // check for incomplete download.
+
 			pthread_mutex_unlock(&unit_info->lock);
 			goto self_repair;
 		}
@@ -518,7 +447,7 @@ void* unit(void* info)
 
 	pthread_mutex_lock(&unit_info->lock);
 
-	if(retries_count < unit_info->max_unit_retries)
+	if (retries_count < unit_info->max_unit_retries)
 	{
 		retries_count++;
 		unit_info->self_repair = 1;
