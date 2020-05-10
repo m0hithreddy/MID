@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&err_lock,NULL);
 	pthread_mutex_init(&write_lock,NULL);
 
-	args=parse_mid_args(argv,argc);
+	parse_mid_args(argv, argc);
 
 	if( !args->surpass_root_check && getuid()!=0 && geteuid()!=0)
 	{

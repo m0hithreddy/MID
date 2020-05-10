@@ -11,6 +11,7 @@
 #include"MID_socket.h"
 #include"MID_unit.h"
 #include"MID_state.h"
+#include"MID.h"
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
@@ -637,10 +638,9 @@ void read_mid_conf(char* conf,struct mid_args* args)
 
 }
 
-struct mid_args* parse_mid_args(char** argv,long argc)
+void parse_mid_args(char** argv, long argc)
 {
-
-	struct mid_args* args=(struct mid_args*)calloc(1,sizeof(struct mid_args));
+	args = (struct mid_args*) malloc(sizeof(struct mid_args));
 
 	hdr_bag=create_mid_bag();
 
@@ -1183,8 +1183,6 @@ struct mid_args* parse_mid_args(char** argv,long argc)
 		args->ipv4 = MID_DEFAULT_IPV4_SCHEME;
 		args->ipv6 = MID_DEFAULT_IPV6_SCHEME;
 	}
-
-	return args;
 }
 
 void mid_help(char* err_msg)
