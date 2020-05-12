@@ -319,7 +319,7 @@ static void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_f
 
 	else if(!strcmp(key, "version"))
 	{
-		if (atoi(key) > 0)
+		if (atoi(value) > 0)
 			args->version = 1;
 		else
 			args->version = 0;
@@ -475,182 +475,153 @@ static void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_f
 	}
 }
 
-static void read_mid_conf(char* conf,struct mid_args* args)
+static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
 {
-	if(conf==NULL)
-		return;
+	if (config_file == NULL || args == NULL)  // Invalid input
+		return MID_ERROR_INVAL;
 
-	FILE* fp=fopen(conf,"r");
+	/* Open config_file */
 
-	if(fp==NULL)
+	FILE* config_fp = fopen(config_file, "r");
+
+	if (config_fp == NULL)
 	{
-		mid_help("MID: Error reading configuration file");
-		exit(0);
+		if (rc_flags & MID_MODE_PRINT_HELP)
+			mid_help("MID: Error reading configuration file \"%s\"", config_file);
+
+		return MID_ERROR_FATAL;
 	}
 
-	char* buf[MAX_TRANSACTION_SIZE];
-	struct mid_bag* conf_bag=create_mid_bag();
-	struct mid_data* conf_data=(struct mid_data*)malloc(sizeof(struct mid_data));
-	conf_data->data=buf;
+	/* Read the config_file data into a mid_bag then into a mid_data*/
 
-	long status=0;
+	struct mid_bag* config_bag = create_mid_bag();
 
-	while(1)
+	struct mid_data* config_data = (struct mid_data*) malloc(sizeof(struct mid_data));
+	config_data->data = malloc(MAX_TRANSACTION_SIZE);
+	config_data->len = MAX_TRANSACTION_SIZE;
+
+	long rd_status = 0;
+
+	for ( ; ; )
 	{
-		status=read(fileno(fp),buf,MAX_TRANSACTION_SIZE);
+		rd_status = read(fileno(config_fp), config_data->data, MAX_TRANSACTION_SIZE);
 
-		if(status<0)
+		if (rd_status < 0)
 		{
-			fclose(fp);
-			mid_help("MID: Error reading configuration file");
-			exit(0);
+			fclose(config_fp);
+
+			if (rc_flags & MID_MODE_PRINT_HELP)
+				mid_help("MID: Error reading configuration file \"%s\"", config_file);
+
+			return MID_ERROR_FATAL;
 		}
-		else if(status==0)
+		else if (rd_status == 0)
 		{
-			fclose(fp);
+			fclose(config_fp);
 			break;
 		}
 
-		conf_data->len=status;
-		place_mid_data(conf_bag,conf_data);
+		config_data->len = rd_status;
+		place_mid_data(config_bag, config_data);
 	}
 
-	conf_data=flatten_mid_bag(conf_bag);
+	config_data = flatten_mid_bag(config_bag);
 
-	free_mid_bag(conf_bag);
+	free_mid_bag(config_bag);
 
-	char* key_buffer;
-	char* value_buffer;
-	int key_flag=0;
+	/* Parse the config_file data */
 
-	while(1)
+	char* arg_key = NULL;
+	char* arg_value = NULL;
+	int key_read = 0;
+
+	for ( ; ; )
 	{
-		conf_data=sseek(conf_data," \n",-1,MID_PERMIT);
+		/* Skip the spaces and empty lines */
 
-		if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
+		config_data = sseek(config_data, " \n", -1, MID_PERMIT);
+
+		if (config_data == NULL || config_data->data == NULL || config_data->len <= 0)
 		{
-			if(key_flag==0)
+			if (key_read == 0)   // If no arg_key is read, config_file parsing successful.
 				break;
-			else
-				fill_mid_args(key_buffer,NULL,args,1);
-		}
-
-		if(((char*)conf_data->data)[0]=='#') // Skip the comments
-		{
-			conf_data=scopy(conf_data,"\n",NULL,-1,MID_DELIMIT);
-		}
-		else
-		{
-			if(key_flag==0)
+			else   // arg_key read but no value is provided.
 			{
-				if(((char*)conf_data->data)[0]=='\'')
+				mid_help("MID: Configuration file not understood, \"%s\" option used but no value specified", \
+						arg_key);
+
+				return MID_ERROR_FATAL;
+			}
+		}
+
+		/* Read the Text */
+
+		if (((char*) config_data->data)[0] == '#')	{	/* If text is starting with '#',
+		 consider the whole line as comment. */
+
+			config_data = sseek(config_data, "\n", -1, MID_DELIMIT);
+		}
+		else // read arg_key or arg_value.
+		{
+
+			if (((char*) config_data->data)[0] == '\'' || \
+					((char*) config_data->data)[0] == '"')	{	/* If starting with ' or " ,
+					read till ' or " */
+
+				int quote = ((char*) config_data->data)[0] == '\'' ? 1 : 0;
+
+				config_data->data = config_data->data + 1;
+				config_data->len = config_data->len - 1;
+
+				config_data = scopy(config_data, quote ? "'" : "\"", key_read ? \
+						(arg_value = NULL, &arg_value) : (arg_key = NULL, &arg_key), -1, MID_DELIMIT);
+
+				if (config_data == NULL || config_data->data == NULL || config_data->len < 1)
 				{
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
+					if (rc_flags & MID_MODE_PRINT_HELP)
+						mid_help("MID: Configuration file not understood, missing \" %s \"", \
+								quote ? "'" : "\"");
 
-					conf_data=scopy(conf_data,"\'",&key_buffer,-1,MID_DELIMIT);
-
-					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
-					{
-						mid_help("MID: Configuration file not understood, missing \" ' \"");
-						exit(0);
-					}
-
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
-				}
-				else if(((char*)conf_data->data)[0]=='\"')
-				{
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
-
-					conf_data=scopy(conf_data,"\"",&key_buffer,-1,MID_DELIMIT);
-
-					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
-					{
-						mid_help("MID: Configuration file not understood, missing \" \" \"");
-						exit(0);
-					}
-
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
-				}
-				else
-				{
-					conf_data=scopy(conf_data," \n#",&key_buffer,-1,MID_DELIMIT);
+					return MID_ERROR_FATAL;
 				}
 
-				key_flag=1;
+				config_data->data = config_data->data + 1;
+				config_data->len = config_data->len - 1;
 			}
 			else
 			{
-				if(((char*)conf_data->data)[0]=='\'')
-				{
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
-
-					conf_data=scopy(conf_data,"\'",&value_buffer,-1,MID_DELIMIT);
-
-					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
-					{
-						mid_help("MID: Configuration file not understood, missing \" ' \"");
-						exit(0);
-					}
-
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
-				}
-				else if(((char*)conf_data->data)[0]=='\"')
-				{
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
-
-					conf_data=scopy(conf_data,"\"",&value_buffer,-1,MID_DELIMIT);
-
-					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
-					{
-						mid_help("MID: Configuration file not understood, missing \" \" \"");
-						exit(0);
-					}
-
-					conf_data->data=conf_data->data+1;
-					conf_data->len=conf_data->len-1;
-				}
-				else
-				{
-					conf_data=scopy(conf_data," #\n",&value_buffer,-1,MID_DELIMIT);
-				}
-
-				if(conf_data==NULL)
-					continue;
-
-				fill_mid_args(key_buffer,value_buffer,args,1);
-
-				key_flag=0;
+				config_data = scopy(config_data, " \n#", key_read ? (arg_value = NULL, &arg_value) : \
+						(arg_key = NULL, &arg_key), -1, MID_DELIMIT);
 			}
+
+			if (key_read)
+				fill_mid_args(arg_key, arg_value, args, 1);
+
+			key_read = !key_read;
 		}
 	}
 
+	return MID_ERROR_NONE;
 }
 
-int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_result)
+int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_result)
 {
-	if (((pa_flag & MID_MODE_READ_CMD_LINE) && (argv == NULL || argc <= 0)) || pa_result == NULL)  // Invalid Input.
+	if (((pa_flags & MID_MODE_READ_CMD_LINE) && (argv == NULL || argc <= 0)) || pa_result == NULL)  // Invalid Input.
 		return MID_ERROR_INVAL;
 
-	/* Initalize data structures */
+	/* Initialize data structures */
 
 	struct mid_args* args = (struct mid_args*) calloc(1, sizeof(struct mid_args));
 
 	if (args == NULL)
 		return MID_ERROR_FATAL;
 
-	hdr_bag = create_mid_bag();
+	hdr_bag == NULL ? (hdr_bag = create_mid_bag()) : 0;
 
 	/* Initialize args with default values, might get replaced with conf_file and cmd_line.
 	 * cmd_line > conf_file > default */
 
-	if (pa_flag & MID_MODE_READ_DEFAULT_VALUES)
+	if (pa_flags & MID_MODE_READ_DEFAULT_VALUES)
 	{
 		args->schd_alg = MID_DEFAULT_SCHEDULER_ALOGORITHM;
 		args->max_unit_retries = MID_MAX_UNIT_RETRIES;
@@ -665,34 +636,43 @@ int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_resul
 
 	/* Read the conf_file, might get replaced with cmd_line's. cmd_line > conf_file */
 
-	if (pa_flag & MID_MODE_READ_CONF_FILE)
+	if (pa_flags & MID_MODE_READ_CONF_FILE)
 	{
+		int rc_return = MID_ERROR_NONE;
+
 		for (long arg_count = 0; arg_count < argc; arg_count++)
 		{
 			if (strcmp(argv[arg_count], "--conf") == 0 || strcmp(argv[arg_count], "-c") == 0)
 			{
 				if (arg_count == argc - 1)
 				{
-					mid_help("MID: \"conf\" option used but the no file specified");
-					exit(0);
+					if (pa_flags & MID_MODE_PRINT_HELP)
+						mid_help("MID: \"--conf\" option used but no value specified");
+
+					return MID_ERROR_FATAL;
 				}
 
 				/* Read the user specified conf_file */
 
-				read_mid_conf(argv[arg_count + 1], args);
+				rc_return = read_mid_conf(argv[arg_count + 1], args, (pa_flags & MID_MODE_PRINT_HELP) ? \
+						MID_MODE_PRINT_HELP : 0);
 				break;
 			}
 
 			/* If end of args reached, try reading default conf_file, if it exists */
 
 			if (arg_count == argc - 1 && access(MID_DEFAULT_CONFIG_FILE, R_OK) == 0)
-				read_mid_conf(MID_DEFAULT_CONFIG_FILE, args);
+				rc_return = read_mid_conf(MID_DEFAULT_CONFIG_FILE, args, (pa_flags & MID_MODE_PRINT_HELP) ? \
+						MID_MODE_PRINT_HELP : 0);
 		}
+
+		if (rc_return != MID_ERROR_NONE)
+			return rc_return;
 	}
 
 	/* Read command line arguments */
 
-	if (pa_flag & MID_MODE_READ_CMD_LINE)
+	if (pa_flags & MID_MODE_READ_CMD_LINE)
 	{
 		long arg_count = 0;
 
@@ -705,7 +685,8 @@ int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_resul
 
 		/*  Argument struct{} initializations */
 
-		struct mid_data args_str, *targs_str;
+		struct mid_data args_str, \
+		*targs_str = (struct mid_data*) malloc(sizeof(struct mid_data));
 
 		args_str.data = strdup(MID_CONSTANT_ARGUMENTS);
 		args_str.len = strlen(MID_CONSTANT_ARGUMENTS);
@@ -736,8 +717,10 @@ int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_resul
 
 			if (targs_str->data == NULL)
 			{
-				mid_help("MID: Option \"%s\" not known", argv[arg_count]);
-				exit(0);
+				if (pa_flags & MID_MODE_PRINT_HELP)
+					mid_help("MID: Option \"%s\" not known", argv[arg_count]);
+
+				return MID_ERROR_FATAL;
 			}
 
 			/* Skip the space and compute remaining buffer length */
@@ -802,6 +785,8 @@ int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_resul
 				char* enable_arg = "1";
 				fill_mid_args(arg_key, enable_arg, args, 0);
 			}
+			else if (_arg_type == 2)  // Ignore_Value type argument.
+				arg_count++;
 			else
 				continue;
 		}
@@ -821,8 +806,10 @@ int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_resul
 	{
 		if ((hdr_bag->n_pockets) % 2 != 0)
 		{
-			mid_help("MID: Header format not correct");
-			exit(0);
+			if (pa_flags & MID_MODE_PRINT_HELP)
+				mid_help("MID: Headers format not correct");
+
+			return MID_ERROR_FATAL;
 		}
 
 		char*** custom_headers = (char***) malloc(sizeof(char**) * (1 + hdr_bag->n_pockets / 2));

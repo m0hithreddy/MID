@@ -68,9 +68,8 @@ int main(int argc, char **argv)
 	struct mid_bag* pa_result = create_mid_bag();
 
 	if (parse_mid_args(argv, argc, MID_MODE_READ_DEFAULT_VALUES | MID_MODE_READ_CONF_FILE | \
-			MID_MODE_READ_CMD_LINE, pa_result) != MID_ERROR_NONE) {
+			MID_MODE_READ_CMD_LINE | MID_MODE_PRINT_HELP, pa_result) != MID_ERROR_NONE) {
 
-		mid_err("MID: Argument parsing error. Exitng...\n");
 		exit(1);
 	}
 

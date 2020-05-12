@@ -10,9 +10,10 @@
 
 #define MID_DEFAULT_CONFIG_FILE "/usr/local/etc/MID.conf"
 
-#define MID_MODE_READ_DEFAULT_VALUES 0b001
-#define MID_MODE_READ_CONF_FILE 0b010
-#define MID_MODE_READ_CMD_LINE 0b100
+#define MID_MODE_READ_DEFAULT_VALUES 0b0001
+#define MID_MODE_READ_CONF_FILE 0b0010
+#define MID_MODE_READ_CMD_LINE 0b0100
+#define MID_MODE_PRINT_HELP 0b1000
 
 #define MID_CONSTANT_ARGUMENTS " -o --output-file 0 \
 -i --interfaces 0 \
@@ -34,7 +35,6 @@
 -dm --delete-ms 0 \
 -vm --validate-ms 0 \
 -H --header 0 \
--c --conf 0 \
 -4 --ipv4 1 \
 -6 --ipv6 1 \
 -dp --detailed-progress 1 \
@@ -46,7 +46,8 @@
 -vv --vverbose 1 \
 -s --surpass-root-check 1 \
 -V --version 1 \
--h --help 1"
+-h --help 1 \
+-c --conf 2 "
 
 #define mid_help(msg, msg_args...)\
 	do\
@@ -118,9 +119,9 @@ struct mid_args
 
 static void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag);
 
-static void read_mid_conf(char* conf,struct mid_args* args);
+static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags);
 
-int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_result);
+int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_result);
 
 int args_check(struct mid_args* args);
 
