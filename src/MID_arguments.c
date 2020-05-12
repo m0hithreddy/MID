@@ -23,9 +23,11 @@
 #include"config.h"
 #endif
 
-struct mid_bag* hdr_bag;
+/* Store custom HTTP headers given by user (conf_file + cmd_line) */
 
-void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
+static struct mid_bag* hdr_bag = NULL;
+
+static void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 {
 	if(key==NULL)
 		return;
@@ -37,26 +39,14 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	{
 		if(conf_flag>=1)
 		{
-			op_data->data="MID: Configuration file not understood, \"";
+			mid_help("MID: Configuration file not understood, \"%s\" option used but value not specified", key);
 		}
 		else
 		{
-			op_data->data="MID: \"";
+			mid_help("MID: \"%s\" option used but value not specified", key);
 		}
 
-		op_data->len=strlen(op_data->data);
-		place_mid_data(op_bag,op_data);
-
-		op_data->data=key;
-		op_data->len=strlen(op_data->data);
-		place_mid_data(op_bag,op_data);
-
-		op_data->data="\" option used but value not specified";
-		op_data->len=strlen(op_data->data)+1;
-		place_mid_data(op_bag,op_data);
-
-		mid_help(flatten_mid_bag(op_bag)->data);
-
+		exit(0);
 	}
 
 	if(!strcmp(key,"output-file"))
@@ -140,6 +130,14 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 	}
 
+	else if(!strcmp(key, "help"))
+	{
+		if (atoi(value) > 0)
+			args->help = 1;
+		else
+			args->help = 0;
+	}
+
 	else if(!strcmp(key,"url"))
 	{
 		args->url=strdup(value);
@@ -162,6 +160,8 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 				mid_help("MID: Configuration file not understood, value given for \"scheduler-algorithm\" unknown");
 			else
 				mid_help("MID: Value given for \"scheduler-algorithm\" unknown");
+
+			exit(0);
 		}
 	}
 
@@ -231,6 +231,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 			mid_help("MID: Configuration file not understood, \"unit-break\" format not correct");
 		else
 			mid_help("MID: \"unit-break\" format not correct");
+		exit(0);
 	}
 
 	else if(!strcmp(key,"max-redirects"))
@@ -316,6 +317,14 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 
 	}
 
+	else if(!strcmp(key, "version"))
+	{
+		if (atoi(key) > 0)
+			args->version = 1;
+		else
+			args->version = 0;
+	}
+
 	else if(!strcmp(key,"header"))
 	{
 
@@ -333,6 +342,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 				mid_help("MID: Configuration file not understood, header format not correct");
 			else
 				mid_help("MID: Header format not correct");
+			exit(0);
 		}
 
 
@@ -344,6 +354,7 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 				mid_help("MID: Configuration file not understood, header format not correct");
 			else
 				mid_help("MID: Header format not correct");
+			exit(0);
 		}
 
 		n_data->len=strlen(n_data->data)+1;
@@ -453,41 +464,19 @@ void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
 	{
 		if(conf_flag>=1)
 		{
-			op_data->data="MID: Configuration file not understood, option \"";
+			mid_help("MID: Configuration file not understood, option \"%s\" not known", key);
 		}
 		else
 		{
-			op_data->data="MID: Option \"";
+			mid_help("MID: Option \"%s\" not known", key);
 		}
 
-		op_data->len=strlen(op_data->data);
-		place_mid_data(op_bag,op_data);
-
-		op_data->data=key;
-		op_data->len=strlen(op_data->data);
-		place_mid_data(op_bag,op_data);
-
-		op_data->data="\" not known";
-		op_data->len=strlen(op_data->data)+1;
-		place_mid_data(op_bag,op_data);
-
-		mid_help(flatten_mid_bag(op_bag)->data);
+		exit(0);
 	}
 }
 
-void read_mid_conf(char* conf,struct mid_args* args)
+static void read_mid_conf(char* conf,struct mid_args* args)
 {
-	args->schd_alg=MID_DEFAULT_SCHEDULER_ALOGORITHM;
-	args->max_unit_retries=MAX_UNIT_RETRIES;
-	args->max_redirects=DEFAULT_MAX_HTTP_REDIRECTS;
-	args->max_parallel_downloads=MAX_PARALLEL_DOWNLOADS;
-	args->max_tcp_syn_retransmits=MAX_TCP_SYN_RETRANSMITS;
-	args->unit_retry_sleep_time=UNIT_RETRY_SLEEP_TIME;
-	args->io_timeout=MID_DEFAULT_IO_TIMEOUT;
-	args->unit_break=UNIT_BREAK_THRESHOLD_SIZE;
-	args->progress_update_time=PROGRESS_UPDATE_TIME;
-	args->entry_number=0;
-
 	if(conf==NULL)
 		return;
 
@@ -496,6 +485,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 	if(fp==NULL)
 	{
 		mid_help("MID: Error reading configuration file");
+		exit(0);
 	}
 
 	char* buf[MAX_TRANSACTION_SIZE];
@@ -513,6 +503,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 		{
 			fclose(fp);
 			mid_help("MID: Error reading configuration file");
+			exit(0);
 		}
 		else if(status==0)
 		{
@@ -562,6 +553,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
 						mid_help("MID: Configuration file not understood, missing \" ' \"");
+						exit(0);
 					}
 
 					conf_data->data=conf_data->data+1;
@@ -577,6 +569,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
 						mid_help("MID: Configuration file not understood, missing \" \" \"");
+						exit(0);
 					}
 
 					conf_data->data=conf_data->data+1;
@@ -601,6 +594,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
 						mid_help("MID: Configuration file not understood, missing \" ' \"");
+						exit(0);
 					}
 
 					conf_data->data=conf_data->data+1;
@@ -616,6 +610,7 @@ void read_mid_conf(char* conf,struct mid_args* args)
 					if(conf_data==NULL || conf_data->data==NULL || conf_data->len==0)
 					{
 						mid_help("MID: Configuration file not understood, missing \" \" \"");
+						exit(0);
 					}
 
 					conf_data->data=conf_data->data+1;
@@ -638,562 +633,286 @@ void read_mid_conf(char* conf,struct mid_args* args)
 
 }
 
-void parse_mid_args(char** argv, long argc)
+int parse_mid_args(char** argv, long argc, int pa_flag, struct mid_bag* pa_result)
 {
-	args = (struct mid_args*) malloc(sizeof(struct mid_args));
+	if (((pa_flag & MID_MODE_READ_CMD_LINE) && (argv == NULL || argc <= 0)) || pa_result == NULL)  // Invalid Input.
+		return MID_ERROR_INVAL;
 
-	hdr_bag=create_mid_bag();
+	/* Initalize data structures */
 
-	// Check if config file option is given --conf || -c
+	struct mid_args* args = (struct mid_args*) calloc(1, sizeof(struct mid_args));
 
-	for(int i=0;i<argc;i++)
+	if (args == NULL)
+		return MID_ERROR_FATAL;
+
+	hdr_bag = create_mid_bag();
+
+	/* Initialize args with default values, might get replaced with conf_file and cmd_line.
+	 * cmd_line > conf_file > default */
+
+	if (pa_flag & MID_MODE_READ_DEFAULT_VALUES)
 	{
-		if(!strcmp(argv[i],"--conf") || !strcmp(argv[i],"-c"))
-		{
-			if(i==argc-1)
-			{
-				mid_help("MID: --conf option used but the file name is not specified");
-			}
-			read_mid_conf(argv[i+1],args);
-			break;
-		}
+		args->schd_alg = MID_DEFAULT_SCHEDULER_ALOGORITHM;
+		args->max_unit_retries = MID_MAX_UNIT_RETRIES;
+		args->max_redirects = MID_DEFAULT_HTTP_REDIRECTS;
+		args->max_parallel_downloads = MID_DEFAULT_PARALLEL_DOWNLOADS;
+		args->max_tcp_syn_retransmits = MID_DEFAULT_TCP_SYN_RETRANSMITS;
+		args->unit_retry_sleep_time = MID_DEFAULT_UNIT_RETRY_SLEEP_TIME;
+		args->io_timeout = MID_DEFAULT_IO_TIMEOUT;
+		args->unit_break = MID_DEFAULT_UNIT_BREAK_THRESHOLD_SIZE;
+		args->progress_update_time = MID_DEFAULT_PROGRESS_UPDATE_TIME;
+	}
 
-		if(i==argc-1)
-		{
-			FILE* fp=fopen(DEFAULT_CONFIG_FILE,"r");
+	/* Read the conf_file, might get replaced with cmd_line's. cmd_line > conf_file */
 
-			if(fp!=NULL) // Default config file exits use it.
+	if (pa_flag & MID_MODE_READ_CONF_FILE)
+	{
+		for (long arg_count = 0; arg_count < argc; arg_count++)
+		{
+			if (strcmp(argv[arg_count], "--conf") == 0 || strcmp(argv[arg_count], "-c") == 0)
 			{
-				fclose(fp);
-				read_mid_conf(DEFAULT_CONFIG_FILE,args);
+				if (arg_count == argc - 1)
+				{
+					mid_help("MID: \"conf\" option used but the no file specified");
+					exit(0);
+				}
+
+				/* Read the user specified conf_file */
+
+				read_mid_conf(argv[arg_count + 1], args);
+				break;
 			}
-			else // No file exits, call the read_mid_conf with NULL to initialize args with default parameters
-			{
-				read_mid_conf(NULL,args);
-			}
+
+			/* If end of args reached, try reading default conf_file, if it exists */
+
+			if (arg_count == argc - 1 && access(MID_DEFAULT_CONFIG_FILE, R_OK) == 0)
+				read_mid_conf(MID_DEFAULT_CONFIG_FILE, args);
 		}
 	}
 
-	long counter=0;
+	/* Read command line arguments */
 
-	// Command name
-
-	args->cmd=(char*)malloc(sizeof(char)*(strlen(argv[0])+1));
-	memcpy(args->cmd,argv[0],strlen(argv[0]+1));
-	args->arg_count=argc;
-
-	counter++;
-
-	// Parse the command line arguments
-
-	while(counter<argc)
+	if (pa_flag & MID_MODE_READ_CMD_LINE)
 	{
-		if(!strcmp(argv[counter],"-h") || !strcmp(argv[counter],"--help"))
+		long arg_count = 0;
+
+		/* Command name and Arguments count */
+
+		args->cmd = strdup(argv[arg_count]);
+		args->args_count = argc;
+
+		arg_count++;
+
+		/*  Argument struct{} initializations */
+
+		struct mid_data args_str, *targs_str;
+
+		args_str.data = strdup(MID_CONSTANT_ARGUMENTS);
+		args_str.len = strlen(MID_CONSTANT_ARGUMENTS);
+
+		/* Parse arguments */
+
+		char* arg_key = NULL;  // Argument key, to handle argument specific operation.
+		char* arg_type = NULL;  // Argument type. (Value or Flag argument).
+
+		for ( ; arg_count < argc; arg_count++)
 		{
-			mid_help(NULL);
-		}
+			/* Make argument compare buffer */
 
-		if( !strcmp(argv[counter],"--output-file") || !strcmp(argv[counter],"-o") ) // --ouput-file || -o
-		{
-			char* value=NULL;
+			char* cmp_buf = (char*) malloc(sizeof(char) * (strlen(argv[arg_count]) + \
+					3)); // ' ' + arg + ' ' + '\0'
 
-			counter++;
+			cmp_buf[0] = ' ';
+			memcpy(cmp_buf + 1, argv[arg_count], strlen(argv[arg_count]));
+			cmp_buf[strlen(argv[arg_count]) + 1] = ' ';
+			cmp_buf[strlen(argv[arg_count]) + 2] = '\0';
 
-			if(counter<argc)
+			/* Try the argument in args_str buffer */
+
+			*targs_str = args_str;
+
+			targs_str->data = (void *) strlocate((char*) targs_str->data, cmp_buf, 0, \
+					targs_str->len);  // Locate cmp_buf occurrence in the val string.
+
+			if (targs_str->data == NULL)
 			{
-				value=argv[counter];
+				mid_help("MID: Option \"%s\" not known", argv[arg_count]);
+				exit(0);
 			}
 
-			fill_mid_args("output-file",value,args,0);
+			/* Skip the space and compute remaining buffer length */
 
-			counter++;
-		}
+			targs_str->data = targs_str->data + 1;
+			targs_str->len = args_str.len - (long) (targs_str->data - args_str.data);
 
-		else if( !strcmp(argv[counter],"--interfaces") || !strcmp(argv[counter],"-i") || !strcmp(argv[counter],"--exclude-interfaces") || !strcmp(argv[counter],"-ni")) // --interface || -i || --exclude-interface || -ni
-		{
+			if (targs_str->len < 2)
+				continue;
 
-			char* value=NULL;
-
-			int in_flag=0;
-
-			if(!strcmp(argv[counter],"--interfaces") || !strcmp(argv[counter],"-i"))
+			if (((char*) targs_str->data)[0] != '-' || ((char*) targs_str->data)[1] != '-')  // If short argument, get the long version.
 			{
-				in_flag=1;
+				targs_str = sseek(targs_str, " ", -1, MID_DELIMIT); // Skip the argument.
+
+				if (targs_str == NULL || targs_str->data == NULL || targs_str->len <= 0)
+					continue;
+
+				targs_str = sseek(targs_str, " ", -1, MID_PERMIT);  // Skip the spaces.
+
+				if (targs_str == NULL || targs_str->data == NULL || targs_str->len <= 0)
+					continue;
 			}
 
-			counter++;
+			/* Get the argument key */
 
-			if(counter<argc)
+			if (targs_str->len < 2)
+				continue;
+
+			targs_str->data = targs_str->data + 2; // Skip "--"
+			targs_str->len = targs_str->len - 2;
+
+			arg_key = NULL;
+			targs_str = scopy(targs_str, " ", &arg_key, -1, MID_DELIMIT);
+
+			if (arg_key == NULL || targs_str == NULL || targs_str->data == NULL || targs_str->len <= 0)
+				continue;
+
+			/* Determine argument type */
+
+			targs_str = sseek(targs_str, " ", -1, MID_PERMIT);  // Seek the spaces
+
+			if (targs_str == NULL || targs_str->data == NULL || targs_str->len <=0)
+				continue;
+
+			arg_type = NULL;
+			targs_str = scopy(targs_str, " ", &arg_type, -1, MID_DELIMIT);  // Copy argument type.
+
+			if (arg_type == NULL)
+				continue;
+
+			int _arg_type = atoi(arg_type);
+
+			/* Fill the mid_args structure */
+
+			if (_arg_type == 0)  // Value type argument.
 			{
-				value=argv[counter];
+				arg_count++;
+				fill_mid_args(arg_key, arg_count < argc ? argv[arg_count] : NULL, args, 0);
 			}
-
-			if(in_flag)
-				fill_mid_args("interfaces",value,args,0);
+			else if (_arg_type == 1)  // Flag type argument.
+			{
+				char* enable_arg = "1";
+				fill_mid_args(arg_key, enable_arg, args, 0);
+			}
 			else
-				fill_mid_args("exclude-interfaces",value,args,0);
-
-			counter++;
+				continue;
 		}
-
-		else if(!strcmp(argv[counter],"--url") || !strcmp(argv[counter],"-u") )  // --url || -u
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("url",value,args,0);
-
-			counter++;
-		}
-
-		else if( !strcmp(argv[counter],"--unprocessed-file") || !strcmp(argv[counter],"-up") ) // --unprocessed-file || -up
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("unprocessed-file",value,args,0);
-
-			counter++;
-		}
-
-		else if( !strcmp(argv[counter],"--scheduler-algorithm") || !strcmp(argv[counter],"-sa") ) // --scheduler-algorithm || -sa
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("scheduler-algorithm",value,args,0);
-
-			counter++;
-		}
-
-		else if( !strcmp(argv[counter],"--max-parallel-downloads") || !strcmp(argv[counter],"-n")) // --max-parallel-downloads || -n
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("max-parallel-downloads",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--max-unit-retries") || !strcmp(argv[counter],"-ur")) // --max-unit-retries || -ur
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("max-unit-retries",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--unit-break") || !strcmp(argv[counter],"-ub")) // --unit-break || -ub
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("unit-break",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--max-redirects") || !strcmp(argv[counter],"-R")) // --max-redirects || -R
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("max-redirects",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--max-tcp-syn-retransmits") || !strcmp(argv[counter],"-sr")) // --max-tcp-syn-retransmits || -sr
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("max-tcp-syn-retransmits",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--unit-sleep-time") || !strcmp(argv[counter],"-us")) // --unit-sleep-time || -us
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("unit-sleep-time",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--io-timeout") || !strcmp(argv[counter],"-io")) // --io-timeout || -io
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("io-timeout",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter], "--ipv4") || !strcmp(argv[counter], "-4")) // --ipv4 || -4
-		{
-			args->ipv4 = 1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter], "--ipv6") || !strcmp(argv[counter], "-6")) // --ipv6 || -6
-		{
-			args->ipv6 = 1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--progress-update-time") || !strcmp(argv[counter],"-pu")) // --progress-update-time || -pu
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("progress-update-time",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--version") || !strcmp(argv[counter],"-V"))
-		{
-			printf("%s version %s (%s) ",PACKAGE_NAME,PACKAGE_VERSION,HOST_ARCH);
-
-#ifdef LIBSSL_SANE
-			printf("+ssl +crypto");
-#else
-			printf("-ssl -crypto");
-#endif
-
-#ifdef LIBZ_SANE
-			printf(" +z");
-#else
-			printf(" -z");
-#endif
-
-			printf("\n\n");
-			printf("Project homepage: [ %s ]",PACKAGE_URL);
-			printf("\n\n");
-
-			exit(1);
-		}
-
-		else if(!strcmp(argv[counter],"--header") || !strcmp(argv[counter],"-H")) // --header || -H
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("header",value,args,0);
-
-			counter++;
-
-		}
-
-		else if(!strcmp(argv[counter],"--detailed-progress") || !strcmp(argv[counter],"-dp")) // --detailed-progress || -dp
-		{
-			args->detailed_progress=1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--force-resume") || !strcmp(argv[counter],"-fr")) // --force-resume || -fr
-		{
-			args->force_resume=1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--no-resume") || !strcmp(argv[counter],"-nr")) // --no-resume || -nr
-		{
-			args->no_resume=1;
-
-			counter++;
-		}
-#ifdef LIBSSL_SANE
-		else if(!strcmp(argv[counter],"--detailed-save") || !strcmp(argv[counter],"-ds")) // --detailed-save || -ds
-		{
-			args->detailed_save=1;
-
-			counter++;
-		}
-#endif
-		else if(!strcmp(argv[counter],"--entry-number") || !strcmp(argv[counter],"-e")) // --entry-number || -e
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("entry-number",value,args,0);
-
-			counter++;
-		}
-
-		else if( !strcmp(argv[counter],"--ms-file") || !strcmp(argv[counter],"-ms") ) // --ms-file || -ms
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("ms-file",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--print-ms") || !strcmp(argv[counter],"-pm") )  // --read-ms || -pm
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("print-ms",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--delete-ms") || !strcmp(argv[counter],"-dm") )  // --delete-ms || -dm
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("delete-ms",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--validate-ms") || !strcmp(argv[counter],"-vm") )  // --validate-ms || -cm
-		{
-			char* value=NULL;
-
-			counter++;
-
-			if(counter<argc)
-			{
-				value=argv[counter];
-			}
-
-			fill_mid_args("validate-ms",value,args,0);
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--quiet") || !strcmp(argv[counter],"-q")) // --quiet || -q
-		{
-			args->quiet_flag=1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--verbose") || !strcmp(argv[counter],"-v")) // --verbose || -v
-		{
-			args->verbose_flag=1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--vverbose") || !strcmp(argv[counter],"-vv")) // --vverbose || -vv
-		{
-			args->verbose_flag=1;
-			args->vverbose_flag=1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--surpass-root-check") || !strcmp(argv[counter],"-s")) // --surpass-root-check || -s
-		{
-			args->surpass_root_check=1;
-
-			counter++;
-		}
-
-		else if(!strcmp(argv[counter],"--conf") || !strcmp(argv[counter],"-c")) // config file already handled
-		{
-			counter++;
-			//
-			counter++;
-		}
-
-		else // else option not known
-		{
-			fill_mid_args(argv[counter],"",args,0);
-		}
-
 	}
 
-	// If read_ms flag is set
+	/* Set IPv4 and IPV6 flags if none is set by user */
 
-	if(args->print_ms)
+	if (args->ipv4 == 0 && args->ipv6 == 0)
 	{
-		read_ms_entry(args->pm_file,args->entry_number,MS_PRINT);
+		args->ipv4 = MID_DEFAULT_IPV4_SCHEME;
+		args->ipv6 = MID_DEFAULT_IPV6_SCHEME;
+	}
 
+	/* Fill the custom HTTP headers accumulated from conf_file and cmd_line */
+
+	if (hdr_bag != NULL && hdr_bag->n_pockets != 0)
+	{
+		if ((hdr_bag->n_pockets) % 2 != 0)
+		{
+			mid_help("MID: Header format not correct");
+			exit(0);
+		}
+
+		char*** custom_headers = (char***) malloc(sizeof(char**) * (1 + hdr_bag->n_pockets / 2));
+
+		long hdr_count = 0;
+
+		for (struct mid_pocket* pocket = hdr_bag->first; \
+		pocket != NULL; pocket = pocket->next, hdr_count++)  {
+
+			custom_headers[hdr_count] = (char**) malloc(sizeof(char*) * 2);
+
+			custom_headers[hdr_count][0] = (char*) memndup(pocket->data, pocket->len);
+
+			pocket = pocket->next;
+
+			custom_headers[hdr_count][1] = (char*) memndup(pocket->data, pocket->len);
+		}
+
+		custom_headers[hdr_count] = NULL;
+
+		args->custom_headers = custom_headers;
+	}
+
+	/* Fill pa_result and return success */
+
+	struct mid_data arg_data;
+	arg_data.data = (void*) args;
+	arg_data.len = sizeof(struct mid_args);
+
+	place_mid_data(pa_result, &arg_data);
+
+	return MID_ERROR_NONE;
+}
+
+int args_check(struct mid_args* args)
+{
+	if (args->help)
+	{
+		mid_help(NULL);
 		exit(0);
 	}
 
-	// If clear_ms flag is set
+	if (args->version)
+	{
+		printf("%s version %s (%s) ", PACKAGE_NAME, PACKAGE_VERSION, HOST_ARCH);
 
-	if(args->delete_ms)
+#ifdef LIBSSL_SANE
+		printf("+ssl +crypto");
+#else
+		printf("-ssl -crypto");
+#endif
+
+#ifdef LIBZ_SANE
+		printf(" +z");
+#else
+		printf(" -z");
+#endif
+
+		printf("\n\n");
+		printf("Project homepage: [ %s ]", PACKAGE_URL);
+		printf("\n\n");
+
+		exit(1);
+	}
+
+	if (args->print_ms)
+	{
+		read_ms_entry(args->pm_file,args->entry_number,MS_PRINT);
+		exit(0);
+	}
+
+	if (args->delete_ms)
 	{
 		delete_ms_entry(args->dm_file,args->entry_number,MS_PRINT);
-
 		exit(0);
 	}
 
 	// Check for mandatory URL argument {--url | -u}
 
-	if(args->url==NULL)
+	if (args->url == NULL)
 	{
 		mid_help("MID: URL must be specified using {--url | -u} option");
+		exit(0);
 	}
 
-	// Collect and fill the custom HTTP headers from conf_file and cmd_line
-
-	if(hdr_bag->n_pockets!=0)
-	{
-		if(hdr_bag->n_pockets%2!=0)
-		{
-			mid_help("MID: Header format not correct");
-		}
-
-		char*** custom_headers=(char***)malloc(sizeof(char**)*(1+hdr_bag->n_pockets/2));
-
-		struct mid_pocket* pocket=hdr_bag->first;
-		long counter=0;
-
-		while(pocket!=NULL)
-		{
-			custom_headers[counter]=(char**)malloc(sizeof(char*)*2);
-
-			custom_headers[counter][0]=(char*)malloc(sizeof(char)*pocket->len);
-			memcpy(custom_headers[counter][0],pocket->data,pocket->len);
-
-			pocket=pocket->next;
-
-			custom_headers[counter][1]=(char*)malloc(sizeof(char)*pocket->len);
-			memcpy(custom_headers[counter][1],pocket->data,pocket->len);
-
-			pocket=pocket->next;
-			counter++;
-		}
-
-		custom_headers[counter]=NULL;
-		args->custom_headers=custom_headers;
-	}
-
-	// IPv4 and IPV6 flags check
-
-	if(args->ipv4 == 0 && args->ipv6 == 0)
-	{
-		args->ipv4 = MID_DEFAULT_IPV4_SCHEME;
-		args->ipv6 = MID_DEFAULT_IPV6_SCHEME;
-	}
+	return MID_ERROR_NONE;
 }
 
-void mid_help(char* err_msg)
+void mid_help_strings()
 {
-	if(err_msg!=NULL)
-	{
-		fprintf(stderr,"%s\n\n",err_msg);
-		fprintf(stderr,"Try {MID | mid} --help for more information \n\n");
-		exit(1);
-	}
-
 	fprintf(stderr,"Usage: {MID | mid} --url URL [OPTIONS]\n\n");
 	fprintf(stderr,"   --output-file file                        -o file                  Use this output file instead of determining from the URL. \n");
 	fprintf(stderr,"   --interfaces nic1,nic2...                 -i nic1,nic2...          Network-interfaces which are used in the file download. \n");
@@ -1234,6 +953,5 @@ void mid_help(char* err_msg)
 	fprintf(stderr,"\n");
 	fprintf(stderr,"Project homepage: { %s }",PACKAGE_URL);
 	fprintf(stderr,"\n\n");
-	exit(1);
 }
 

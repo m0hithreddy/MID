@@ -65,7 +65,18 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&err_lock,NULL);
 	pthread_mutex_init(&write_lock,NULL);
 
-	parse_mid_args(argv, argc);
+	struct mid_bag* pa_result = create_mid_bag();
+
+	if (parse_mid_args(argv, argc, MID_MODE_READ_DEFAULT_VALUES | MID_MODE_READ_CONF_FILE | \
+			MID_MODE_READ_CMD_LINE, pa_result) != MID_ERROR_NONE) {
+
+		mid_err("MID: Argument parsing error. Exitng...\n");
+		exit(1);
+	}
+
+	args = (struct mid_args*) pa_result->first->data;
+
+	args_check(args);
 
 	if( !args->surpass_root_check && getuid()!=0 && geteuid()!=0)
 	{
