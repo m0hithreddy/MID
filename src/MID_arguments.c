@@ -558,7 +558,7 @@ static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
 
 			if (key_read)
 			{
-				fa_return = fill_mid_args(arg_key, arg_value, args, MID_MODE_PRINT_HELP | MID_MODE_READ_CONF_FILE);
+				fa_return = fill_mid_args(arg_key, arg_value, args, ((rc_flags & MID_MODE_PRINT_HELP) | MID_MODE_READ_CONF_FILE));
 
 				if (fa_return != MID_ERROR_NONE)
 					return fa_return;
@@ -755,12 +755,12 @@ int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_resu
 					return MID_ERROR_FATAL;
 				}
 
-				fa_return = fill_mid_args(arg_key, argv[arg_count], args, MID_MODE_PRINT_HELP);
+				fa_return = fill_mid_args(arg_key, argv[arg_count], args, (pa_flags & MID_MODE_PRINT_HELP));
 			}
 			else if (_arg_type == 1)  // Flag type argument.
 			{
 				char* enable_arg = "1";
-				fa_return = fill_mid_args(arg_key, enable_arg, args, MID_MODE_PRINT_HELP);
+				fa_return = fill_mid_args(arg_key, enable_arg, args, (pa_flags & MID_MODE_PRINT_HELP));
 			}
 			else if (_arg_type == 2)  // Parsed_Value type argument.
 			{
