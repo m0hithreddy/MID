@@ -27,452 +27,414 @@
 
 static struct mid_bag* hdr_bag = NULL;
 
-static void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag)
+static int fill_mid_args(char* arg_key, char* arg_value, struct mid_args* args, int fa_flags)
 {
-	if(key==NULL)
-		return;
-
-	struct mid_data* op_data=(struct mid_data*)malloc(sizeof(struct mid_data));
-	struct mid_bag* op_bag=create_mid_bag();
-
-	if(value==NULL)
+	if (arg_key == NULL || arg_value == NULL || args == NULL)    // Invalid input.
 	{
-		if(conf_flag>=1)
+		if (arg_key != NULL && arg_value == NULL && (fa_flags & MID_MODE_PRINT_HELP))
 		{
-			mid_help("MID: Configuration file not understood, \"%s\" option used but value not specified", key);
+			if (fa_flags & MID_MODE_READ_CONF_FILE)
+				mid_help("MID: Configuration file not understood, \"%s\" option used but no value specified", \
+					arg_key);
+			else
+				mid_help("MID: \"%s\" option used but no value specified", arg_key);
+		}
+
+		return MID_ERROR_INVAL;
+	}
+
+	/* Interpret the arg_value based on the arg_key */
+
+	if (strcmp(arg_key, "output-file") == 0)
+	{
+		args->output_file = strdup(arg_value);
+	}
+	else if (strcmp(arg_key, "interfaces") == 0 || strcmp(arg_key, "exclude-interfaces") == 0)
+	{
+		/* Pointers initializations */
+
+		char*** ifs_ptr = NULL;
+		long* ifs_count = NULL;
+
+		if (strcmp(arg_key, "interfaces") == 0)
+		{
+			ifs_ptr = &args->include_ifs;
+			ifs_count = &args->include_ifs_count;
 		}
 		else
 		{
-			mid_help("MID: \"%s\" option used but value not specified", key);
+			ifs_ptr = &args->exclude_ifs;
+			ifs_count = &args->exclude_ifs_count;
 		}
 
-		exit(0);
-	}
+		/* Parse the arg_value and copy ifs into mid_bag */
 
-	if(!strcmp(key,"output-file"))
-	{
-		args->output_file=strdup(value);
-	}
+		struct mid_data* value_data = (struct mid_data*) malloc(sizeof(struct mid_data));
 
-	else if(!strcmp(key,"interfaces") || !strcmp(key,"exclude-interfaces"))
-	{
-		int in_flag=0;
+		value_data->data = arg_value;
+		value_data->len = strlen(arg_value);
 
-		if(!strcmp(key,"interfaces"))
+		struct mid_bag* ifs_bag = create_mid_bag();
+		struct mid_data ifs_data;
+		char* ifs = NULL;
+
+		for ( ; ; )
 		{
-			in_flag=1;
+			value_data = sseek(value_data, " ,", -1, MID_PERMIT);
+
+			if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
+				break;
+
+			value_data = scopy(value_data, " ,", (char**) &ifs, -1, MID_DELIMIT);
+
+			ifs_data.data = &ifs;
+			ifs_data.len = sizeof(char*);
+
+			place_mid_data(ifs_bag, &ifs_data);
+
+			if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
+				break;
 		}
 
+		/* Fill the results */
 
-		char*** ifs;
-		long* ifs_count;
-
-		if(in_flag)
+		if (ifs_bag->n_pockets == 0)
 		{
-			ifs=&args->include_ifs;
-			ifs_count=&args->include_ifs_count;
+			*ifs_ptr = NULL;
+			*ifs_count = 0;
 		}
 		else
 		{
-			ifs=&args->exclude_ifs;
-			ifs_count=&args->exclude_ifs_count;
+			*ifs_ptr = (char**) (flatten_mid_bag(ifs_bag)->data);
+			*ifs_count = ifs_bag->n_pockets;
 		}
-
-		struct mid_data* n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
-
-		n_data->data=value;
-		n_data->len=strlen(value);
-
-		struct mid_bag* if_bag=create_mid_bag();
-		struct mid_data* if_data=(struct mid_data*)malloc(sizeof(struct mid_data));
-
-		while(1)
-		{
-
-			n_data=sseek(n_data,",",-1,MID_PERMIT);
-
-			if(n_data==NULL || n_data->data==NULL || n_data->len==0)
-			{
-				break;
-			}
-
-			n_data=scopy(n_data,",",(char**)(&if_data->data),-1,MID_DELIMIT);
-			if_data->len=strlen(if_data->data)+1;
-
-			place_mid_data(if_bag,if_data);
-
-			if(n_data==NULL || n_data->data==NULL || n_data->len==0)
-			{
-				break;
-			}
-		}
-
-		if(if_bag->n_pockets==0)
-		{
-			*ifs=NULL;
-			*ifs_count=0;
-			return;
-		}
-
-		*ifs=(char**)malloc(sizeof(char*)*if_bag->n_pockets);
-		*ifs_count=if_bag->n_pockets;
-
-		struct mid_pocket* pocket=if_bag->first;
-		long if_count=0;
-
-		while(pocket!=NULL)
-		{
-			(*ifs)[if_count]=(char*)malloc(sizeof(char)*pocket->len);
-			memcpy((*ifs)[if_count],pocket->data,pocket->len);
-			pocket=pocket->next;
-			if_count++;
-		}
-
 	}
-
-	else if(!strcmp(key, "help"))
+	else if (strcmp(arg_key, "help") == 0)
 	{
-		if (atoi(value) > 0)
+		if (atol(arg_value) > 0)
 			args->help = 1;
 		else
 			args->help = 0;
 	}
-
-	else if(!strcmp(key,"url"))
+	else if (strcmp(arg_key, "url") == 0)
 	{
-		args->url=strdup(value);
+		args->url = strdup(arg_value);
 	}
-
-	else if(!strcmp(key,"unprocessed-file"))
+	else if (strcmp(arg_key, "unprocessed-file") == 0)
 	{
-		args->up_file=strdup(value);
+		args->up_file = strdup(arg_value);
 	}
-
-	else if(!strcmp(key,"scheduler-algorithm"))
+	else if (strcmp(arg_key, "scheduler-algorithm") == 0)
 	{
-		if(!strcasecmp(value,"MAXOUT"))
-			args->schd_alg=maxout_scheduler;
-		else if(!strcasecmp(value,"ALL"))
-			args->schd_alg=all_scheduler;
+		if (strcasecmp(arg_value, "MAXOUT") == 0)
+		{
+			args->schd_alg = maxout_scheduler;
+		}
+		else if (strcasecmp(arg_value, "ALL") == 0)
+		{
+			args->schd_alg = all_scheduler;
+		}
 		else
 		{
-			if(conf_flag)
-				mid_help("MID: Configuration file not understood, value given for \"scheduler-algorithm\" unknown");
-			else
-				mid_help("MID: Value given for \"scheduler-algorithm\" unknown");
+			if (fa_flags & MID_MODE_PRINT_HELP)
+			{
+				if (fa_flags & MID_MODE_READ_CONF_FILE)
+					mid_help("MID: Configuration file not understood, value given for \"scheduler-algorithm\" unknown");
+				else
+					mid_help("MID: Value given for \"scheduler-algorithm\" unknown");
+			}
 
-			exit(0);
+			return MID_ERROR_FATAL;
 		}
 	}
-
-	else if(!strcmp(key,"max-parallel-downloads"))
+	else if (strcmp(arg_key, "max-parallel-downloads") == 0)
 	{
-		args->max_parallel_downloads=atol(value);
+		args->max_parallel_downloads = atol(arg_value);
 	}
-
-	else if(!strcmp(key,"max-unit-retries"))
+	else if (strcmp(arg_key, "max-unit-retries") == 0)
 	{
-		args->max_unit_retries=atol(value);
+		args->max_unit_retries = atol(arg_value);
 	}
-
-	else if(!strcmp(key,"unit-break"))
+	else if (strcmp(arg_key, "unit-break") == 0)
 	{
-		struct mid_data* v_data=(struct mid_data*)malloc(sizeof(struct mid_data));
-		v_data->data=value;
-		v_data->len=strlen(value);
+		struct mid_data* value_data = (struct mid_data*) malloc(sizeof(struct mid_data));
 
-		char* num;
-		char* unit="b";
+		value_data->data = arg_value;
+		value_data->len = strlen(arg_value);
 
-		v_data=sseek(v_data," ",-1,MID_PERMIT);
-		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+		char* num_str = NULL;
+		char* unit_str = "b";
+
+		/* Skip the spaces */
+
+		value_data = sseek(value_data, " ", -1, MID_PERMIT);
+
+		if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
 			goto illegal_unit_break;
 
-		v_data=scopy(v_data,"0123456789",&num,-1,MID_PERMIT);
-		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+		/* Copy numeric characters */
+
+		value_data = scopy(value_data, "0123456789", &num_str, -1, MID_PERMIT);
+
+		if (num_str == NULL || strlen(num_str) == 0)	// If no numeric characters were present.
+			goto illegal_unit_break;
+
+		if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
 			goto compute_unit_break;
 
-		v_data=sseek(v_data," ",-1,MID_PERMIT);
-		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+		value_data = sseek(value_data, " ", -1, MID_PERMIT);
+
+		if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
 			goto compute_unit_break;
 
-		v_data=scopy(v_data," ",&unit,-1,MID_DELIMIT);
-		if(v_data==NULL || v_data->data==NULL || v_data->len==0)
+		/* Copy the data unit */
+
+		value_data = scopy(value_data, " ", &unit_str, -1, MID_DELIMIT);
+
+		if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
 			goto compute_unit_break;
 
-		v_data=sseek(v_data," ",-1,MID_PERMIT);
-		if(v_data!=NULL && v_data->len!=0)
+		/* Check if still characters are left */
+
+		value_data = sseek(value_data, " ", -1, MID_PERMIT);
+
+		if (value_data != NULL && value_data->len != 0)
 			goto illegal_unit_break;
 
 		compute_unit_break:
 
-		if(!strcmp(unit,"B") || !strcmp(unit,"b"))
-			args->unit_break=atol(num);
-		else if(!strcmp(unit,"K"))
-			args->unit_break=atol(num)*1024;
-		else if(!strcmp(unit,"k"))
-			args->unit_break=atol(num)*1000;
-		else if(!strcmp(unit,"M"))
-			args->unit_break=atol(num)*1024*1024;
-		else if(!strcmp(unit,"m"))
-			args->unit_break=atol(num)*1000*1000;
-		else if(!strcmp(unit,"G"))
-			args->unit_break=atol(num)*1024*1024*1024;
-		else if(!strcmp(unit,"g"))
-			args->unit_break=atol(num)*1000*1000*1000;
+		if (strcasecmp(unit_str, "B") == 0)
+			args->unit_break = atol(num_str);
+		else if (strcmp(unit_str, "K") == 0)
+			args->unit_break = atol(num_str) * 1024;
+		else if (strcmp(unit_str, "k") == 0)
+			args->unit_break = atol(num_str) * 1000;
+		else if (strcmp(unit_str, "M") == 0)
+			args->unit_break = atol(num_str) * 1024 * 1024;
+		else if (strcmp(unit_str, "m") == 0)
+			args->unit_break = atol(num_str) * 1000 * 1000;
+		else if (strcmp(unit_str, "G") == 0)
+			args->unit_break = atol(num_str) * 1024 * 1024 * 1024;
+		else if (strcmp(unit_str, "g") == 0)
+			args->unit_break = atol(num_str) * 1000 * 1000 * 1000;
 		else
 			goto illegal_unit_break;
 
-		return;
+		return MID_ERROR_NONE;
 
 		illegal_unit_break:
 
-		if(conf_flag==1)
-			mid_help("MID: Configuration file not understood, \"unit-break\" format not correct");
-		else
-			mid_help("MID: \"unit-break\" format not correct");
-		exit(0);
-	}
-
-	else if(!strcmp(key,"max-redirects"))
-	{
-		args->max_redirects=atol(value);
-	}
-
-	else if(!strcmp(key,"max-tcp-syn-retransmits"))
-	{
-		args->max_tcp_syn_retransmits=atol(value);
-	}
-
-	else if(!strcmp(key,"unit-sleep-time"))
-	{
-		args->unit_retry_sleep_time=atol(value);
-	}
-
-	else if(!strcmp(key,"io-timeout"))
-	{
-		args->io_timeout=atol(value);
-	}
-
-	else if(!strcmp(key, "ipv4"))
-	{
-		if(atol(value) <= 0)
+		if (fa_flags & MID_MODE_PRINT_HELP)
 		{
-			args->ipv4 = 0;
+			if(fa_flags & MID_MODE_READ_CONF_FILE)
+				mid_help("MID: Configuration file not understood, \"unit-break\" format not understood");
+			else
+				mid_help("MID: \"unit-break\" format not understood");
 		}
-		else
-		{
+
+		return MID_ERROR_FATAL;
+	}
+	else if (strcmp(arg_key, "max-redirects") == 0)
+	{
+		args->max_redirects = atol(arg_value);
+	}
+	else if (strcmp(arg_key, "max-tcp-syn-retransmits") == 0)
+	{
+		args->max_tcp_syn_retransmits = atol(arg_value);
+	}
+	else if (strcmp(arg_key, "unit-sleep-time") == 0)
+	{
+		args->unit_retry_sleep_time = atol(arg_value);
+	}
+	else if (strcmp(arg_key, "io-timeout") == 0)
+	{
+		args->io_timeout = atol(arg_value);
+	}
+	else if (strcmp(arg_key, "ipv4") == 0)
+	{
+		if (atol(arg_value) > 0)
 			args->ipv4 = 1;
-		}
-	}
-
-	else if(!strcmp(key, "ipv6"))
-	{
-		if(atol(value) <= 0)
-		{
-			args->ipv6 = 0;
-		}
 		else
-		{
+			args->ipv4 = 0;
+	}
+	else if (strcmp(arg_key, "ipv6") == 0)
+	{
+		if(atol(arg_value) > 0)
 			args->ipv6 = 1;
-		}
+		else
+			args->ipv6 = 0;
 	}
-
-	else if(!strcmp(key,"progress-update-time"))
+	else if (strcmp(arg_key, "progress-update-time") == 0)
 	{
-		args->progress_update_time=atol(value);
+		args->progress_update_time = atol(arg_value);
 	}
-
-	else if(!strcmp(key,"entry-number"))
+	else if (strcmp(arg_key, "entry-number") == 0)
 	{
-		args->entry_number=atol(value);
+		args->entry_number = atol(arg_value);
 
-		if(args->entry_number<0)
-			args->entry_number=0;
+		if (args->entry_number < 0)
+			args->entry_number = 0;
 	}
-
-	else if(!strcmp(key,"ms-file"))
+	else if (strcmp(arg_key, "ms-file") == 0)
 	{
-		args->ms_file=strdup(value);
+		args->ms_file = strdup(arg_value);
 	}
-
-	else if(!strcmp(key,"print-ms"))
+	else if (strcmp(arg_key, "print-ms") == 0)
 	{
-		args->print_ms=1;
-		args->pm_file=strdup(value);
-
+		args->print_ms = 1;
+		args->pm_file = strdup(arg_value);
 	}
-
-	else if(!strcmp(key,"delete-ms"))
+	else if (strcmp(arg_key, "delete-ms") == 0)
 	{
-		args->delete_ms=1;
-		args->dm_file=strdup(value);
-
+		args->delete_ms = 1;
+		args->dm_file = strdup(arg_value);
 	}
-
-	else if(!strcmp(key,"validate-ms"))
+	else if (strcmp(arg_key, "validate-ms") == 0)
 	{
-		args->validate_ms=1;
-		args->cm_file=strdup(value);
-
+		args->validate_ms = 1;
+		args->cm_file = strdup(arg_value);
 	}
-
-	else if(!strcmp(key, "version"))
+	else if (strcmp(arg_key, "version") == 0)
 	{
-		if (atoi(value) > 0)
+		if (atoi(arg_value) > 0)
 			args->version = 1;
 		else
 			args->version = 0;
 	}
-
-	else if(!strcmp(key,"header"))
+	else if (strcmp(arg_key, "header") == 0)
 	{
+		struct mid_data* value_data = (struct mid_data*) malloc(sizeof(struct mid_data));
+		value_data->data = arg_value;
+		value_data->len = strlen(arg_value) + 1;
 
-		struct mid_data* n_data=(struct mid_data*)malloc(sizeof(struct mid_data));
-		struct mid_data* hdr_data=(struct mid_data*)malloc(sizeof(struct mid_data));
+		/* Skip the spaces */
 
-		hdr_data->data=value;
-		hdr_data->len=strlen(value)+1;
+		value_data = sseek(value_data, " ", -1, MID_PERMIT);
 
-		hdr_data=scopy(hdr_data,"= ",(char**)(&n_data->data),-1,MID_DELIMIT);
+		if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
+			goto illegal_header;
 
-		if(hdr_data==NULL || hdr_data->data==NULL || hdr_data->len==0 || hdr_data->len==1)
+		/* Copy the header_key */
+
+		struct mid_data hdr_key;
+		hdr_key.data = NULL;
+
+		value_data = scopy(value_data, " =", (char**) (&hdr_key.data), -1, MID_DELIMIT);
+
+		if (value_data == NULL || value_data->data == NULL || value_data->len <= 0 || \
+				hdr_key.data == NULL || (hdr_key.len = strlen(hdr_key.data) + 1) == 1)	{
+
+			goto illegal_header;
+		}
+
+		/* Skip the header delimiting tokens */
+
+		value_data = sseek(value_data, " =", -1, MID_PERMIT);
+
+		if (value_data == NULL || value_data->data == NULL || value_data->len <= 0)
+			goto illegal_header;
+
+		/* Copy header_key and header_value into hdr_bag{} */
+
+		place_mid_data(hdr_bag, &hdr_key);
+		place_mid_data(hdr_bag, value_data);
+
+		return MID_ERROR_NONE;
+
+		illegal_header :
+
+		if (fa_flags & MID_MODE_PRINT_HELP)
 		{
-			if(conf_flag==0)
+			if (fa_flags & MID_MODE_READ_CONF_FILE)
 				mid_help("MID: Configuration file not understood, header format not correct");
 			else
 				mid_help("MID: Header format not correct");
-			exit(0);
 		}
 
-
-		hdr_data=sseek(hdr_data,"= ",-1,MID_PERMIT);
-
-		if(hdr_data==NULL || hdr_data->data==NULL || hdr_data->len==0)
-		{
-			if(conf_flag==0)
-				mid_help("MID: Configuration file not understood, header format not correct");
-			else
-				mid_help("MID: Header format not correct");
-			exit(0);
-		}
-
-		n_data->len=strlen(n_data->data)+1;
-
-		place_mid_data(hdr_bag,n_data);
-		place_mid_data(hdr_bag,hdr_data);
+		return MID_ERROR_FATAL;
 	}
-
-	else if(!strcmp(key,"detailed-progress"))
+	else if (strcmp(arg_key, "detailed-progress") == 0)
 	{
-		if(atol(value)<=0)
-		{
-			args->detailed_progress=0;
-		}
+		if (atol(arg_value) > 0)
+			args->detailed_progress = 1;
 		else
-		{
-			args->detailed_progress=1;
-		}
+			args->detailed_progress = 0;
 	}
-
-	else if(!strcmp(key,"force-resume"))
+	else if (strcmp(arg_key, "force-resume") == 0)
 	{
-		if(atol(value)<=0)
-		{
-			args->force_resume=0;
-		}
+		if (atol(arg_value) > 0)
+			args->force_resume = 1;
 		else
-		{
-			args->force_resume=1;
-		}
+			args->force_resume = 0;
 	}
-
-	else if(!strcmp(key,"no-resume"))
+	else if (strcmp(arg_key, "no-resume") == 0)
 	{
-		if(atol(value)<=0)
-		{
-			args->no_resume=0;
-		}
+		if (atol(arg_value) > 0)
+			args->no_resume = 1;
 		else
-		{
-			args->no_resume=1;
-		}
+			args->no_resume = 0;
 	}
 #ifdef LIBSSL_SANE
-	else if(!strcmp(key,"detailed-save"))
+	else if (strcmp(arg_key, "detailed-save") == 0)
 	{
-		if(atol(value)<=0)
-		{
-			args->detailed_save=0;
-		}
+		if (atol(arg_value) > 0)
+			args->detailed_save = 1;
 		else
-		{
-			args->detailed_save=1;
-		}
+			args->detailed_save = 0;
 	}
 #endif
-	else if(!strcmp(key,"quiet"))
+	else if (strcmp(arg_key, "quiet") == 0)
 	{
-		if(atol(value)<=0)
-		{
-			args->quiet_flag=0;
-		}
+		if (atol(arg_value) > 0)
+			args->quiet_flag = 1;
 		else
-		{
-			args->quiet_flag=1;
-		}
+			args->quiet_flag = 0;
 	}
-
-	else if(!strcmp(key,"verbose"))
+	else if (strcmp(arg_key, "verbose") == 0)
 	{
-		if(atol(value)<=0)
-		{
-			args->verbose_flag=0;
-		}
+		if (atol(arg_value) > 0)
+			args->verbose_flag = 1;
 		else
-		{
-			args->verbose_flag=1;
-		}
+			args->verbose_flag = 0;
 	}
-
-	else if(!strcmp(key,"vverbose"))
+	else if (strcmp(arg_key, "vverbose") == 0)
 	{
-		if(atol(value)<=0)
-		{
-			args->vverbose_flag=0;
-		}
-		else
+		if(atol(arg_value) > 0)
 		{
 			args->vverbose_flag=1;
 			args->verbose_flag=1;
 		}
-	}
-
-	else if(!strcmp(key,"surpass-root-check"))
-	{
-		if(atol(value)<=0)
-		{
-			args->surpass_root_check=0;
-		}
 		else
-		{
-			args->surpass_root_check=1;
-		}
+			args->vverbose_flag = 0;
 	}
+	else if (strcmp(arg_key, "surpass-root-check") == 0)
+	{
+		if(atol(arg_value) > 0)
+			args->surpass_root_check = 1;
+		else
+			args->surpass_root_check = 0;
+	}
+	else if (strcmp(arg_key, "conf") == 0)
+	{
+		int rc_return = read_mid_conf(arg_value, args, (fa_flags & MID_MODE_PRINT_HELP));
 
+		if (rc_return != MID_ERROR_NONE)
+			return rc_return;
+	}
 	else // If option not valid
 	{
-		if(conf_flag>=1)
+		if (fa_flags & MID_MODE_PRINT_HELP)
 		{
-			mid_help("MID: Configuration file not understood, option \"%s\" not known", key);
-		}
-		else
-		{
-			mid_help("MID: Option \"%s\" not known", key);
+			if(fa_flags & MID_MODE_READ_CONF_FILE)
+				mid_help("MID: Configuration file not understood, option \"%s\" not known", arg_key);
+			else
+				mid_help("MID: Option \"%s\" not known", arg_key);
 		}
 
-		exit(0);
+		return MID_ERROR_FATAL;
 	}
+
+	return MID_ERROR_NONE;
 }
 
 static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
@@ -533,7 +495,7 @@ static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
 
 	char* arg_key = NULL;
 	char* arg_value = NULL;
-	int key_read = 0;
+	int key_read = 0, fa_return = MID_ERROR_NONE;
 
 	for ( ; ; )
 	{
@@ -547,7 +509,8 @@ static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
 				break;
 			else   // arg_key read but no value is provided.
 			{
-				mid_help("MID: Configuration file not understood, \"%s\" option used but no value specified", \
+				if (rc_flags & MID_MODE_PRINT_HELP)
+					mid_help("MID: Configuration file not understood, \"%s\" option used but no value specified", \
 						arg_key);
 
 				return MID_ERROR_FATAL;
@@ -563,7 +526,6 @@ static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
 		}
 		else // read arg_key or arg_value.
 		{
-
 			if (((char*) config_data->data)[0] == '\'' || \
 					((char*) config_data->data)[0] == '"')	{	/* If starting with ' or " ,
 					read till ' or " */
@@ -595,7 +557,12 @@ static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
 			}
 
 			if (key_read)
-				fill_mid_args(arg_key, arg_value, args, 1);
+			{
+				fa_return = fill_mid_args(arg_key, arg_value, args, MID_MODE_PRINT_HELP | MID_MODE_READ_CONF_FILE);
+
+				if (fa_return != MID_ERROR_NONE)
+					return fa_return;
+			}
 
 			key_read = !key_read;
 		}
@@ -647,23 +614,22 @@ int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_resu
 				if (arg_count == argc - 1)
 				{
 					if (pa_flags & MID_MODE_PRINT_HELP)
-						mid_help("MID: \"--conf\" option used but no value specified");
+						mid_help("MID: \"conf\" option used but no value specified");
 
 					return MID_ERROR_FATAL;
 				}
 
 				/* Read the user specified conf_file */
 
-				rc_return = read_mid_conf(argv[arg_count + 1], args, (pa_flags & MID_MODE_PRINT_HELP) ? \
-						MID_MODE_PRINT_HELP : 0);
+				rc_return = read_mid_conf(argv[arg_count + 1], args, (pa_flags & MID_MODE_PRINT_HELP));
+
 				break;
 			}
 
 			/* If end of args reached, try reading default conf_file, if it exists */
 
 			if (arg_count == argc - 1 && access(MID_DEFAULT_CONFIG_FILE, R_OK) == 0)
-				rc_return = read_mid_conf(MID_DEFAULT_CONFIG_FILE, args, (pa_flags & MID_MODE_PRINT_HELP) ? \
-						MID_MODE_PRINT_HELP : 0);
+				rc_return = read_mid_conf(MID_DEFAULT_CONFIG_FILE, args, (pa_flags & MID_MODE_PRINT_HELP));
 		}
 
 		if (rc_return != MID_ERROR_NONE)
@@ -692,6 +658,8 @@ int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_resu
 		args_str.len = strlen(MID_CONSTANT_ARGUMENTS);
 
 		/* Parse arguments */
+
+		int fa_return = MID_ERROR_NONE;
 
 		char* arg_key = NULL;  // Argument key, to handle argument specific operation.
 		char* arg_type = NULL;  // Argument type. (Value or Flag argument).
@@ -762,7 +730,7 @@ int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_resu
 
 			targs_str = sseek(targs_str, " ", -1, MID_PERMIT);  // Seek the spaces
 
-			if (targs_str == NULL || targs_str->data == NULL || targs_str->len <=0)
+			if (targs_str == NULL || targs_str->data == NULL || targs_str->len <= 0)
 				continue;
 
 			arg_type = NULL;
@@ -778,17 +746,32 @@ int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_resu
 			if (_arg_type == 0)  // Value type argument.
 			{
 				arg_count++;
-				fill_mid_args(arg_key, arg_count < argc ? argv[arg_count] : NULL, args, 0);
+
+				if (arg_count >= argc)
+				{
+					if (pa_flags & MID_MODE_PRINT_HELP)
+						mid_help("MID: \"%s\" option used but no value specified", arg_key);
+
+					return MID_ERROR_FATAL;
+				}
+
+				fa_return = fill_mid_args(arg_key, argv[arg_count], args, MID_MODE_PRINT_HELP);
 			}
 			else if (_arg_type == 1)  // Flag type argument.
 			{
 				char* enable_arg = "1";
-				fill_mid_args(arg_key, enable_arg, args, 0);
+				fa_return = fill_mid_args(arg_key, enable_arg, args, MID_MODE_PRINT_HELP);
 			}
-			else if (_arg_type == 2)  // Ignore_Value type argument.
+			else if (_arg_type == 2)  // Parsed_Value type argument.
+			{
 				arg_count++;
+				continue;
+			}
 			else
 				continue;
+
+			if (fa_return != MID_ERROR_NONE)
+				return fa_return;
 		}
 	}
 

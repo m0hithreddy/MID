@@ -117,7 +117,7 @@ struct mid_args
 	int help;
 };
 
-static void fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag);
+static int fill_mid_args(char* key,char* value,struct mid_args* args,int conf_flag);
 
 static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags);
 
