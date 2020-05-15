@@ -139,9 +139,9 @@ static int fill_mid_args(char* arg_key, char* arg_value, struct mid_args* args, 
 			if (fa_flags & MID_MODE_PRINT_HELP)
 			{
 				if (fa_flags & MID_MODE_READ_CONF_FILE)
-					mid_help("MID: Configuration file not understood, value given for \"scheduler-algorithm\" unknown");
+					mid_help("MID: Configuration file not understood, scheduler-algorithm \"%s\" is not implemented", arg_value);
 				else
-					mid_help("MID: Value given for \"scheduler-algorithm\" unknown");
+					mid_help("MID: scheduler-algorithm \"%s\" is not implemented", arg_value);
 			}
 
 			return MID_ERROR_FATAL;
@@ -666,6 +666,14 @@ int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_resu
 
 		for ( ; arg_count < argc; arg_count++)
 		{
+			if (argv[arg_count][0] != '-')  // Every option starts should start with '-'
+			{
+				if (pa_flags & MID_MODE_PRINT_HELP)
+					mid_help("MID: Option \"%s\" not known", argv[arg_count]);
+
+				return MID_ERROR_FATAL;
+			}
+
 			/* Make argument compare buffer */
 
 			char* cmp_buf = (char*) malloc(sizeof(char) * (strlen(argv[arg_count]) + \
