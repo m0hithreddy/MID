@@ -65,6 +65,8 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&err_lock,NULL);
 	pthread_mutex_init(&write_lock,NULL);
 
+	/* Parse cmd_line args, config_file args and default_args */
+
 	struct mid_bag* pa_result = create_mid_bag();
 
 	if (parse_mid_args(argv, argc, MID_MODE_READ_DEFAULT_VALUES | MID_MODE_READ_CONF_FILE | \
@@ -75,7 +77,10 @@ int main(int argc, char **argv)
 
 	args = (struct mid_args*) pa_result->first->data;
 
-	args_check(args);
+	/* Handle non download specific actions */
+
+	if (check_mid_args(args) != MID_ERROR_NONE)
+		exit(0);
 
 	if( !args->surpass_root_check && getuid()!=0 && geteuid()!=0)
 	{

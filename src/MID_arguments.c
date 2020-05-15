@@ -827,12 +827,13 @@ int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_resu
 	return MID_ERROR_NONE;
 }
 
-int args_check(struct mid_args* args)
+int check_mid_args(struct mid_args* args)
 {
 	if (args->help)
 	{
 		mid_help(NULL);
-		exit(0);
+
+		return MID_ERROR_REQUEST_SERVED;
 	}
 
 	if (args->version)
@@ -855,19 +856,21 @@ int args_check(struct mid_args* args)
 		printf("Project homepage: [ %s ]", PACKAGE_URL);
 		printf("\n\n");
 
-		exit(1);
+		return MID_ERROR_REQUEST_SERVED;
 	}
 
 	if (args->print_ms)
 	{
-		read_ms_entry(args->pm_file,args->entry_number,MS_PRINT);
-		exit(0);
+		read_ms_entry(args->pm_file, args->entry_number, MS_PRINT);
+
+		return MID_ERROR_REQUEST_SERVED;
 	}
 
 	if (args->delete_ms)
 	{
-		delete_ms_entry(args->dm_file,args->entry_number,MS_PRINT);
-		exit(0);
+		delete_ms_entry(args->dm_file, args->entry_number, MS_PRINT);
+
+		return MID_ERROR_REQUEST_SERVED;
 	}
 
 	// Check for mandatory URL argument {--url | -u}
@@ -875,7 +878,8 @@ int args_check(struct mid_args* args)
 	if (args->url == NULL)
 	{
 		mid_help("MID: URL must be specified using {--url | -u} option");
-		exit(0);
+
+		return MID_ERROR_FATAL;
 	}
 
 	return MID_ERROR_NONE;

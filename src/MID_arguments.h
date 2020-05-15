@@ -123,7 +123,7 @@ static int read_mid_conf(char* config_file, struct mid_args* args, int rc_flags)
 
 int parse_mid_args(char** argv, long argc, int pa_flags, struct mid_bag* pa_result);
 
-int args_check(struct mid_args* args);
+int check_mid_args(struct mid_args* args);
 
 void mid_help_strings();
 
